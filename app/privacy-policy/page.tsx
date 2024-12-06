@@ -6,7 +6,7 @@ export default function PrivacyPolicy() {
         <p className="mb-4">Effective Date: [Insert Date]</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">1. Introduction</h2>
-        <p>Welcome to ThreadQuirk ("Company", "we", "our", "us"). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website [www.threadquirk.com], use our services, or engage with us in other ways. Please read this policy carefully to understand our practices regarding your personal information.</p>
+        <p>Welcome to ThreadQuirk (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, &quot;us&quot;). We are committed to protecting your personal information and your right to privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website [www.threadquirk.com], use our services, or engage with us in other ways. Please read this policy carefully to understand our practices regarding your personal information.</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">2. Information We Collect</h2>
         <p>We may collect and process the following data about you:</p>

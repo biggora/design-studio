@@ -106,11 +106,11 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Testimonial cards */}
           <div className="bg-[#D3D9D4] p-6 rounded-lg">
-            <p className="italic mb-4 text-[#212A31]">"ThreadQuirk transformed our vision into reality. Their innovative designs exceeded our expectations!"</p>
+            <p className="italic mb-4 text-[#212A31]">&quot;ThreadQuirk transformed our vision into reality. Their innovative designs exceeded our expectations!&quot;</p>
             <p className="font-semibold text-[#124E66]">- Jane Doe, Company XYZ</p>
           </div>
           <div className="bg-[#D3D9D4] p-6 rounded-lg">
-            <p className="italic mb-4 text-[#212A31]">"Working with ThreadQuirk was a game-changer for our brand. Their creativity and attention to detail are unmatched."</p>
+            <p className="italic mb-4 text-[#212A31]">&quot;Working with ThreadQuirk was a game-changer for our brand. Their creativity and attention to detail are unmatched.&quot;</p>
             <p className="font-semibold text-[#124E66]">- John Smith, ABC Corp</p>
           </div>
         </div>

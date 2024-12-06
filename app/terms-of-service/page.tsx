@@ -6,10 +6,10 @@ export default function TermsOfService() {
         <p className="mb-4">Effective Date: [Insert Date]</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">1. Acceptance of Terms</h2>
-        <p>By accessing and using the services provided by ThreadQuirk ("Company", "we", "our", "us"), including our website [www.threadquirk.com] ("Website"), you ("User", "you", "your") agree to comply with and be bound by these Terms of Service. If you do not agree to these terms, please do not use our services or Website.</p>
+        <p>By accessing and using the services provided by ThreadQuirk (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;, &quot;us&quot;), including our website [www.threadquirk.com] (&quot;Website&quot;), you (&quot;User&quot;, &quot;you&quot;, &quot;your&quot;) agree to comply with and be bound by these Terms of Service. If you do not agree to these terms, please do not use our services or Website.</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">2. Services Provided</h2>
-        <p>ThreadQuirk offers design services, including but not limited to graphic design, branding, and web design ("Services"). The specifics of each project will be outlined in individual agreements or proposals.</p>
+        <p>ThreadQuirk offers design services, including but not limited to graphic design, branding, and web design (&quot;Services&quot;). The specifics of each project will be outlined in individual agreements or proposals.</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">3. User Responsibilities</h2>
         <ul className="list-disc pl-6 mb-4">

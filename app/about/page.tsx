@@ -11,7 +11,7 @@ export default function About() {
           ThreadQuirk was founded in 2020 with a vision to revolutionize the world of design through innovative use of threads and textiles. Our journey began with a small team of passionate designers who believed in the power of unconventional materials to create stunning visual narratives.
         </p>
         <p className="text-gray-700">
-          Today, we've grown into a diverse team of creatives, each bringing unique perspectives and skills to the table. Our commitment to pushing the boundaries of design remains at the core of everything we do.
+          Today, we&apos;ve grown into a diverse team of creatives, each bringing unique perspectives and skills to the table. Our commitment to pushing the boundaries of design remains at the core of everything we do.
         </p>
       </section>
 
@@ -31,7 +31,7 @@ export default function About() {
       <section>
         <h2 className="text-2xl font-semibold mb-4">Our Approach</h2>
         <p className="text-gray-700 mb-4">
-          At ThreadQuirk, we believe that great design is born from a perfect blend of creativity, technical skill, and a deep understanding of our clients' needs. Our approach is rooted in:
+          At ThreadQuirk, we believe that great design is born from a perfect blend of creativity, technical skill, and a deep understanding of our clients&apos; needs. Our approach is rooted in:
         </p>
         <ul className="list-disc list-inside text-gray-700 mb-4">
           <li>Collaborative ideation with our clients</li>
