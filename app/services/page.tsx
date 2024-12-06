@@ -1,29 +1,38 @@
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle } from "lucide-react";
 
 const services = [
   {
     title: "Custom Thread Art",
     description: "Bespoke artwork created using various threading techniques.",
-    features: ["Personalized designs", "Multiple size options", "Framing available"]
+    features: [
+      "Personalized designs",
+      "Multiple size options",
+      "Framing available",
+    ],
   },
   {
     title: "Textile Branding",
     description: "Unique branding solutions using textiles and threads.",
-    features: ["Logo recreation", "Branded installations", "Textile business cards"]
+    features: [
+      "Logo recreation",
+      "Branded installations",
+      "Textile business cards",
+    ],
   },
   {
     title: "Interior Thread Design",
-    description: "Innovative interior design solutions using threads and textiles.",
-    features: ["Wall installations", "Furniture accents", "Room dividers"]
+    description:
+      "Innovative interior design solutions using threads and textiles.",
+    features: ["Wall installations", "Furniture accents", "Room dividers"],
   },
   // Add more services as needed
-]
+];
 
 export default function Services() {
   return (
     <div className="container mx-auto px-6 py-12">
       <h1 className="text-4xl font-bold mb-8">Our Services</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {services.map((service, index) => (
           <div key={index} className="bg-white shadow-md rounded-lg p-6">
@@ -41,6 +50,5 @@ export default function Services() {
         ))}
       </div>
     </div>
-  )
+  );
 }
-
