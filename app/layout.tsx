@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title></title>
+        <title>{metadata.title}</title>
         <link
           rel="stylesheet"
           type="text/css"
@@ -33,7 +33,7 @@ export default function RootLayout({
       </head>
       <body className={`${inter.className} bg-[#D3D9D4]`}>
         <Header />
-        <main>{children}</main>
+        <main className="pt-16 min-h-[500px]">{children}</main>
         <Footer />
       </body>
     </html>

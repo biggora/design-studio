@@ -1,9 +1,9 @@
-import Image from "next/image";
-
 export default function About() {
   return (
-    <div className="container mx-auto px-6 py-12">
-      <h1 className="text-4xl font-bold mb-8">About ThreadQuirk</h1>
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
+        About ThreadQuirk
+      </h1>
 
       <section className="mb-12">
         <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
@@ -27,12 +27,10 @@ export default function About() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Add team member cards here */}
           <div className="text-center">
-            <Image
+            <img
               src="/placeholder.svg"
               alt="Team Member"
-              width={200}
-              height={200}
-              className="rounded-full mx-auto mb-4"
+              className="w-48 h-48 rounded-full mx-auto mb-4"
             />
             <h3 className="font-semibold">Jane Doe</h3>
             <p className="text-gray-600">Founder & Creative Director</p>
@@ -55,7 +53,7 @@ export default function About() {
           <li>Continuous learning and adaptation to emerging trends</li>
         </ul>
         <p className="text-gray-700">
-          This approach allows us to create designs that are not only visually
+          This approach allows us to create prints that are not only visually
           striking but also meaningful and impactful.
         </p>
       </section>
