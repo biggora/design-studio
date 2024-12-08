@@ -10,19 +10,23 @@ import { useEffect, useState } from 'react'
 import { supabase } from "@/utils/supabase"
 import { Print } from "@/types/print"
 
+import Slide1 from '../static/images/SHOP1_00002.png'
+import Slide2 from '../static/images/TABLE_00001.png'
+import Slide3 from '../static/images/T_SHIRT_1_00003.png'
+
 const carouselItems = [
   {
-    image: '/placeholder.svg',
+    image: Slide1,
     title: 'Innovative Thread Designs',
     description: 'Pushing the boundaries of textile art and design'
   },
   {
-    image: '/placeholder.svg',
+    image: Slide2,
     title: 'Bespoke Creations',
     description: 'Tailored solutions for your unique vision'
   },
   {
-    image: '/placeholder.svg',
+    image: Slide3,
     title: 'Artistic Excellence',
     description: 'Where creativity meets craftsmanship'
   }
