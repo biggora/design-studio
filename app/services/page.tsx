@@ -1,39 +1,54 @@
-'use client'
+"use client";
 
-import { CheckCircle } from 'lucide-react'
-import { Helmet } from 'react-helmet-async'
+import { CheckCircle } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 
 const services = [
   {
     title: "Custom Thread Art",
     description: "Bespoke artwork created using various threading techniques.",
-    features: ["Personalized designs", "Multiple size options", "Framing available"]
+    features: [
+      "Personalized designs",
+      "Multiple size options",
+      "Framing available",
+    ],
   },
   {
     title: "Textile Branding",
     description: "Unique branding solutions using textiles and threads.",
-    features: ["Logo recreation", "Branded installations", "Textile business cards"]
+    features: [
+      "Logo recreation",
+      "Branded installations",
+      "Textile business cards",
+    ],
   },
   {
     title: "Interior Thread Design",
-    description: "Innovative interior design solutions using threads and textiles.",
-    features: ["Wall installations", "Furniture accents", "Room dividers"]
+    description:
+      "Innovative interior design solutions using threads and textiles.",
+    features: ["Wall installations", "Furniture accents", "Room dividers"],
   },
   // Add more services as needed
-]
+];
 
 export default function Services() {
   return (
     <>
       <Helmet>
         <title>Our Services - ThreadQuirk</title>
-        <meta name="description" content="Explore ThreadQuirk's range of innovative thread-based design services, from custom art to textile branding and interior design." />
-        <meta name="keywords" content="thread art services, textile branding, interior thread design, custom artwork" />
+        <meta
+          name="description"
+          content="Explore ThreadQuirk's range of innovative thread-based design services, from custom art to textile branding and interior design."
+        />
+        <meta
+          name="keywords"
+          content="thread art services, textile branding, interior thread design, custom artwork"
+        />
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-4xl font-bold mb-8">Our Services</h1>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service, index) => (
             <div key={index} className="bg-white shadow-md rounded-lg p-6">
@@ -52,6 +67,5 @@ export default function Services() {
         </div>
       </div>
     </>
-  )
+  );
 }
-

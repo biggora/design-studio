@@ -1,21 +1,24 @@
-'use client'
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { Helmet } from 'react-helmet-async';
+import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
 import { useEffect, useState } from "react";
+import { printCardHeight, printCardWidth } from "@/lib/image";
 
 const ITEMS_PER_PAGE = 12;
 
-async function getPrints(page: number): Promise<{ prints: Print[], total: number }> {
+async function getPrints(
+  page: number,
+): Promise<{ prints: Print[]; total: number }> {
   const start = (page - 1) * ITEMS_PER_PAGE;
   const end = start + ITEMS_PER_PAGE - 1;
 
   const { data, error, count } = await supabase
     .from("prints")
-    .select("*", { count: 'exact' })
+    .select("*", { count: "exact" })
     .range(start, end);
 
   if (error) {
@@ -26,7 +29,11 @@ async function getPrints(page: number): Promise<{ prints: Print[], total: number
   return { prints: data || [], total: count || 0 };
 }
 
-export default function PrintFolio({ searchParams }: { searchParams: { page?: string } }) {
+export default function PrintFolio({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
   const [prints, setPrints] = useState<Print[]>([]);
   const [total, setTotal] = useState(0);
   const currentPage = Number(searchParams.page) || 1;
@@ -45,8 +52,14 @@ export default function PrintFolio({ searchParams }: { searchParams: { page?: st
     <>
       <Helmet>
         <title>Our Prints - ThreadQuirk</title>
-        <meta name="description" content="Explore our unique collection of thread-based prints. Each piece is a testament to innovative design and artistic excellence." />
-        <meta name="keywords" content="thread prints, textile art, innovative designs, ThreadQuirk collection" />
+        <meta
+          name="description"
+          content="Explore our unique collection of thread-based prints. Each piece is a testament to innovative design and artistic excellence."
+        />
+        <meta
+          name="keywords"
+          content="thread prints, textile art, innovative designs, ThreadQuirk collection"
+        />
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -59,14 +72,18 @@ export default function PrintFolio({ searchParams }: { searchParams: { page?: st
               className="bg-white shadow-md rounded-lg overflow-hidden flex flex-col"
             >
               <Image
-                src={decodeURIComponent(print.externalImageUrl || "/placeholder.svg")}
+                src={decodeURIComponent(
+                  print.externalImageUrl || "/placeholder.svg",
+                )}
                 alt={print.title}
-                width={600}
-                height={400}
-                className="w-full h-[200px] object-cover"
+                width={printCardWidth}
+                height={printCardHeight}
+                className="w-full h-[400px] object-cover"
               />
               <div className="p-4 flex flex-col flex-grow">
-                <h2 className="text-xl font-semibold mb-2 text-[#212A31]">{print.title}</h2>
+                <h2 className="text-xl font-semibold mb-2 text-[#212A31]">
+                  {print.title}
+                </h2>
                 <p className="text-[#748D92] mb-4">{print.description}</p>
                 <Link
                   href={`/prints/${print.id}`}
@@ -106,4 +123,3 @@ export default function PrintFolio({ searchParams }: { searchParams: { page?: st
     </>
   );
 }
-

@@ -3,10 +3,10 @@
 @tailwind utilities;
 
 :root {
-  --primary: 33 42 49;    /* #212A31 */
-  --secondary: 46 57 68;  /* #2E3944 */
-  --accent: 18 78 102;    /* #124E66 */
-  --muted: 116 141 146;   /* #748D92 */
+  --primary: 33 42 49; /* #212A31 */
+  --secondary: 46 57 68; /* #2E3944 */
+  --accent: 18 78 102; /* #124E66 */
+  --muted: 116 141 146; /* #748D92 */
   --background: 211 217 212; /* #D3D9D4 */
 }
 
@@ -18,15 +18,14 @@
 
 /* Custom styles for the carousel */
 .slick-dots li button:before {
-  color: #748D92 !important;
+  color: #748d92 !important;
 }
 
 .slick-dots li.slick-active button:before {
-  color: #124E66 !important;
+  color: #124e66 !important;
 }
 
 .slick-prev:before,
 .slick-next:before {
-  color: #124E66 !important;
+  color: #124e66 !important;
 }
-
