@@ -25,6 +25,10 @@ async function getPrintById(id: string) {
 export default function PrintDetails({ params }: { params: { id: string } }) {
     const [print, setPrint] = useState<Print | null>(null)
 
+    const goToLink = (url: string) => {
+        window.open(url, '_blank');
+    }
+
     useEffect(() => {
         async function fetchPrint() {
             const printData = await getPrintById(params.id)
@@ -81,8 +85,8 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
                                     <p className="text-[#748D92]">{print.inStock ? 'In Stock' : 'Out of Stock'}</p>
                                 </div>
                             </div>
-                            <button className="w-full bg-[#124E66] text-white px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors">
-                                Shop products
+                            <button onClick={()=> {goToLink(print?.externalLink);}} className="w-full bg-[#124E66] text-white px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors">
+                                Shop products with this print
                             </button>
                         </div>
                     </div>
