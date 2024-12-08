@@ -123,6 +123,8 @@ export default function Home() {
                   alt={print.title}
                   width={printCardWidth}
                   height={printCardHeight}
+                  loading="lazy"
+                  style={{ objectFit: "cover" }}
                   className={`w-full h-[400px] object-cover`}
                 />
                 <div className="p-4">
@@ -144,46 +146,46 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="text-center mb-12">
-          <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
-            Our Services
-          </h2>
-          <p className="text-[#748D92] mb-6">
-            Discover how ThreadQuirk can bring your vision to life
-          </p>
-          <Link
-            href="/services"
-            className="bg-[#124E66] text-[#D3D9D4] px-6 py-2 rounded-full hover:bg-[#2E3944] transition-colors"
-          >
-            Explore Our Services
-          </Link>
-        </section>
+        {/*<section className="text-center mb-12">*/}
+        {/*  <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">*/}
+        {/*    Our Services*/}
+        {/*  </h2>*/}
+        {/*  <p className="text-[#748D92] mb-6">*/}
+        {/*    Discover how ThreadQuirk can bring your vision to life*/}
+        {/*  </p>*/}
+        {/*  <Link*/}
+        {/*    href="/services"*/}
+        {/*    className="bg-[#124E66] text-[#D3D9D4] px-6 py-2 rounded-full hover:bg-[#2E3944] transition-colors"*/}
+        {/*  >*/}
+        {/*    Explore Our Services*/}
+        {/*  </Link>*/}
+        {/*</section>*/}
 
-        <section>
-          <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
-            Client Testimonials
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[#D3D9D4] p-6 rounded-lg">
-              <p className="italic mb-4 text-[#212A31]">
-                &quot;ThreadQuirk transformed our vision into reality. Their
-                innovative designs exceeded our expectations!&quot;
-              </p>
-              <p className="font-semibold text-[#124E66]">
-                - Jane Doe, Company XYZ
-              </p>
-            </div>
-            <div className="bg-[#D3D9D4] p-6 rounded-lg">
-              <p className="italic mb-4 text-[#212A31]">
-                &quot;Working with ThreadQuirk was a game-changer for our brand.
-                Their creativity and attention to detail are unmatched.&quot;
-              </p>
-              <p className="font-semibold text-[#124E66]">
-                - John Smith, ABC Corp
-              </p>
-            </div>
-          </div>
-        </section>
+        {/*<section>*/}
+        {/*  <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">*/}
+        {/*    Client Testimonials*/}
+        {/*  </h2>*/}
+        {/*  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">*/}
+        {/*    <div className="bg-[#D3D9D4] p-6 rounded-lg">*/}
+        {/*      <p className="italic mb-4 text-[#212A31]">*/}
+        {/*        &quot;ThreadQuirk transformed our vision into reality. Their*/}
+        {/*        innovative designs exceeded our expectations!&quot;*/}
+        {/*      </p>*/}
+        {/*      <p className="font-semibold text-[#124E66]">*/}
+        {/*        - Jane Doe, Company XYZ*/}
+        {/*      </p>*/}
+        {/*    </div>*/}
+        {/*    <div className="bg-[#D3D9D4] p-6 rounded-lg">*/}
+        {/*      <p className="italic mb-4 text-[#212A31]">*/}
+        {/*        &quot;Working with ThreadQuirk was a game-changer for our brand.*/}
+        {/*        Their creativity and attention to detail are unmatched.&quot;*/}
+        {/*      </p>*/}
+        {/*      <p className="font-semibold text-[#124E66]">*/}
+        {/*        - John Smith, ABC Corp*/}
+        {/*      </p>*/}
+        {/*    </div>*/}
+        {/*  </div>*/}
+        {/*</section>*/}
       </div>
     </>
   );

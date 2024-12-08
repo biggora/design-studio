@@ -78,6 +78,8 @@ export default function PrintFolio({
                 alt={print.title}
                 width={printCardWidth}
                 height={printCardHeight}
+                loading="lazy"
+                style={{ objectFit: "cover" }}
                 className="w-full h-[400px] object-cover"
               />
               <div className="p-4 flex flex-col flex-grow">

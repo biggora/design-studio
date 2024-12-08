@@ -26,12 +26,12 @@ export default function Header() {
           >
             Prints
           </Link>
-          <Link
-            href="/services"
-            className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
-          >
-            Services
-          </Link>
+          {/*<Link*/}
+          {/*  href="/services"*/}
+          {/*  className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"*/}
+          {/*>*/}
+          {/*  Services*/}
+          {/*</Link>*/}
           <Link
             href="/contact"
             className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
