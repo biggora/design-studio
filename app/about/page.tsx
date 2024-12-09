@@ -9,7 +9,7 @@ export default function About() {
         <title>About ThreadQuirk - Our Story and Approach</title>
         <meta
           name="description"
-          content="Learn about ThreadQuirk's journey, our passionate team, and our innovative approach to thread-based design."
+          content="Learn about ThreadQuirk&#39;s journey, our passionate team, and our innovative approach to thread-based design."
         />
         <meta
           name="keywords"
@@ -32,19 +32,19 @@ export default function About() {
           </p>
           <p className="text-gray-700">
             At ThreadQuirk, we believe that fashion is more than just
-            clothing—it's a reflection of your personality and passions. Our
+            clothing—it&#39;s a reflection of your personality and passions. Our
             mission is to transform everyday apparel into bold statements of
             individuality and creativity.
           </p>
           <p className="text-gray-700">
             We’ve assembled a talented team of designers who thrive on turning
-            imaginative ideas into wearable art. Whether you're looking for a
-            quirky design, a heartfelt message, or a bold statement piece, our
+            imaginative ideas into wearable art. Whether you&#39;re looking for
+            a quirky design, a heartfelt message, or a bold statement piece, our
             collections are crafted to inspire and empower your unique style.
           </p>
           <p className="text-gray-700">
             From versatile t-shirts and cozy hoodies to timeless polos, our wide
-            range of products ensures there's something for everyone. With
+            range of products ensures there&#39;s something for everyone. With
             ThreadQuirk, you’re not just wearing clothes; you’re wearing your
             story.
           </p>
