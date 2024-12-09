@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Facebook, Twitter, Instagram, Linkedin } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -35,7 +36,42 @@ export default function Footer() {
           <div className="w-full md:w-1/3 mt-4 md:mt-0 text-center md:text-right">
             <h4 className="text-lg font-semibold mb-2">Connect With Us</h4>
             <div className="flex justify-center md:justify-end space-x-4">
-              {/* Add social media icons/links here */}
+              <a
+                href="https://facebook.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+              >
+                <Facebook size={24} />
+                <span className="sr-only">Facebook</span>
+              </a>
+              <a
+                href="https://twitter.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+              >
+                <Twitter size={24} />
+                <span className="sr-only">Twitter</span>
+              </a>
+              <a
+                href="https://instagram.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+              >
+                <Instagram size={24} />
+                <span className="sr-only">Instagram</span>
+              </a>
+              <a
+                href="https://linkedin.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+              >
+                <Linkedin size={24} />
+                <span className="sr-only">LinkedIn</span>
+              </a>
             </div>
           </div>
         </div>

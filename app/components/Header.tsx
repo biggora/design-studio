@@ -15,16 +15,10 @@ export default function Header() {
             Home
           </Link>
           <Link
-            href="/about"
-            className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
-          >
-            About
-          </Link>
-          <Link
             href="/prints"
             className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
           >
-            Prints
+            Our Prints
           </Link>
           {/*<Link*/}
           {/*  href="/services"*/}
@@ -32,6 +26,12 @@ export default function Header() {
           {/*>*/}
           {/*  Services*/}
           {/*</Link>*/}
+          <Link
+            href="/about"
+            className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+          >
+            About Us
+          </Link>
           <Link
             href="/contact"
             className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"

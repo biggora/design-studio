@@ -91,7 +91,7 @@ export default function Contact() {
           <div className="space-y-4">
             <div className="flex items-center text-[#212A31]">
               <Mail className="mr-2" size={20} />
-              <span>info@threadquirk.com</span>
+              <span>info@threadquirk.lv</span>
             </div>
             <div className="flex items-center text-[#212A31]">
               <Phone className="mr-2" size={20} />

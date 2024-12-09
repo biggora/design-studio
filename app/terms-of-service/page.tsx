@@ -5,7 +5,7 @@ export default function TermsOfService() {
         Terms of Service
       </h1>
       <div className="prose prose-lg max-w-none text-[#212A31]">
-        <p className="mb-4">Effective Date: [Insert Date]</p>
+        <p className="mb-4">Effective Date: Nov 30, 2024</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">
           1. Acceptance of Terms
@@ -13,7 +13,7 @@ export default function TermsOfService() {
         <p>
           By accessing and using the services provided by ThreadQuirk
           (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;,
-          &quot;us&quot;), including our website [www.threadquirk.com]
+          &quot;us&quot;), including our website [www.threadquirk.lv]
           (&quot;Website&quot;), you (&quot;User&quot;, &quot;you&quot;,
           &quot;your&quot;) agree to comply with and be bound by these Terms of
           Service. If you do not agree to these terms, please do not use our
@@ -111,8 +111,7 @@ export default function TermsOfService() {
         <h2 className="text-2xl font-semibold mt-8 mb-4">8. Governing Law</h2>
         <p>
           These Terms are governed by and construed in accordance with the laws
-          of [Your Jurisdiction], without regard to its conflict of law
-          principles.
+          of Latvia, without regard to its conflict of law principles.
         </p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">
@@ -133,9 +132,9 @@ export default function TermsOfService() {
           at:
         </p>
         <p>
-          Email: [Insert Email Address]
+          Email: info@threadquirk.lv
           <br />
-          Address: [Insert Physical Address]
+          Address: Latvia, Riga, LV-1005
         </p>
       </div>
     </div>
