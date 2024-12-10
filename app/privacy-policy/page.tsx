@@ -1,18 +1,20 @@
+import companyData from "@/config/company.json";
+
 export default function PrivacyPolicy() {
   return (
     <div className="container mx-auto px-6 py-12">
       <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Privacy Policy</h1>
       <div className="prose prose-lg max-w-none text-[#212A31]">
-        <p className="mb-4">Effective Date: Nov 30, 2024</p>
+        <p className="mb-4">Effective Date: {companyData.policyUpdateDate}</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">1. Introduction</h2>
         <p>
-          Welcome to ThreadQuirk (&quot;Company&quot;, &quot;we&quot;,
+          Welcome to {companyData.name} (&quot;Company&quot;, &quot;we&quot;,
           &quot;our&quot;, &quot;us&quot;). We are committed to protecting your
           personal information and your right to privacy. This Privacy Policy
           explains how we collect, use, disclose, and safeguard your information
-          when you visit our website [www.threadquirk.lv], use our services, or
-          engage with us in other ways. Please read this policy carefully to
+          when you visit our website [{companyData.domain}], use our services,
+          or engage with us in other ways. Please read this policy carefully to
           understand our practices regarding your personal information.
         </p>
 

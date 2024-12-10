@@ -1,11 +1,12 @@
 import Link from "next/link";
+import companyData from "@/config/company.json";
 
 export default function Header() {
   return (
     <header className="bg-[#212A31] bg-opacity-80 text-[#D3D9D4] shadow-md fixed w-full z-10 h-16">
       <nav className="container mx-auto px-6 h-full flex items-center justify-between">
         <Link href="/" className="text-2xl font-bold text-[#D3D9D4]">
-          ThreadQuirk
+          {companyData.name}
         </Link>
         <div className="flex space-x-6">
           <Link

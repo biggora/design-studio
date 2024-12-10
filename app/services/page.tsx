@@ -2,6 +2,7 @@
 
 import { CheckCircle } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import companyData from "@/config/company.json";
 
 const services = [
   {
@@ -35,10 +36,10 @@ export default function Services() {
   return (
     <>
       <Helmet>
-        <title>Our Services - ThreadQuirk</title>
+        <title>Our Services - {companyData.name}</title>
         <meta
           name="description"
-          content="Explore ThreadQuirk's range of innovative thread-based design services, from custom art to textile branding and interior design."
+          content={`Explore ${companyData.name}'s range of innovative thread-based design services, from custom art to textile branding and interior design.`}
         />
         <meta
           name="keywords"

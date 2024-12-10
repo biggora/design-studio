@@ -7,6 +7,7 @@ import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
 import { useEffect, useState } from "react";
 import { printCardHeight, printCardWidth } from "@/lib/image";
+import companyData from "@/config/company.json";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -51,14 +52,14 @@ export default function PrintFolio({
   return (
     <>
       <Helmet>
-        <title>Our Prints - ThreadQuirk</title>
+        <title>Our Prints - {companyData.name}</title>
         <meta
           name="description"
           content="Explore our unique collection of thread-based prints. Each piece is a testament to innovative design and artistic excellence."
         />
         <meta
           name="keywords"
-          content="thread prints, textile art, innovative designs, ThreadQuirk collection"
+          content={`thread prints, textile art, innovative designs, ${companyData.name} collection`}
         />
       </Helmet>
 

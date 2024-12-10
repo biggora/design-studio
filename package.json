@@ -10,6 +10,7 @@
     "lint:fix": "next lint --fix"
   },
   "dependencies": {
+    "@icons-pack/react-simple-icons": "^10.2.0",
     "@supabase/supabase-js": "^2.47.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

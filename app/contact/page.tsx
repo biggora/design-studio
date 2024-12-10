@@ -1,7 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { Mail, Phone, MapPin } from "lucide-react";
+// import { Mail, Phone, MapPin } from "lucide-react";
+import {
+  SiFacebook,
+  SiInstagram,
+  SiLinkedin,
+  SiPinterest,
+  SiX,
+} from "@icons-pack/react-simple-icons";
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -86,22 +93,69 @@ export default function Contact() {
         </div>
         <div>
           <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
-            Contact Information
+            Connect With Us
           </h2>
-          <div className="space-y-4">
-            <div className="flex items-center text-[#212A31]">
-              <Mail className="mr-2" size={20} />
-              <span>info@threadquirk.lv</span>
-            </div>
-            <div className="flex items-center text-[#212A31]">
-              <Phone className="mr-2" size={20} />
-              <span>+1 (555) 123-4567</span>
-            </div>
-            <div className="flex items-center text-[#212A31]">
-              <MapPin className="mr-2" size={20} />
-              <span>123 Design Street, Creativity City, TC 12345</span>
-            </div>
+          <div className="flex justify-left space-x-4">
+            <a
+              href="https://facebook.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+            >
+              <SiFacebook size={24} />
+              <span className="sr-only">Facebook</span>
+            </a>
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+            >
+              <SiX size={24} />
+              <span className="sr-only">Twitter</span>
+            </a>
+            <a
+              href="https://instagram.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+            >
+              <SiInstagram size={24} />
+              <span className="sr-only">Instagram</span>
+            </a>
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+            >
+              <SiLinkedin size={24} />
+              <span className="sr-only">LinkedIn</span>
+            </a>
+            <a
+              href="https://pinterest.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+            >
+              <SiPinterest size={24} />
+              <span className="sr-only">Pinterest</span>
+            </a>
           </div>
+          {/*<div className="space-y-4">*/}
+          {/*  <div className="flex items-center text-[#212A31]">*/}
+          {/*    <Mail className="mr-2" size={20}/>*/}
+          {/*    <span>{companyData.email}</span>*/}
+          {/*  </div>*/}
+          {/*  <div className="flex items-center text-[#212A31]">*/}
+          {/*    <Phone className="mr-2" size={20}/>*/}
+          {/*    <span>{companyData.phone}</span>*/}
+          {/*  </div>*/}
+          {/*  <div className="flex items-center text-[#212A31]">*/}
+          {/*    <MapPin className="mr-2" size={20}/>*/}
+          {/*    <span>123 Design Street, Creativity City, TC 12345</span>*/}
+          {/*  </div>*/}
+          {/*</div>*/}
         </div>
       </div>
     </div>

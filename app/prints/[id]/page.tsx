@@ -6,6 +6,7 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
 import { useEffect, useState } from "react";
 import { Print } from "@/types/print";
+import companyData from "@/config/company.json";
 
 async function getPrintById(id: string) {
   const { data, error } = await supabase
@@ -44,14 +45,14 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
   return (
     <>
       <Helmet>
-        <title>{`${print.title} - ThreadQuirk Print`}</title>
+        <title>{`${print.title} - ${companyData.name} Print`}</title>
         <meta
           name="description"
-          content={`Discover the unique ${print.title} print by ThreadQuirk. ${print.description}`}
+          content={`Discover the unique ${print.title} print by ${companyData.name}. ${print.description}`}
         />
         <meta
           name="keywords"
-          content={`${print.keywords}, thread art, textile design, ThreadQuirk print`}
+          content={`${print.keywords}, thread art, textile design, ${companyData.name} print`}
         />
       </Helmet>
 

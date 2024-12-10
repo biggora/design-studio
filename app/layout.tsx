@@ -5,13 +5,14 @@ import Head from "next/head";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import HelmetWrapper from "@/app/components/HelmetWrapper";
+import companyData from "../config/company.json";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "ThreadQuirk - Innovative Design Studio",
-  description:
-    "ThreadQuirk is a cutting-edge design studio specializing in unique and quirky thread-based designs.",
+  title: `${companyData.name} - ${companyData.intro}`,
+  description: companyData.description,
+  keywords: companyData.keywords,
 };
 
 export default function RootLayout({
@@ -25,10 +26,7 @@ export default function RootLayout({
         <Head>
           <title>{metadata.title as string}</title>
           <meta name="description" content={metadata.description as string} />
-          <meta
-            name="keywords"
-            content="thread art, textile design, ThreadQuirk print"
-          />
+          <meta name="keywords" content={metadata.keywords as string} />
           <link
             rel="stylesheet"
             type="text/css"
