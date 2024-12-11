@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useSiteConfigStore } from "@/lib/store";
+import { useContext } from "react";
+import { ConfigContext } from "@/app/wrapper";
 
 export default function Header() {
-  const { config } = useSiteConfigStore();
+  const config = useContext(ConfigContext);
 
   return (
     <header className="bg-[#212A31] bg-opacity-80 text-[#D3D9D4] shadow-md fixed w-full z-10 h-16">

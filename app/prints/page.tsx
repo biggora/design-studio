@@ -5,10 +5,10 @@ import Link from "next/link";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { useSiteConfigStore } from "@/lib/store";
 import { printCardHeight, printCardWidth } from "@/lib/image";
+import { ConfigContext } from "@/app/wrapper";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -59,7 +59,7 @@ export default function PrintFolio({
 }: {
   searchParams: { page?: string };
 }) {
-  const { config } = useSiteConfigStore();
+  const config = useContext(ConfigContext);
   const [prints, setPrints] = useState<Print[]>([]);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");

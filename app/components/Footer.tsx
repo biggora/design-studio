@@ -8,10 +8,11 @@ import {
   SiLinkedin,
   SiPinterest,
 } from "@icons-pack/react-simple-icons";
-import { useSiteConfigStore } from "@/lib/store";
+import { useContext } from "react";
+import { ConfigContext } from "@/app/wrapper";
 
 export default function Footer() {
-  const { config } = useSiteConfigStore();
+  const config = useContext(ConfigContext);
 
   return (
     <footer className="bg-[#2E3944] text-[#D3D9D4]">

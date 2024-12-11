@@ -6,7 +6,7 @@ import { Helmet } from "react-helmet-async";
 import Slider from "react-slick";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
 import {
@@ -16,7 +16,7 @@ import {
   getPlaceholderImage,
 } from "@/lib/image";
 import { truncateText } from "@/lib/utils";
-import { useSiteConfigStore } from "@/lib/store";
+import { ConfigContext } from "@/app/wrapper";
 
 const carouselItems = [
   {
@@ -37,8 +37,8 @@ const carouselItems = [
 ];
 
 export default function Home() {
+  const config = useContext(ConfigContext);
   const [featuredPrints, setFeaturedPrints] = useState<Print[]>([]);
-  const { config } = useSiteConfigStore();
 
   useEffect(() => {
     async function fetchFeaturedPrints() {

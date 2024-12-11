@@ -1,8 +1,9 @@
 import { ConfigProp } from "@/types/config";
 import { ConfigValue, SiteConfig } from "@/lib/store";
+import baseConfig from "@/config/config.json";
 
 export function mapDataToConfig(props: ConfigProp[]): SiteConfig {
-  const config: SiteConfig = {} as SiteConfig;
+  const config: SiteConfig = baseConfig;
   for (const prop of props) {
     if (/\./.test(prop.key)) {
       const keys = prop.key.split(".");
@@ -18,6 +19,5 @@ export function mapDataToConfig(props: ConfigProp[]): SiteConfig {
     }
     config[prop.key as keyof SiteConfig] = prop.value as ConfigValue;
   }
-  console.log("@@@ config:", config);
   return config;
 }

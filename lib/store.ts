@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import companyData from "@/config/company.json";
+import companyData from "@/config/config.json";
 
 export interface SocialMedia {
   [key: string]: string;

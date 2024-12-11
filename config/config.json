@@ -1,0 +1,27 @@
+{
+  "name": "Design Studio",
+  "intro": "Innovative Design Studio",
+  "description": "We are a cutting-edge design studio specializing in unique and quirky thread-based designs.",
+  "keywords": "thread art, textile design, print",
+  "domain": "example.com",
+  "email": "info@example.com",
+  "phone": "",
+  "address": "USA, 999 Anywhere St., Apt 555",
+  "policyUpdateDate": "Dec 1, 2024",
+  "social": {
+    "pinterest": "",
+    "twitter": "",
+    "facebook": "",
+    "instagram": "",
+    "linkedin": "",
+    "youtube": ""
+  },
+  "representation": {
+    "redbuble": "",
+    "teepublic": "",
+    "tostadora": ""
+  },
+  "slides": {
+    "test": ""
+  }
+}
