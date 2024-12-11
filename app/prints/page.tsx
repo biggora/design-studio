@@ -51,11 +51,7 @@ async function fetchCollections() {
     return [];
   }
 
-  let uniqueCollections: string[];
-  uniqueCollections = Array.from(
-    new Set(data.map((item) => item.collection)),
-  ) as string[];
-  return uniqueCollections;
+  return Array.from(new Set(data.map((item) => item.collection))) as string[];
 }
 
 export default function PrintFolio({

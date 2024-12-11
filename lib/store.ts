@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import companyData from "@/config/company.json";
 
-interface SiteConfig {
+export interface SocialMedia {
+  [key: string]: string;
+}
+
+export type ConfigValue = string & SocialMedia;
+
+export interface SiteConfig {
   name: string;
   intro: string;
   description: string;
@@ -11,14 +17,7 @@ interface SiteConfig {
   phone: string;
   address: string;
   policyUpdateDate: string;
-  social: {
-    pinterest: string;
-    twitter: string;
-    facebook: string;
-    instagram: string;
-    linkedin: string;
-    youtube: string;
-  };
+  social: SocialMedia;
 }
 
 interface SiteConfigStore {

@@ -8,7 +8,11 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import HelmetWrapper from "@/app/components/HelmetWrapper";
 import { CookieBanner } from "./components/CookieBanner";
-import { useSiteConfigStore } from "@/lib/store";
+import { SiteConfig, useSiteConfigStore } from "@/lib/store";
+import { supabase } from "@/utils/supabase";
+import { useEffect } from "react";
+import { mapDataToConfig } from "@/lib/config";
+import { ConfigProp } from "@/types/config";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -17,13 +21,22 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { config } = useSiteConfigStore();
+  const { config, updateConfig } = useSiteConfigStore();
 
   const metadata: Metadata = {
     title: `${config.name} - ${config.intro}`,
     description: config.description,
     keywords: config.keywords,
   };
+
+  useEffect(() => {
+    const getSiteConfig = async () => {
+      const { data } = await supabase.from("studio").select("*");
+      const newConfig: SiteConfig = mapDataToConfig(data as ConfigProp[]);
+      updateConfig(newConfig);
+    };
+    void getSiteConfig();
+  }, [updateConfig]);
 
   return (
     <HelmetWrapper>
