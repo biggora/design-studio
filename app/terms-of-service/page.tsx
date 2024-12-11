@@ -1,21 +1,24 @@
-import companyData from "../../config/company.json";
+"use client";
+
+import { useSiteConfigStore } from "@/lib/store";
 
 export default function TermsOfService() {
+  const { config } = useSiteConfigStore();
   return (
     <div className="container mx-auto px-6 py-12">
       <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
         Terms of Service
       </h1>
       <div className="prose prose-lg max-w-none text-[#212A31]">
-        <p className="mb-4">Effective Date: {companyData.policyUpdateDate}</p>
+        <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">
           1. Acceptance of Terms
         </h2>
         <p>
-          By accessing and using the services provided by {companyData.name}
+          By accessing and using the services provided by {config.name}
           (&quot;Company&quot;, &quot;we&quot;, &quot;our&quot;,
-          &quot;us&quot;), including our website [{companyData.domain}]
+          &quot;us&quot;), including our website [{config.domain}]
           (&quot;Website&quot;), you (&quot;User&quot;, &quot;you&quot;,
           &quot;your&quot;) agree to comply with and be bound by these Terms of
           Service. If you do not agree to these terms, please do not use our
@@ -26,10 +29,10 @@ export default function TermsOfService() {
           2. Services Provided
         </h2>
         <p>
-          {companyData.name} offers design services, including but not limited
-          to graphic design, branding, and web design (&quot;Services&quot;).
-          The specifics of each project will be outlined in individual
-          agreements or proposals.
+          {config.name} offers design services, including but not limited to
+          graphic design, branding, and web design (&quot;Services&quot;). The
+          specifics of each project will be outlined in individual agreements or
+          proposals.
         </p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">
@@ -63,13 +66,13 @@ export default function TermsOfService() {
         <ul className="list-disc pl-6 mb-4">
           <li>
             Ownership: All content, designs, and materials created by
-            {companyData.name} are the intellectual property of the Company
-            unless otherwise agreed upon.
+            {config.name} are the intellectual property of the Company unless
+            otherwise agreed upon.
           </li>
           <li>
             License: Upon full payment, and unless otherwise specified,
-            {companyData.name} grants you a non-exclusive, non-transferable
-            license to use the final deliverables for their intended purpose.
+            {config.name} grants you a non-exclusive, non-transferable license
+            to use the final deliverables for their intended purpose.
           </li>
         </ul>
 
@@ -92,7 +95,7 @@ export default function TermsOfService() {
           6. Limitation of Liability
         </h2>
         <p>
-          {companyData.name} is not liable for any indirect, incidental, or
+          {config.name} is not liable for any indirect, incidental, or
           consequential damages arising from the use of our Services or Website.
           Our total liability is limited to the amount paid by you for the
           specific Service in question.
@@ -120,10 +123,10 @@ export default function TermsOfService() {
           9. Changes to Terms
         </h2>
         <p>
-          {companyData.name} reserves the right to modify these Terms at any
-          time. Changes will be effective immediately upon posting on our
-          Website. Continued use of our Services constitutes acceptance of the
-          revised Terms.
+          {config.name} reserves the right to modify these Terms at any time.
+          Changes will be effective immediately upon posting on our Website.
+          Continued use of our Services constitutes acceptance of the revised
+          Terms.
         </p>
 
         <h2 className="text-2xl font-semibold mt-8 mb-4">
@@ -134,9 +137,9 @@ export default function TermsOfService() {
           at:
         </p>
         <p>
-          Email: {companyData.email}
+          Email: {config.email}
           <br />
-          Address: {companyData.address}
+          Address: {config.address}
         </p>
       </div>
     </div>

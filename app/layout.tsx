@@ -1,3 +1,5 @@
+"use client";
+
 import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -5,21 +7,24 @@ import Head from "next/head";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import HelmetWrapper from "@/app/components/HelmetWrapper";
-import companyData from "@/config/company.json";
+import { CookieBanner } from "./components/CookieBanner";
+import { useSiteConfigStore } from "@/lib/store";
 
 const inter = Inter({ subsets: ["latin"] });
-
-export const metadata: Metadata = {
-  title: `${companyData.name} - ${companyData.intro}`,
-  description: companyData.description,
-  keywords: companyData.keywords,
-};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const { config } = useSiteConfigStore();
+
+  const metadata: Metadata = {
+    title: `${config.name} - ${config.intro}`,
+    description: config.description,
+    keywords: config.keywords,
+  };
+
   return (
     <HelmetWrapper>
       <html lang="en">
@@ -42,6 +47,7 @@ export default function RootLayout({
           <Header />
           <main className="pt-16 min-h-[500px]">{children}</main>
           <Footer />
+          <CookieBanner />
         </body>
       </html>
     </HelmetWrapper>

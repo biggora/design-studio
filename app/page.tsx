@@ -9,26 +9,28 @@ import "slick-carousel/slick/slick-theme.css";
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
-
-import Slide1 from "../static/images/slide_1.png";
-import Slide2 from "../static/images/slide_2.png";
-import Slide3 from "../static/images/slide_3.png";
-import { printCardHeight, printCardWidth } from "@/lib/image";
-import companyData from "@/config/company.json";
+import {
+  printCardHeight,
+  printCardWidth,
+  getImageUrl,
+  getPlaceholderImage,
+} from "@/lib/image";
+import { truncateText } from "@/lib/utils";
+import { useSiteConfigStore } from "@/lib/store";
 
 const carouselItems = [
   {
-    image: Slide1,
+    image: getImageUrl("slide_1.png"),
     title: "Innovative Thread Designs",
     description: "Pushing the boundaries of textile art and design",
   },
   {
-    image: Slide2,
+    image: getImageUrl("slide_2.png"),
     title: "Bespoke Creations",
     description: "Tailored solutions for your unique vision",
   },
   {
-    image: Slide3,
+    image: getImageUrl("slide_3.png"),
     title: "Artistic Excellence",
     description: "Where creativity meets craftsmanship",
   },
@@ -36,6 +38,7 @@ const carouselItems = [
 
 export default function Home() {
   const [featuredPrints, setFeaturedPrints] = useState<Print[]>([]);
+  const { config } = useSiteConfigStore();
 
   useEffect(() => {
     async function fetchFeaturedPrints() {
@@ -67,11 +70,9 @@ export default function Home() {
   return (
     <>
       <Helmet>
-        <title>
-          `${companyData.name} - ${companyData.intro}`
-        </title>
-        <meta name="description" content={companyData.description} />
-        <meta name="keywords" content={companyData.keywords} />
+        <title>{`${config.name} - ${config.intro}`}</title>
+        <meta name="description" content={config.description} />
+        <meta name="keywords" content={config.keywords} />
       </Helmet>
 
       <section className="w-full -mt-16">
@@ -99,9 +100,7 @@ export default function Home() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <section className="text-center mb-12 bg-[#212A31] text-[#D3D9D4] py-16 rounded-lg">
-          <h1 className="text-4xl font-bold mb-4">
-            Welcome to {companyData.name}
-          </h1>
+          <h1 className="text-4xl font-bold mb-4">Welcome to {config.name}</h1>
           <p className="text-xl text-[#748D92]">
             Weaving innovation into every design
           </p>
@@ -118,7 +117,10 @@ export default function Home() {
                 className="bg-white shadow-md rounded-lg overflow-hidden"
               >
                 <Image
-                  src={print.externalImageUrl || "/placeholder.svg"}
+                  src={
+                    print.externalImageUrl ||
+                    getPlaceholderImage(printCardWidth, printCardHeight)
+                  }
                   alt={print.title}
                   width={printCardWidth}
                   height={printCardHeight}
@@ -131,7 +133,7 @@ export default function Home() {
                     {print.title}
                   </h3>
                   <p className="text-[#748D92]">
-                    {print.description.substring(0, 100)}...
+                    {truncateText(print.description, 100)}
                   </p>
                   <Link
                     href={`/prints/${print.id}`}
@@ -144,47 +146,6 @@ export default function Home() {
             ))}
           </div>
         </section>
-
-        {/*<section className="text-center mb-12">*/}
-        {/*  <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">*/}
-        {/*    Our Services*/}
-        {/*  </h2>*/}
-        {/*  <p className="text-[#748D92] mb-6">*/}
-        {/*    Discover how {companyData.name} can bring your vision to life*/}
-        {/*  </p>*/}
-        {/*  <Link*/}
-        {/*    href="/services"*/}
-        {/*    className="bg-[#124E66] text-[#D3D9D4] px-6 py-2 rounded-full hover:bg-[#2E3944] transition-colors"*/}
-        {/*  >*/}
-        {/*    Explore Our Services*/}
-        {/*  </Link>*/}
-        {/*</section>*/}
-
-        {/*<section>*/}
-        {/*  <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">*/}
-        {/*    Client Testimonials*/}
-        {/*  </h2>*/}
-        {/*  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">*/}
-        {/*    <div className="bg-[#D3D9D4] p-6 rounded-lg">*/}
-        {/*      <p className="italic mb-4 text-[#212A31]">*/}
-        {/*        &quot;{companyData.name} transformed our vision into reality. Their*/}
-        {/*        innovative designs exceeded our expectations!&quot;*/}
-        {/*      </p>*/}
-        {/*      <p className="font-semibold text-[#124E66]">*/}
-        {/*        - Jane Doe, Company XYZ*/}
-        {/*      </p>*/}
-        {/*    </div>*/}
-        {/*    <div className="bg-[#D3D9D4] p-6 rounded-lg">*/}
-        {/*      <p className="italic mb-4 text-[#212A31]">*/}
-        {/*        &quot;Working with {companyData.name} was a game-changer for our brand.*/}
-        {/*        Their creativity and attention to detail are unmatched.&quot;*/}
-        {/*      </p>*/}
-        {/*      <p className="font-semibold text-[#124E66]">*/}
-        {/*        - John Smith, ABC Corp*/}
-        {/*      </p>*/}
-        {/*    </div>*/}
-        {/*  </div>*/}
-        {/*</section>*/}
       </div>
     </>
   );

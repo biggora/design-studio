@@ -1,39 +1,39 @@
 "use client";
 
 import { Helmet } from "react-helmet-async";
-import companyData from "@/config/company.json";
+import { useSiteConfigStore } from "@/lib/store";
 
 export default function About() {
+  const { config } = useSiteConfigStore();
   return (
     <>
       <Helmet>
-        <title>About {companyData.name} - Our Story and Approach</title>
+        <title>About {config.name} - Our Story and Approach</title>
         <meta
           name="description"
-          content={`Learn about ${companyData.name}&#39;s journey, our passionate team, and our innovative approach to thread-based design.`}
+          content={`Learn about ${config.name}&#39;s journey, our passionate team, and our innovative approach to thread-based design.`}
         />
         <meta
           name="keywords"
-          content={`${companyData.name}, about us, design studio, thread art, textile innovation`}
+          content={`${config.name}, about us, design studio, thread art, textile innovation`}
         />
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-3">
         <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
-          About {companyData.name}
+          About {config.name}
         </h1>
 
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
           <p className="text-gray-700 mb-4">
-            {companyData.name} was founded in 2024 with a vision to
-            revolutionize the world of design through innovative use AI tools.
-            Our journey began with a small team of passionate designers who
-            believed in the power of unconventional tools to create stunning
-            visual narratives.
+            {config.name} was founded in 2024 with a vision to revolutionize the
+            world of design through innovative use AI tools. Our journey began
+            with a small team of passionate designers who believed in the power
+            of unconventional tools to create stunning visual narratives.
           </p>
           <p className="text-gray-700">
-            At {companyData.name}, we believe that fashion is more than just
+            At {config.name}, we believe that fashion is more than just
             clothing—it&#39;s a reflection of your personality and passions. Our
             mission is to transform everyday apparel into bold statements of
             individuality and creativity.
@@ -47,13 +47,13 @@ export default function About() {
           <p className="text-gray-700">
             From versatile t-shirts and cozy hoodies to timeless polos, our wide
             range of products ensures there&#39;s something for everyone. With
-            {companyData.name}, you’re not just wearing clothes; you’re wearing
-            your story.
+            {config.name}, you’re not just wearing clothes; you’re wearing your
+            story.
           </p>
           <p className="text-gray-700">
             Dare to be different, celebrate your quirks, and let your fashion do
-            the talking—because at {companyData.name}, individuality is always
-            in style.
+            the talking—because at {config.name}, individuality is always in
+            style.
           </p>
         </section>
 
@@ -77,7 +77,7 @@ export default function About() {
         <section className="pb-3">
           <h2 className="text-2xl font-semibold mb-4">Our Approach</h2>
           <p className="text-gray-700 mb-4">
-            At {companyData.name}, we believe that great design is born from a
+            At {config.name}, we believe that great design is born from a
             perfect blend of creativity, technical skill, and a deep
             understanding of our clients&apos; needs. Our approach is rooted in:
           </p>

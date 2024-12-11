@@ -6,10 +6,15 @@ import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
 import { useEffect, useState } from "react";
 import { Print } from "@/types/print";
-import companyData from "@/config/company.json";
+import {
+  getPlaceholderImage,
+  printCardHeight,
+  printCardWidth,
+} from "@/lib/image";
+import { formatDate, truncateText } from "@/lib/utils";
 
 async function getPrintById(id: string) {
-  const { data, error } = await supabase
+  const { data: print, error } = await supabase
     .from("prints")
     .select("*")
     .eq("id", id)
@@ -20,11 +25,24 @@ async function getPrintById(id: string) {
     return null;
   }
 
-  return data;
+  // Fetch related prints from the same collection
+  const { data: relatedPrints, error: relatedError } = await supabase
+    .from("prints")
+    .select("*")
+    .eq("collection", print.collection)
+    .neq("id", id)
+    .limit(3);
+
+  if (relatedError) {
+    console.error("Error fetching related prints:", relatedError);
+  }
+
+  return { print, relatedPrints: relatedPrints || [] };
 }
 
 export default function PrintDetails({ params }: { params: { id: string } }) {
   const [print, setPrint] = useState<Print | null>(null);
+  const [relatedPrints, setRelatedPrints] = useState<Print[]>([]);
 
   const goToLink = (url: string) => {
     window.open(url, "_blank");
@@ -32,8 +50,11 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     async function fetchPrint() {
-      const printData = await getPrintById(params.id);
-      setPrint(printData);
+      const data = await getPrintById(params.id);
+      if (data) {
+        setPrint(data.print);
+        setRelatedPrints(data.relatedPrints);
+      }
     }
     fetchPrint();
   }, [params.id]);
@@ -45,14 +66,14 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
   return (
     <>
       <Helmet>
-        <title>{`${print.title} - ${companyData.name} Print`}</title>
+        <title>{`${print.title} - ThreadQuirk Print`}</title>
         <meta
           name="description"
-          content={`Discover the unique ${print.title} print by ${companyData.name}. ${print.description}`}
+          content={`Discover the unique ${print.title} print by ThreadQuirk. ${print.description}`}
         />
         <meta
           name="keywords"
-          content={`${print.keywords}, thread art, textile design, ${companyData.name} print`}
+          content={`${print.keywords}, thread art, textile design, ThreadQuirk print`}
         />
       </Helmet>
 
@@ -67,10 +88,10 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative h-0 pb-[66.67%] md:pb-0 md:h-full">
               <Image
-                src={print.externalImageUrl || "/placeholder.svg"}
+                src={print.externalImageUrl || getPlaceholderImage(900, 600)}
                 alt={print.title}
-                width={900}
-                height={600}
+                width={printCardWidth}
+                height={printCardHeight}
                 className="object-cover w-full h-full"
               />
             </div>
@@ -107,6 +128,9 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
                   </p>
                 </div>
               </div>
+              <p className="text-[#748D92] mb-4">
+                Created on: {formatDate(print.createdAt)}
+              </p>
               <button
                 onClick={() => {
                   goToLink(print?.externalLink);
@@ -119,6 +143,46 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
           </div>
         </div>
       </div>
+      {relatedPrints.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-2xl font-bold mb-6 text-[#212A31]">
+            More from this collection
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {relatedPrints.map((relatedPrint) => (
+              <div
+                key={relatedPrint.id}
+                className="bg-white shadow-md rounded-lg overflow-hidden"
+              >
+                <Image
+                  src={
+                    relatedPrint.externalImageUrl ||
+                    getPlaceholderImage(printCardWidth, printCardHeight)
+                  }
+                  alt={relatedPrint.title}
+                  width={printCardWidth}
+                  height={printCardHeight}
+                  className={`w-full h-[${printCardWidth}px] object-cover`}
+                />
+                <div className="p-4">
+                  <h3 className="font-semibold mb-2 text-[#212A31]">
+                    {relatedPrint.title}
+                  </h3>
+                  <p className="text-[#748D92] mb-2">
+                    {truncateText(relatedPrint.description, 100)}
+                  </p>
+                  <Link
+                    href={`/prints/${relatedPrint.id}`}
+                    className="text-[#124E66] hover:underline"
+                  >
+                    View Details
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
