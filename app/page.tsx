@@ -10,9 +10,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
 
-import Slide1 from "../static/images/SHOP1_00002.png";
-import Slide2 from "../static/images/TABLE_00001.png";
-import Slide3 from "../static/images/T_SHIRT_1_00003.png";
+import Slide1 from "../static/images/slide_1.png";
+import Slide2 from "../static/images/slide_2.png";
+import Slide3 from "../static/images/slide_3.png";
 import { printCardHeight, printCardWidth } from "@/lib/image";
 import companyData from "@/config/company.json";
 
@@ -124,7 +124,7 @@ export default function Home() {
                   height={printCardHeight}
                   loading="lazy"
                   style={{ objectFit: "cover" }}
-                  className={`w-full h-[400px] object-cover`}
+                  className={`w-full h-[${printCardWidth}px] object-cover`}
                 />
                 <div className="p-4">
                   <h3 className="font-semibold mb-2 text-[#212A31]">

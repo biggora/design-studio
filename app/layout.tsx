@@ -5,7 +5,7 @@ import Head from "next/head";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import HelmetWrapper from "@/app/components/HelmetWrapper";
-import companyData from "../config/company.json";
+import companyData from "@/config/company.json";
 
 const inter = Inter({ subsets: ["latin"] });
 

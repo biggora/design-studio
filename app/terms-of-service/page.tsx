@@ -136,7 +136,7 @@ export default function TermsOfService() {
         <p>
           Email: {companyData.email}
           <br />
-          Address: Latvia, Riga, LV-1005
+          Address: {companyData.address}
         </p>
       </div>
     </div>
