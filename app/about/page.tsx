@@ -1,10 +1,11 @@
 "use client";
 
 import { Helmet } from "react-helmet-async";
-import { useSiteConfigStore } from "@/lib/store";
+import { useContext } from "react";
+import { ConfigContext } from "@/app/wrapper";
 
 export default function About() {
-  const { config } = useSiteConfigStore();
+  const config = useContext(ConfigContext);
   return (
     <>
       <Helmet>
