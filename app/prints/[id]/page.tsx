@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Print } from "@/types/print";
 import {
   getPlaceholderImage,
@@ -12,6 +12,7 @@ import {
   printCardWidth,
 } from "@/lib/image";
 import { formatDate, truncateText } from "@/lib/utils";
+import { ConfigContext } from "@/app/wrapper";
 
 async function getPrintById(id: string) {
   const { data: print, error } = await supabase
@@ -41,6 +42,7 @@ async function getPrintById(id: string) {
 }
 
 export default function PrintDetails({ params }: { params: { id: string } }) {
+  const config = useContext(ConfigContext);
   const [print, setPrint] = useState<Print | null>(null);
   const [relatedPrints, setRelatedPrints] = useState<Print[]>([]);
 
@@ -63,18 +65,37 @@ export default function PrintDetails({ params }: { params: { id: string } }) {
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
 
+  const printTitle = `${print.title} - ${config.name} Print`;
+
   return (
     <>
       <Helmet>
-        <title>{`${print.title} - ThreadQuirk Print`}</title>
+        <title>{printTitle}</title>
         <meta
           name="description"
-          content={`Discover the unique ${print.title} print by ThreadQuirk. ${print.description}`}
+          content={`Discover the unique print. ${print.description}`}
         />
         <meta
           name="keywords"
-          content={`${print.keywords}, thread art, textile design, ThreadQuirk print`}
+          content={`${print.keywords}, ${config.keywords}`}
         />
+        <meta property="og:title" content={printTitle} />
+        <meta
+          property="twitter:image"
+          content={print.externalImageUrl || getPlaceholderImage(900, 600)}
+        />
+        <meta
+          property="og:image"
+          content={print.externalImageUrl || getPlaceholderImage(900, 600)}
+        />
+        <meta
+          property="og:url"
+          content={`https://${config.domain}/prints/${print.id}`}
+        />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content={print.description} />
+        <meta property="og:site_name" content={printTitle} />
+        <meta property="og:locale" content="en_US" />
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

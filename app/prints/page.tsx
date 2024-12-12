@@ -7,7 +7,11 @@ import { supabase } from "@/utils/supabase";
 import { Print } from "@/types/print";
 import { useContext, useEffect, useState } from "react";
 import { Search } from "lucide-react";
-import { printCardHeight, printCardWidth } from "@/lib/image";
+import {
+  getPlaceholderImage,
+  printCardHeight,
+  printCardWidth,
+} from "@/lib/image";
 import { ConfigContext } from "@/app/wrapper";
 
 const ITEMS_PER_PAGE = 12;
@@ -100,18 +104,34 @@ export default function PrintFolio({
     setCurrentPage(1);
   };
 
+  const pageTitle = `${config.name} Prints`;
+  const pageDescription = `Discover the unique prints. ${config.description}`;
   return (
     <>
       <Helmet>
         <title>Our Prints - {config.name}</title>
         <meta
           name="description"
-          content="Explore our unique collection of thread-based prints. Each piece is a testament to innovative design and artistic excellence."
+          content={`Explore our unique collection of ${config.name} prints. Each piece is a testament to innovative design and artistic excellence.`}
         />
         <meta
           name="keywords"
-          content={`thread prints, textile art, innovative designs, ${config.name} collection`}
+          content={`t-shirt prints, textile art, innovative designs, ${config.name} collection, ${config.keywords}`}
         />
+        <meta property="og:title" content={pageTitle} />
+        <meta
+          property="twitter:image"
+          content={config.siteBanner || getPlaceholderImage(400, 200)}
+        />
+        <meta
+          property="og:image"
+          content={config.siteBanner || getPlaceholderImage(400, 200)}
+        />
+        <meta property="og:url" content={`https://${config.domain}/prints`} />
+        <meta property="og:type" content="website" />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:site_name" content={pageTitle} />
+        <meta property="og:locale" content="en_US" />
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

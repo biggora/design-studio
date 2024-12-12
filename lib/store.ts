@@ -13,6 +13,8 @@ export interface SiteConfig {
   description: string;
   keywords: string;
   domain: string;
+  siteLogo: string;
+  siteBanner: string;
   email: string;
   phone: string;
   address: string;
