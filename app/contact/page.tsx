@@ -11,6 +11,9 @@ import {
   SiX,
 } from "@icons-pack/react-simple-icons";
 import { ConfigContext } from "@/app/wrapper";
+import { RedBubble } from "@/app/components/Icons/RedBubble";
+import { TeePublic } from "@/app/components/Icons/TeePublic";
+import { TostaDora } from "@/app/components/Icons/TostaDora";
 
 export default function Contact() {
   const config = useContext(ConfigContext);
@@ -116,7 +119,7 @@ export default function Contact() {
                   href={config.social.facebook}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
                 >
                   <SiFacebook size={24} />
                   <span className="sr-only">Facebook</span>
@@ -127,7 +130,7 @@ export default function Contact() {
                   href={config.social.twitter}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
                 >
                   <SiX size={24} />
                   <span className="sr-only">Twitter</span>
@@ -138,7 +141,7 @@ export default function Contact() {
                   href={config.social.instagram}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
                 >
                   <SiInstagram size={24} />
                   <span className="sr-only">Instagram</span>
@@ -149,7 +152,7 @@ export default function Contact() {
                   href={config.social.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
                 >
                   <SiLinkedin size={24} />
                   <span className="sr-only">LinkedIn</span>
@@ -160,10 +163,48 @@ export default function Contact() {
                   href={config.social.pinterest}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
                 >
                   <SiPinterest size={24} />
                   <span className="sr-only">Pinterest</span>
+                </a>
+              )}
+            </div>
+            <h2 className="text-2xl font-semibold mb-4 mt-3 text-[#212A31]">
+              Our Shops
+            </h2>
+            <div className="flex justify-left space-x-4">
+              {config.representation.redbuble && (
+                <a
+                  href={config.representation.redbuble}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
+                >
+                  <RedBubble size={24} color="#748D92" />
+                  <span className="sr-only">Redbuble</span>
+                </a>
+              )}
+              {config.representation.teepublic && (
+                <a
+                  href={config.representation.teepublic}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
+                >
+                  <TeePublic size={24} />
+                  <span className="sr-only">Teepublic</span>
+                </a>
+              )}
+              {config.representation.tostadora && (
+                <a
+                  href={config.representation.tostadora}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#748D92] hover:text-[#124e66] transition-colors"
+                >
+                  <TostaDora size={24} />
+                  <span className="sr-only">Tostadora</span>
                 </a>
               )}
             </div>

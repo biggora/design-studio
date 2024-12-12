@@ -5,6 +5,10 @@ export interface SocialMedia {
   [key: string]: string;
 }
 
+export interface Representation {
+  [key: string]: string;
+}
+
 export type ConfigValue = string & SocialMedia;
 
 export interface SiteConfig {
@@ -20,6 +24,7 @@ export interface SiteConfig {
   address: string;
   policyUpdateDate: string;
   social: SocialMedia;
+  representation: Representation;
 }
 
 interface SiteConfigStore {
