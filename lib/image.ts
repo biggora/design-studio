@@ -2,7 +2,7 @@ export const designCardWidth = 600;
 export const designCardHeight = 400;
 
 export function getImageUrl(imageName: string): string {
-  return `/static/images/${imageName}`;
+  return `/images/${imageName}`;
 }
 
 export function getPlaceholderImage(width: number, height: number): string {

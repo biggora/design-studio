@@ -1,24 +1,12 @@
 "use client";
 
 import { useContext } from "react";
-import { Helmet } from "react-helmet-async";
 import { ConfigContext } from "@/app/wrapper";
 
 export default function TermsOfService() {
   const config = useContext(ConfigContext);
   return (
     <>
-      <Helmet>
-        <title>Terms of Service - {config.name}</title>
-        <meta
-          name="description"
-          content={`Contact ${config.name}&#39;s journey, our passionate team, and our innovative approach to thread-based design.`}
-        />
-        <meta
-          name="keywords"
-          content={`${config.name}, terms of service, ${config.keywords}`}
-        />
-      </Helmet>
       <div className="container mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
           Terms of Service

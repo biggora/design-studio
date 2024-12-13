@@ -1,14 +1,15 @@
 "use client";
 
 import { useContext } from "react";
-import { Helmet } from "react-helmet-async";
+// import { Helmet } from "react-helmet-async";
 import { ConfigContext } from "@/app/wrapper";
+import Head from "next/head";
 
 export default function PrivacyPolicy() {
   const config = useContext(ConfigContext);
   return (
     <>
-      <Helmet>
+      <Head>
         <title>Privacy Policy - {config.name}</title>
         <meta
           name="description"
@@ -18,7 +19,7 @@ export default function PrivacyPolicy() {
           name="keywords"
           content={`${config.name}, privacy policy, ${config.keywords}`}
         />
-      </Helmet>
+      </Head>
       <div className="container mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
           Privacy Policy

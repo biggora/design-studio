@@ -1,6 +1,5 @@
 "use client";
 
-import { Helmet } from "react-helmet-async";
 import { useContext } from "react";
 import { ConfigContext } from "@/app/wrapper";
 
@@ -8,18 +7,6 @@ export default function About() {
   const config = useContext(ConfigContext);
   return (
     <>
-      <Helmet>
-        <title>About {config.name} - Our Story and Approach</title>
-        <meta
-          name="description"
-          content={`Learn about ${config.name}&#39;s journey, our passionate team, and our innovative approach to thread-based design.`}
-        />
-        <meta
-          name="keywords"
-          content={`${config.name}, about us, design studio, thread art, textile innovation`}
-        />
-      </Helmet>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-3">
         <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
           About {config.name}

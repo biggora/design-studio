@@ -1,9 +1,6 @@
 "use client";
 
 import { CheckCircle } from "lucide-react";
-import { Helmet } from "react-helmet-async";
-import { useContext } from "react";
-import { ConfigContext } from "@/app/wrapper";
 
 const services = [
   {
@@ -34,21 +31,8 @@ const services = [
 ];
 
 export default function Services() {
-  const config = useContext(ConfigContext);
   return (
     <>
-      <Helmet>
-        <title>Our Services - {config.name}</title>
-        <meta
-          name="description"
-          content={`Explore ${config.name}'s range of innovative thread-based design services, from custom art to textile branding and interior design.`}
-        />
-        <meta
-          name="keywords"
-          content="thread art services, textile branding, interior thread design, custom artwork"
-        />
-      </Helmet>
-
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <h1 className="text-4xl font-bold mb-8">Our Services</h1>
 
