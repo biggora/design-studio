@@ -1,4 +1,4 @@
-export interface Print {
+export interface Design {
   id: number;
   externalId: number;
   title: string;

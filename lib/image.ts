@@ -1,5 +1,5 @@
-export const printCardWidth = 600;
-export const printCardHeight = 400;
+export const designCardWidth = 600;
+export const designCardHeight = 400;
 
 export function getImageUrl(imageName: string): string {
   return `/static/images/${imageName}`;

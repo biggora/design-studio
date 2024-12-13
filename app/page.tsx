@@ -8,10 +8,10 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import { useEffect, useState, useContext } from "react";
 import { supabase } from "@/utils/supabase";
-import { Print } from "@/types/print";
+import { Design } from "@/types/design";
 import {
-  printCardHeight,
-  printCardWidth,
+  designCardHeight,
+  designCardWidth,
   getImageUrl,
   getPlaceholderImage,
 } from "@/lib/image";
@@ -38,23 +38,23 @@ const carouselItems = [
 
 export default function Home() {
   const config = useContext(ConfigContext);
-  const [featuredPrints, setFeaturedPrints] = useState<Print[]>([]);
+  const [featuredDesigns, setFeaturedDesigns] = useState<Design[]>([]);
 
   useEffect(() => {
-    async function fetchFeaturedPrints() {
-      const { data, error } = await supabase.from("prints").select("*");
+    async function fetchFeaturedDesigns() {
+      const { data, error } = await supabase.from("designs").select("*");
 
       if (error) {
-        console.error("Error fetching prints:", error);
+        console.error("Error fetching designs:", error);
         return;
       }
 
-      // Randomly select 3 prints
-      const randomPrints = data.sort(() => 0.5 - Math.random()).slice(0, 3);
-      setFeaturedPrints(randomPrints);
+      // Randomly select 3 designs
+      const randomDesigns = data.sort(() => 0.5 - Math.random()).slice(0, 3);
+      setFeaturedDesigns(randomDesigns);
     }
 
-    fetchFeaturedPrints();
+    void fetchFeaturedDesigns();
   }, []);
 
   const settings = {
@@ -108,35 +108,35 @@ export default function Home() {
 
         <section className="mb-12">
           <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
-            Featured Prints
+            Featured Designs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredPrints.map((print) => (
+            {featuredDesigns.map((design) => (
               <div
-                key={print.id}
+                key={design.id}
                 className="bg-white shadow-md rounded-lg overflow-hidden"
               >
                 <Image
                   src={
-                    print.externalImageUrl ||
-                    getPlaceholderImage(printCardWidth, printCardHeight)
+                    design.externalImageUrl ||
+                    getPlaceholderImage(designCardWidth, designCardHeight)
                   }
-                  alt={print.title}
-                  width={printCardWidth}
-                  height={printCardHeight}
+                  alt={design.title}
+                  width={designCardWidth}
+                  height={designCardHeight}
                   loading="lazy"
                   style={{ objectFit: "cover" }}
-                  className={`w-full h-[${printCardWidth}px] object-cover`}
+                  className={`w-full h-[${designCardWidth}px] object-cover`}
                 />
                 <div className="p-4">
                   <h3 className="font-semibold mb-2 text-[#212A31]">
-                    {print.title}
+                    {design.title}
                   </h3>
                   <p className="text-[#748D92]">
-                    {truncateText(print.description, 100)}
+                    {truncateText(design.description, 100)}
                   </p>
                   <Link
-                    href={`/prints/${print.id}`}
+                    href={`/designs/${design.id}`}
                     className="text-[#124E66] hover:underline mt-2 inline-block"
                   >
                     View Details

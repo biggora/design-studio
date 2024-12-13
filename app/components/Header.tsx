@@ -21,10 +21,10 @@ export default function Header() {
             Home
           </Link>
           <Link
-            href="/prints"
+            href="/designs"
             className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
           >
-            Our Prints
+            Our Designs
           </Link>
           <Link
             href="/about"

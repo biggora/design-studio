@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { NextFont } from "next/dist/compiled/@next/font";
 import Head from "next/head";
 import Header from "./components/Header";
@@ -47,10 +48,24 @@ export default async function RootLayout({
               type="text/css"
               href="https://cdnjs.cloudflare.com/ajax/libs/slick-carousel/1.6.0/slick-theme.min.css"
             />
+            {newConfig?.verification?.pinterest ? (
+              <meta
+                name="p:domain_verify"
+                content={newConfig.verification.pinterest}
+              />
+            ) : (
+              ""
+            )}
+            {newConfig?.analytics?.google ? (
+              <GoogleAnalytics gaId={newConfig?.analytics?.google} />
+            ) : (
+              ""
+            )}
+            <link rel="icon" href="/static/favicon/favicon.ico" />
           </Head>
           <body className={`${inter.className} bg-[#D3D9D4]`}>
             <Header />
-            <main className="pt-16 min-h-[600px]">{children}</main>
+            <main className="main-container pt-16">{children}</main>
             <Footer />
             <CookieBanner />
           </body>

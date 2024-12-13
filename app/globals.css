@@ -16,6 +16,10 @@
   }
 }
 
+.main-container {
+  min-height: calc(100vh - 160px);
+}
+
 /* Custom styles for the carousel */
 .slick-dots li button:before {
   color: #748d92 !important;
@@ -28,4 +32,14 @@
 .slick-prev:before,
 .slick-next:before {
   color: #124e66 !important;
+}
+
+.slick-prev {
+  left: 25px !important;
+  z-index: 10;
+}
+
+.slick-next {
+  right: 25px !important;
+  z-index: 10;
 }

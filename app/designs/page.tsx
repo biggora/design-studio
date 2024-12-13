@@ -4,27 +4,27 @@ import Image from "next/image";
 import Link from "next/link";
 import { Helmet } from "react-helmet-async";
 import { supabase } from "@/utils/supabase";
-import { Print } from "@/types/print";
+import { Design } from "@/types/design";
 import { useContext, useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import {
   getPlaceholderImage,
-  printCardHeight,
-  printCardWidth,
+  designCardHeight,
+  designCardWidth,
 } from "@/lib/image";
 import { ConfigContext } from "@/app/wrapper";
 
 const ITEMS_PER_PAGE = 12;
 
-async function getPrints(
+async function getDesigns(
   page: number,
   searchQuery: string,
   collection: string,
-): Promise<{ prints: Print[]; total: number }> {
+): Promise<{ designs: Design[]; total: number }> {
   const start = (page - 1) * ITEMS_PER_PAGE;
   const end = start + ITEMS_PER_PAGE - 1;
 
-  let query = supabase.from("prints").select("*", { count: "exact" });
+  let query = supabase.from("designs").select("*", { count: "exact" });
 
   if (searchQuery) {
     query = query.ilike("title", `%${searchQuery}%`);
@@ -37,16 +37,16 @@ async function getPrints(
   const { data, error, count } = await query.range(start, end);
 
   if (error) {
-    console.error("Error fetching prints:", error);
-    return { prints: [], total: 0 };
+    console.error("Error fetching designs:", error);
+    return { designs: [], total: 0 };
   }
 
-  return { prints: data || [], total: count || 0 };
+  return { designs: data || [], total: count || 0 };
 }
 
 async function fetchCollections() {
   const { data, error } = await supabase
-    .from("prints")
+    .from("designs")
     .select("collection")
     .not("collection", "is", null);
 
@@ -58,13 +58,13 @@ async function fetchCollections() {
   return Array.from(new Set(data.map((item) => item.collection))) as string[];
 }
 
-export default function PrintFolio({
+export default function DesignFolio({
   searchParams,
 }: {
   searchParams: { page?: string };
 }) {
   const config = useContext(ConfigContext);
-  const [prints, setPrints] = useState<Print[]>([]);
+  const [designs, setDesigns] = useState<Design[]>([]);
   const [total, setTotal] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(
@@ -78,12 +78,12 @@ export default function PrintFolio({
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true);
-      const { prints, total } = await getPrints(
+      const { designs, total } = await getDesigns(
         currentPage,
         searchQuery,
         selectedCollection,
       );
-      setPrints(prints);
+      setDesigns(designs);
       setTotal(total);
 
       const collectionsData = await fetchCollections();
@@ -104,19 +104,19 @@ export default function PrintFolio({
     setCurrentPage(1);
   };
 
-  const pageTitle = `${config.name} Prints`;
-  const pageDescription = `Discover the unique prints. ${config.description}`;
+  const pageTitle = `${config.name} designs`;
+  const pageDescription = `Discover the unique designs. ${config.description}`;
   return (
     <>
       <Helmet>
-        <title>Our Prints - {config.name}</title>
+        <title>Our designs - {config.name}</title>
         <meta
           name="description"
-          content={`Explore our unique collection of ${config.name} prints. Each piece is a testament to innovative design and artistic excellence.`}
+          content={`Explore our unique collection of ${config.name} designs. Each piece is a testament to innovative design and artistic excellence.`}
         />
         <meta
           name="keywords"
-          content={`t-shirt prints, textile art, innovative designs, ${config.name} collection, ${config.keywords}`}
+          content={`t-shirt designs, textile art, innovative designs, ${config.name} collection, ${config.keywords}`}
         />
         <meta property="og:title" content={pageTitle} />
         <meta
@@ -127,7 +127,7 @@ export default function PrintFolio({
           property="og:image"
           content={config.siteBanner || getPlaceholderImage(400, 200)}
         />
-        <meta property="og:url" content={`https://${config.domain}/prints`} />
+        <meta property="og:url" content={`https://${config.domain}/designs`} />
         <meta property="og:type" content="website" />
         <meta property="og:description" content={pageDescription} />
         <meta property="og:site_name" content={pageTitle} />
@@ -135,18 +135,18 @@ export default function PrintFolio({
       </Helmet>
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Our Prints</h1>
+        <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Our Designs</h1>
 
         <div className="flex flex-col md:flex-row gap-4 mb-8">
           <form onSubmit={handleSearch} className="flex-grow">
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search prints..."
+                placeholder="Search designs..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full px-4 py-2 pr-10 rounded-md border border-[#748D92] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
-                aria-label="Search prints"
+                aria-label="Search designs"
               />
               <button
                 type="submit"
@@ -173,35 +173,35 @@ export default function PrintFolio({
 
         {isLoading ? (
           <div className="text-center py-8">Loading...</div>
-        ) : prints.length > 0 ? (
+        ) : designs.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {prints.map((print: Print) => (
+            {designs.map((design: Design) => (
               <div
-                key={print.id}
+                key={design.id}
                 className="bg-white shadow-md rounded-lg overflow-hidden flex flex-col"
               >
                 <Image
                   src={decodeURIComponent(
-                    print.externalImageUrl || "/placeholder.svg",
+                    design.externalImageUrl || "/placeholder.svg",
                   )}
-                  alt={print.title}
-                  width={printCardWidth}
-                  height={printCardHeight}
-                  className={`w-full h-[${printCardWidth}px] object-cover`}
+                  alt={design.title}
+                  width={designCardWidth}
+                  height={designCardHeight}
+                  className={`w-full h-[${designCardWidth}px] object-cover`}
                 />
                 <div className="p-4 flex flex-col flex-grow">
                   <h2 className="text-xl font-semibold mb-2 text-[#212A31]">
-                    {print.title}
+                    {design.title}
                   </h2>
-                  <p className="text-[#748D92] mb-4">{print.description}</p>
+                  <p className="text-[#748D92] mb-4">{design.description}</p>
                   <p className="text-[#748D92] mb-2">
-                    Collection: {print.collection}
+                    Collection: {design.collection}
                   </p>
                   <Link
-                    href={`/prints/${print.id}`}
+                    href={`/designs/${design.id}`}
                     className="text-[#124E66] hover:underline mt-auto"
                   >
-                    View Print Details
+                    View design Details
                   </Link>
                 </div>
               </div>
@@ -209,7 +209,7 @@ export default function PrintFolio({
           </div>
         ) : (
           <div className="text-center py-8">
-            No prints found. Try adjusting your search or filter.
+            No designs found. Try adjusting your search or filter.
           </div>
         )}
 

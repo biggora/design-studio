@@ -5,7 +5,15 @@ export interface SocialMedia {
   [key: string]: string;
 }
 
-export interface Representation {
+export interface RepresentationProps {
+  [key: string]: string;
+}
+
+export interface VerificationProps {
+  [key: string]: string;
+}
+
+export interface AnalyticsProps {
   [key: string]: string;
 }
 
@@ -24,7 +32,9 @@ export interface SiteConfig {
   address: string;
   policyUpdateDate: string;
   social: SocialMedia;
-  representation: Representation;
+  representation: RepresentationProps;
+  verification: VerificationProps;
+  analytics: AnalyticsProps;
 }
 
 interface SiteConfigStore {

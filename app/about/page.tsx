@@ -89,7 +89,7 @@ export default function About() {
             <li>Continuous learning and adaptation to emerging trends</li>
           </ul>
           <p className="text-gray-700 pb-5">
-            This approach allows us to create prints that are not only visually
+            This approach allows us to create designs that are not only visually
             striking but also meaningful and impactful.
           </p>
         </section>

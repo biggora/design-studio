@@ -2,7 +2,7 @@
   "name": "Design Studio",
   "intro": "Innovative Design Studio",
   "description": "We are a cutting-edge design studio specializing in unique and quirky thread-based designs.",
-  "keywords": "thread art, textile design, print",
+  "keywords": "thread art, textile design, t-shirt print",
   "siteLogo": "https://via.placeholder.com/200x200",
   "siteBanner": "https://via.placeholder.com/400x200",
   "domain": "example.com",
@@ -22,6 +22,12 @@
     "redbuble": "",
     "teepublic": "",
     "tostadora": ""
+  },
+  "verification": {
+    "pinterest": ""
+  },
+  "analytics": {
+    "google": ""
   },
   "slides": {
     "test": ""
