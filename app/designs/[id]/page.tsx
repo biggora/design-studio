@@ -7,7 +7,7 @@ import {
   designCardHeight,
   designCardWidth,
 } from "@/lib/image";
-import { formatDate } from "@/lib/utils";
+import { formatDate, truncateText } from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { DesignCard } from "@/app/components/DesignCard";
@@ -55,19 +55,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   if (!data || !data.design) {
     return {
-      title: "Print Not Found",
+      title: "Design Not Found",
     };
   }
 
   const { design } = data;
-
+  const title = `${design.title} - ${config.name} Design`;
+  const description = `Discover the unique ${design.title} design by ${config.name}. ${truncateText(design.description, 180)}`;
   return {
-    title: `${design.title} - ${config.name} Design`,
-    description: `Discover the unique ${design.title} design by ${config.name}. ${design.description}`,
+    title,
+    description,
     keywords: `${design.keywords}, thread art, textile design, ${config.name} design`,
     openGraph: {
-      title: `${design.title} - ${config.name} Design`,
-      description: `Discover the unique ${design.title} design by ${config.name}. ${design.description}`,
+      title,
+      description,
       images: [design.externalImageUrl],
     },
   };
@@ -150,6 +151,7 @@ export default async function DesignDetails({
               </p>
               <a
                 href={design?.externalLink}
+                target={design?.externalLink ? "_blank" : "_self"}
                 className="w-full block text-center bg-[#124E66] text-white px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
               >
                 Shop products with this design

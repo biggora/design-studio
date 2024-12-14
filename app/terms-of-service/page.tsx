@@ -1,10 +1,24 @@
-"use client";
+import { Metadata } from "next";
+import { SiteConfig } from "@/lib/store";
+import { getSiteConfig } from "@/utils/supabase";
 
-import { useContext } from "react";
-import { ConfigContext } from "@/app/wrapper";
+export async function generateMetadata(): Promise<Metadata> {
+  const config: SiteConfig = await getSiteConfig();
+  const title = `Terms of Service - ${config.name}`;
+  const description = `Read our terms of service to understand the agreement between you and ${config.name} regarding the use of our website and services.`;
+  return {
+    title,
+    description,
+    keywords: "terms of service, user agreement, legal, conditions of use",
+    openGraph: {
+      title,
+      description,
+    },
+  };
+}
 
-export default function TermsOfService() {
-  const config = useContext(ConfigContext);
+export default async function TermsOfService() {
+  const config: SiteConfig = await getSiteConfig();
   return (
     <>
       <div className="container mx-auto px-6 py-12">

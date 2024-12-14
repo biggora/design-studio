@@ -1,20 +1,22 @@
 import { Metadata } from "next";
-import { useSiteConfigStore } from "@/lib/store";
+import { SiteConfig } from "@/lib/store";
 import ContactForm from "../components/ContactForm";
 import SocialLinks from "../components/SocialLinks";
 import ShopLinks from "@/app/components/ShopLinks";
+import { getSiteConfig } from "@/utils/supabase";
 
+//       images: ["/static/images/contact-banner.jpg"], // Assuming you have a contact page banner image
 export async function generateMetadata(): Promise<Metadata> {
-  const { config } = useSiteConfigStore.getState();
-
+  const config: SiteConfig = await getSiteConfig();
+  const title = `Contact Us - ${config.name}`;
+  const description = `Get in touch with ${config.name}. We're here to answer your questions and discuss your thread-based design needs.`;
   return {
-    title: `Contact Us - ${config.name}`,
-    description: `Get in touch with ${config.name}. We're here to answer your questions and discuss your thread-based design needs.`,
+    title,
+    description,
     keywords: "contact, get in touch, thread art, design inquiry",
     openGraph: {
-      title: `Contact Us - ${config.name}`,
-      description: `Get in touch with ${config.name}. We're here to answer your questions and discuss your thread-based design needs.`,
-      images: ["/static/images/contact-banner.jpg"], // Assuming you have a contact page banner image
+      title,
+      description,
     },
   };
 }

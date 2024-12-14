@@ -1,25 +1,26 @@
-"use client";
+import { Metadata } from "next";
+import { SiteConfig } from "@/lib/store";
+import { getSiteConfig } from "@/utils/supabase";
 
-import { useContext } from "react";
-// import { Helmet } from "react-helmet-async";
-import { ConfigContext } from "@/app/wrapper";
-import Head from "next/head";
+export async function generateMetadata(): Promise<Metadata> {
+  const config: SiteConfig = await getSiteConfig();
+  const title = `Privacy Policy - ${config.name}`;
+  const description = `Read our privacy policy to understand how ${config.name} collects, uses, and protects your personal information.`;
+  return {
+    title,
+    description,
+    keywords: "privacy policy, data protection, personal information",
+    openGraph: {
+      title,
+      description,
+    },
+  };
+}
 
-export default function PrivacyPolicy() {
-  const config = useContext(ConfigContext);
+export default async function PrivacyPolicy() {
+  const config: SiteConfig = await getSiteConfig();
   return (
     <>
-      <Head>
-        <title>Privacy Policy - {config.name}</title>
-        <meta
-          name="description"
-          content={`Contact ${config.name}&#39;s journey, our passionate team, and our innovative approach to thread-based design.`}
-        />
-        <meta
-          name="keywords"
-          content={`${config.name}, privacy policy, ${config.keywords}`}
-        />
-      </Head>
       <div className="container mx-auto px-6 py-12">
         <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
           Privacy Policy

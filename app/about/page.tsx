@@ -1,10 +1,25 @@
-"use client";
+import { SiteConfig } from "@/lib/store";
+import { getSiteConfig } from "@/utils/supabase";
+import { Metadata } from "next";
 
-import { useContext } from "react";
-import { ConfigContext } from "@/app/wrapper";
+//       images: ["/static/images/about-banner.jpg"], // Assuming you have an about page banner image
+export async function generateMetadata(): Promise<Metadata> {
+  const config: SiteConfig = await getSiteConfig();
+  const title = `About ${config.name} - Our Story and Approach`;
+  const description = `Learn about ${config.name}'s journey, our passionate team, and our innovative approach to thread-based design.`;
+  return {
+    title,
+    description,
+    keywords: `${config.name}, about us, design studio, thread art, textile innovation`,
+    openGraph: {
+      title,
+      description,
+    },
+  };
+}
 
-export default function About() {
-  const config = useContext(ConfigContext);
+export default async function About() {
+  const config: SiteConfig = await getSiteConfig();
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-3">
