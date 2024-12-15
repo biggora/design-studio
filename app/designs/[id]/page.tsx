@@ -10,7 +10,7 @@ import {
 import { formatDate, truncateText } from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
-import { DesignCard } from "@/app/components/DesignCard";
+import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 
 type Props = {
   params: { id: string };
@@ -160,20 +160,12 @@ export default async function DesignDetails({
           </div>
         </div>
       </div>
-      {relatedDesigns.length > 0 && (
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold mb-6 text-[#212A31]">
-              More from this collection
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {relatedDesigns.map((relatedDesign: Design) => (
-                <DesignCard key={relatedDesign.id} design={relatedDesign} />
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <FeaturedDesigns
+          title="More from this collection"
+          designs={relatedDesigns}
+        />
+      </div>
     </>
   );
 }

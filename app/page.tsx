@@ -6,7 +6,7 @@ import { SiteConfig } from "@/lib/store";
 import { Carousel } from "@/app/components/Carousel";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { DesignCard } from "@/app/components/DesignCard";
+import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 
 const carouselItems = [
   {
@@ -41,10 +41,10 @@ async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
       config,
     };
   }
-
   // Randomly select 3 designs
+  const featuredDesigns: Design[] = data.sort(() => 0.5 - Math.random()).slice(0, 3);
   return {
-    featuredDesigns: data.sort(() => 0.5 - Math.random()).slice(0, 3),
+    featuredDesigns,
     config,
   };
 }
@@ -78,18 +78,7 @@ export default async function Home() {
             Weaving innovation into every design
           </p>
         </section>
-        {featuredDesigns && featuredDesigns.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
-              Featured Designs
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {featuredDesigns.map((design) => (
-                <DesignCard key={design.id} design={design} />
-              ))}
-            </div>
-          </section>
-        )}
+        <FeaturedDesigns title="Featured Designs" designs={featuredDesigns} />
       </div>
     </>
   );
