@@ -42,7 +42,9 @@ async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
     };
   }
   // Randomly select 3 designs
-  const featuredDesigns: Design[] = data.sort(() => 0.5 - Math.random()).slice(0, 3);
+  const featuredDesigns: Design[] = data
+    .sort(() => 0.5 - Math.random())
+    .slice(0, 3);
   return {
     featuredDesigns,
     config,
