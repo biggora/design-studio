@@ -11,6 +11,7 @@ import { formatDate, truncateText } from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
+import { SiFacebook, SiX, SiPinterest } from "@icons-pack/react-simple-icons";
 
 type Props = {
   params: { id: string };
@@ -79,6 +80,7 @@ export default async function DesignDetails({
 }: {
   params: { id: string };
 }) {
+  const config: SiteConfig = await getSiteConfig();
   const data = await getDesignById(params.id);
 
   if (!data || !data.design) {
@@ -91,6 +93,9 @@ export default async function DesignDetails({
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
 
+  const shareUrl = `https://${config.domain}/prints/${params.id}`; // Replace with your actual domain
+  const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
+
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -102,7 +107,7 @@ export default async function DesignDetails({
         </Link>
         <div className="bg-white shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="relative h-0 pb-[66.67%] md:pb-0 md:h-full">
+            <div className="relative md:pb-0 md:h-full">
               <Image
                 src={design.externalImageUrl || getPlaceholderImage(900, 600)}
                 alt={design.title}
@@ -156,6 +161,36 @@ export default async function DesignDetails({
               >
                 Shop products with this design
               </a>
+              <div className="flex justify-start items-center space-x-4 mt-4">
+                <span className="text-[#212A31] font-semibold">Share:</span>
+                <a
+                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
+                  aria-label="Share on Facebook"
+                >
+                  <SiFacebook size={24} />
+                </a>
+                <a
+                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
+                  aria-label="Share on Twitter"
+                >
+                  <SiX size={24} />
+                </a>
+                <a
+                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(design.externalImageUrl)}&description=${encodeURIComponent(shareText)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
+                  aria-label="Share on Pinterest"
+                >
+                  <SiPinterest size={24} />
+                </a>
+              </div>
             </div>
           </div>
         </div>
