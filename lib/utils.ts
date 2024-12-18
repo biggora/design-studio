@@ -25,3 +25,7 @@ export function calculateReadingTime(text: string): number {
   const numberOfWords = text.split(/\s/g).length;
   return Math.ceil(numberOfWords / wordsPerMinute);
 }
+
+export function getRedBubbleDesignPageLink(designId: number): string {
+  return `https://www.redbubble.com/shop/ap/${designId}`;
+}

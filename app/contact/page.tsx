@@ -21,7 +21,8 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default function Contact() {
+export default async function Contact() {
+  const config: SiteConfig = await getSiteConfig();
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Contact Us</h1>
@@ -35,7 +36,12 @@ export default function Contact() {
         </div>
         <div>
           <SocialLinks />
-          <ShopLinks />
+          <ShopLinks
+            title="Our Shops"
+            redBubble={config.representation.redbuble}
+            teePublic={config.representation.teepublic}
+            tostaDora={config.representation.tostaDora}
+          />
           {/*<div className="mt-6">*/}
           {/*  <p className="text-[#212A31]">Email: {config.email}</p>*/}
           {/*  {config.phone && <p className="text-[#212A31]">Phone: {config.phone}</p>}*/}

@@ -7,11 +7,16 @@ import {
   designCardHeight,
   designCardWidth,
 } from "@/lib/image";
-import { formatDate, truncateText } from "@/lib/utils";
+import {
+  formatDate,
+  getRedBubbleDesignPageLink,
+  truncateText,
+} from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
-import { SiFacebook, SiX, SiPinterest } from "@icons-pack/react-simple-icons";
+import ShopLinks from "@/app/components/ShopLinks";
+import ShareLinks from "@/app/components/ShareLinks";
 
 type Props = {
   params: { id: string };
@@ -151,8 +156,8 @@ export default async function DesignDetails({
               {/*    </p>*/}
               {/*  </div>*/}
               {/*</div>*/}
-              <div className={`grid grid-cols-2`}>
-                <p className="text-[#748D92] mb-4 flex-grow-0">
+              <div className={`grid grid-cols-1 md:grid-cols-2`}>
+                <p className="text-[#748D92] mb-4">
                   Collection:&nbsp;
                   <Link
                     href={`/designs?collection=${design.collection}&page=1`}
@@ -160,7 +165,7 @@ export default async function DesignDetails({
                     {design.collection}
                   </Link>
                 </p>
-                <p className="text-[#748D92] mb-4 text-right">
+                <p className="text-[#748D92] mb-4 lg:text-right">
                   Created on: {formatDate(design.createdAt)}
                 </p>
               </div>
@@ -171,36 +176,23 @@ export default async function DesignDetails({
               >
                 Shop products with this design
               </a>
-              <div className="flex justify-start items-center space-x-4 mt-4">
-                <span className="text-[#212A31] font-semibold">Share:</span>
-                <a
-                  href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
-                  aria-label="Share on Facebook"
-                >
-                  <SiFacebook size={24} />
-                </a>
-                <a
-                  href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
-                  aria-label="Share on Twitter"
-                >
-                  <SiX size={24} />
-                </a>
-                <a
-                  href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(design.externalImageUrl)}&description=${encodeURIComponent(shareText)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#124E66] hover:text-[#2E3944] transition-colors"
-                  aria-label="Share on Pinterest"
-                >
-                  <SiPinterest size={24} />
-                </a>
+              <div className={`grid grid-cols-2 grid-md-cols-2`}>
+                <div className="flex justify-start items-center space-x-4 mt-4">
+                  <ShareLinks
+                    shareText={shareText}
+                    shareUrl={shareUrl}
+                    imageUrl={design.externalImageUrl}
+                  />
+                </div>
+                <div className="flex justify-end items-center space-x-4 mt-4">
+                  <ShopLinks
+                    title="Our Shops"
+                    styleTitle={" "}
+                    redBubble={getRedBubbleDesignPageLink(design.externalId)}
+                  />
+                </div>
               </div>
+              {/**/}
             </div>
           </div>
         </div>

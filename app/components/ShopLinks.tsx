@@ -3,47 +3,57 @@
 import { RedBubble } from "@/app/components/Icons/RedBubble";
 import { TeePublic } from "@/app/components/Icons/TeePublic";
 import { TostaDora } from "@/app/components/Icons/TostaDora";
-import { useContext } from "react";
-import { ConfigContext } from "@/app/wrapper";
 
-export default function ShopLinks() {
-  const config = useContext(ConfigContext);
+type ShopLinksProps = {
+  title: string;
+  redBubble?: string;
+  teePublic?: string;
+  tostaDora?: string;
+  styleTitle?: string;
+};
 
+export default function ShopLinks({
+  title,
+  redBubble,
+  teePublic,
+  tostaDora,
+  styleTitle = "text-2xl mb-4",
+}: ShopLinksProps) {
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">Our Shops</h2>
+      <h2 className={`${styleTitle} font-semibold text-[#212A31]`}>{title}</h2>
       <div className="flex justify-left space-x-4">
-        {config.representation.redbuble && (
+        {redBubble && (
           <a
-            href={config.representation.redbuble}
+            href={redBubble}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
           >
             <RedBubble size={24} />
-            <span className="sr-only">Redbuble</span>
+            <span className="sr-only">RedBubble</span>
           </a>
         )}
-        {config.representation.teepublic && (
+        {teePublic && (
           <a
-            href={config.representation.teepublic}
+            href={teePublic}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
           >
             <TeePublic size={24} />
-            <span className="sr-only">Teepublic</span>
+            <span className="sr-only">TeePublic</span>
           </a>
         )}
-        {config.representation.tostadora && (
+        {tostaDora && (
           <a
-            href={config.representation.tostadora}
+            href={tostaDora}
             target="_blank"
             rel="noopener noreferrer"
             className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
           >
             <TostaDora size={24} />
-            <span className="sr-only">Tostadora</span>
+            <span className="sr-only">TostaDora</span>
           </a>
         )}
       </div>
