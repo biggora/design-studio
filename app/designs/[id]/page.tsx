@@ -151,9 +151,19 @@ export default async function DesignDetails({
               {/*    </p>*/}
               {/*  </div>*/}
               {/*</div>*/}
-              <p className="text-[#748D92] mb-4">
-                Created on: {formatDate(design.createdAt)}
-              </p>
+              <div className={`grid grid-cols-2`}>
+                <p className="text-[#748D92] mb-4 flex-grow-0">
+                  Collection:&nbsp;
+                  <Link
+                    href={`/designs?collection=${design.collection}&page=1`}
+                  >
+                    {design.collection}
+                  </Link>
+                </p>
+                <p className="text-[#748D92] mb-4 text-right">
+                  Created on: {formatDate(design.createdAt)}
+                </p>
+              </div>
               <a
                 href={design?.externalLink}
                 target={design?.externalLink ? "_blank" : "_self"}
