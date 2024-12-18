@@ -1,9 +1,10 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { supabase } from "@/utils/supabase";
+import { getSiteConfig, supabase } from "@/utils/supabase";
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
+import { SiteConfig } from "@/lib/store";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -50,15 +51,16 @@ async function fetchCollections(): Promise<string[]> {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
+  const config: SiteConfig = await getSiteConfig();
   const { designs, total } = await getDesigns(1, "", "");
   const collections = await fetchCollections();
 
   return {
-    title: "Our Designs - ThreadQuirk",
-    description: `Explore our unique collection of ${total} thread-based designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
-    keywords: `thread designs, textile art, innovative designs, ThreadQuirk collection, ${collections.join(", ")}`,
+    title: `Our Designs - ${config.name}`,
+    description: `Explore our unique collection of ${total} print designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
+    keywords: `print designs, textile art, innovative designs, ${config.name} collection, ${collections.join(", ")}`,
     openGraph: {
-      title: "Our Designs - ThreadQuirk",
+      title: `Our Designs - ${config.name}`,
       description: `Explore our unique collection of ${total} thread-based designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
       images: designs.slice(0, 4).map((design) => design.externalImageUrl),
     },
