@@ -71,8 +71,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
-    keywords: `${design.keywords}, thread art, textile design, ${config.name} design`,
+    keywords: `${design.keywords}, art, t-shirt design, ${config.name} design`,
     openGraph: {
+      url: `https://${config.domain}/designs/${id}`,
+      type: "website",
       title,
       description,
       images: [design.externalImageUrl],

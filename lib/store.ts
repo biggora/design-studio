@@ -35,6 +35,8 @@ export interface SiteConfig {
   representation: RepresentationProps;
   verification: VerificationProps;
   analytics: AnalyticsProps;
+  favicon: string;
+  themeLink: string;
 }
 
 interface SiteConfigStore {
@@ -43,7 +45,9 @@ interface SiteConfigStore {
 }
 
 export const useSiteConfigStore = create<SiteConfigStore>((set) => ({
-  config: companyData,
+  config: {
+    ...companyData,
+  },
   updateConfig: (newConfig) =>
     set((state) => ({ config: { ...state.config, ...newConfig } })),
 }));

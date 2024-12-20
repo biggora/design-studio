@@ -60,8 +60,10 @@ export async function generateMetadata(): Promise<Metadata> {
     description: `Explore our unique collection of ${total} print designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
     keywords: `print designs, textile art, innovative designs, ${config.name} collection, ${collections.join(", ")}`,
     openGraph: {
+      url: `https://${config.domain}/designs`,
+      type: "website",
       title: `Our Designs - ${config.name}`,
-      description: `Explore our unique collection of ${total} thread-based designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
+      description: `Explore our unique collection of ${total} designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
       images: designs.slice(0, 4).map((design) => design.externalImageUrl),
     },
   };

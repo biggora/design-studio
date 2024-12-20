@@ -11,6 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords: "privacy policy, data protection, personal information",
     openGraph: {
+      url: `https://${config.domain}/privacy-policy`,
+      type: "website",
       title,
       description,
     },

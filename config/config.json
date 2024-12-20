@@ -31,5 +31,7 @@
   },
   "slides": {
     "test": ""
-  }
+  },
+  "favicon": "/favicon/favicon.ico",
+  "themeLink": ""
 }

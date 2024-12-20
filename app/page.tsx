@@ -59,6 +59,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description: config.description,
     keywords: config.keywords,
     openGraph: {
+      url: `https://${config.domain}`,
+      type: "website",
       title: `${config.name} - ${config.intro}`,
       description: config.description,
       images: [config.siteLogo, config.siteBanner],

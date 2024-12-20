@@ -18,6 +18,9 @@ export default async function RootLayout({
 }) {
   const newConfig: SiteConfig = await getSiteConfig();
 
+  const favIcon = newConfig?.favicon || "/favicon/favicon.ico";
+  const themeLink = newConfig?.themeLink;
+
   return (
     <ContextWrapper config={newConfig}>
       <html lang="en">
@@ -31,7 +34,10 @@ export default async function RootLayout({
           {newConfig?.analytics?.google ? (
             <GoogleAnalytics gaId={newConfig.analytics.google} />
           ) : null}
-          <link rel="icon" href="/favicon/favicon.ico" />
+          {themeLink ? (
+            <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
+          ) : null}
+          <link rel="icon" href={favIcon} />
         </head>
         <body className={`${inter.className} bg-[#D3D9D4]`}>
           <Header />

@@ -15,6 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords: "contact, get in touch, thread art, design inquiry",
     openGraph: {
+      url: `https://${config.domain}/contact`,
+      type: "website",
       title,
       description,
     },

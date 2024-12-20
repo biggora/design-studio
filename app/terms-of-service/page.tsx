@@ -11,6 +11,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     keywords: "terms of service, user agreement, legal, conditions of use",
     openGraph: {
+      url: `https://${config.domain}/terms-of-service`,
+      type: "website",
       title,
       description,
     },
