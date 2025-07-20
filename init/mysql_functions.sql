@@ -1,0 +1,17 @@
+DELIMITER $$
+
+CREATE PROCEDURE get_random_design()
+BEGIN
+  SELECT * FROM designs
+  ORDER BY RAND()
+  LIMIT 1;
+END $$
+
+CREATE PROCEDURE get_random_designs()
+BEGIN
+  SELECT * FROM designs
+  ORDER BY RAND()
+  LIMIT 3;
+END $$
+
+DELIMITER ;
