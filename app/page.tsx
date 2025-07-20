@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getSiteConfig, supabase } from "@/utils/supabase";
+import { getSiteConfig, fetchDesigns } from "@/utils/database";
 import { Design } from "@/types/design";
 import { getImageUrl } from "@/lib/image";
 import { SiteConfig } from "@/lib/store";
@@ -32,19 +32,13 @@ type FeaturedDesignsProps = {
 };
 
 async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
-  const { data, error } = await supabase.from("designs").select("*");
+  const { designs } = await fetchDesigns(1, "", "", 1000);
   const config: SiteConfig = await getSiteConfig();
-  if (error) {
-    console.error("Error fetching designs:", error);
-    return {
-      featuredDesigns: [],
-      config,
-    };
-  }
-  // Randomly select 3 designs
-  const featuredDesigns: Design[] = data
+
+  const featuredDesigns: Design[] = designs
     .sort(() => 0.5 - Math.random())
     .slice(0, 3);
+
   return {
     featuredDesigns,
     config,

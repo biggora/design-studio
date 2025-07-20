@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
-import { getSiteConfig } from "@/utils/supabase";
+import { getSiteConfig } from "@/utils/database";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();

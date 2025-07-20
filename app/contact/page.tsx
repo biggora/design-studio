@@ -3,7 +3,7 @@ import { SiteConfig } from "@/lib/store";
 import ContactForm from "../components/ContactForm";
 import SocialLinks from "../components/SocialLinks";
 import ShopLinks from "@/app/components/ShopLinks";
-import { getSiteConfig } from "@/utils/supabase";
+import { getSiteConfig } from "@/utils/database";
 
 //       images: ["/static/images/contact-banner.jpg"], // Assuming you have a contact page banner image
 export async function generateMetadata(): Promise<Metadata> {

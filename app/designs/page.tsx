@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { getSiteConfig, supabase } from "@/utils/supabase";
+import { getSiteConfig, fetchDesigns, fetchCollections } from "@/utils/database";
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
@@ -8,51 +8,10 @@ import { SiteConfig } from "@/lib/store";
 
 const ITEMS_PER_PAGE = 12;
 
-async function getDesigns(
-  page: number,
-  searchQuery: string,
-  collection: string,
-): Promise<{ designs: Design[]; total: number }> {
-  const start = (page - 1) * ITEMS_PER_PAGE;
-  const end = start + ITEMS_PER_PAGE - 1;
-
-  let query = supabase.from("designs").select("*", { count: "exact" });
-
-  if (searchQuery) {
-    query = query.ilike("title", `%${searchQuery}%`);
-  }
-
-  if (collection) {
-    query = query.eq("collection", collection);
-  }
-
-  const { data, error, count } = await query.range(start, end);
-
-  if (error) {
-    console.error("Error fetching designs:", error);
-    return { designs: [], total: 0 };
-  }
-
-  return { designs: data || [], total: count || 0 };
-}
-
-async function fetchCollections(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from("designs")
-    .select("collection")
-    .not("collection", "is", null);
-
-  if (error) {
-    console.error("Error fetching collections:", error);
-    return [];
-  }
-
-  return Array.from(new Set(data.map((item) => item.collection))) as string[];
-}
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
-  const { designs, total } = await getDesigns(1, "", "");
+  const { designs, total } = await fetchDesigns(1, "", "", ITEMS_PER_PAGE);
   const collections = await fetchCollections();
 
   return {
@@ -78,10 +37,11 @@ export default async function DesignFolio({
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";
 
-  const { designs, total } = await getDesigns(
+  const { designs, total } = await fetchDesigns(
     currentPage,
     searchQuery,
     selectedCollection,
+    ITEMS_PER_PAGE,
   );
   const collections = await fetchCollections();
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
