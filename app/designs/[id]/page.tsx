@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getSiteConfig, supabase } from "@/utils/supabase";
-import { Design } from "@/types/design";
+import { getSiteConfig, getDesignById } from "@/utils/database";
 import {
   getPlaceholderImage,
   designCardHeight,
@@ -22,37 +21,6 @@ type Props = {
   params: { id: string };
 };
 
-type DesignDetailsProps = {
-  design: Design;
-  relatedDesigns: Design[];
-};
-
-async function getDesignById(id: string): Promise<DesignDetailsProps | null> {
-  const { data: design, error } = await supabase
-    .from("designs")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching design:", error);
-    return null;
-  }
-
-  // Fetch related designs from the same collection
-  const { data: relatedDesigns, error: relatedError } = await supabase
-    .from("designs")
-    .select("*")
-    .eq("collection", design.collection)
-    .neq("id", id)
-    .limit(3);
-
-  if (relatedError) {
-    console.error("Error fetching related designs:", relatedError);
-  }
-
-  return { design, relatedDesigns: relatedDesigns || [] };
-}
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const id = params.id;

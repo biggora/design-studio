@@ -6,7 +6,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
 import { SiteConfig } from "@/lib/store";
-import { getSiteConfig } from "@/utils/supabase";
+import { getSiteConfig } from "@/utils/database";
 import ContextWrapper from "@/app/wrapper";
 
 const inter: NextFont = Inter({ subsets: ["latin"] });

@@ -1,5 +1,5 @@
 import { SiteConfig } from "@/lib/store";
-import { getSiteConfig } from "@/utils/supabase";
+import { getSiteConfig } from "@/utils/database";
 import { Metadata } from "next";
 
 //       images: ["/static/images/about-banner.jpg"], // Assuming you have an about page banner image
