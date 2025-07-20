@@ -59,3 +59,21 @@ During development you can use watch mode:
 ```bash
 npm run test:watch
 ```
+
+## Database Setup
+
+The `init/` directory contains SQL scripts for PostgreSQL and MySQL.
+
+### PostgreSQL
+
+```bash
+psql -f init/tables.sql
+psql -f init/functions.sql
+```
+
+### MySQL
+
+```bash
+mysql -u <user> -p <database> < init/mysql_tables.sql
+mysql -u <user> -p <database> < init/mysql_functions.sql
+```
