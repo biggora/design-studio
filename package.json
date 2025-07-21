@@ -9,8 +9,8 @@
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "prettier": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-    "eslint": "eslint src/**/*.ts",
-    "format": "eslint src/**/*.ts --fix",
+    "eslint": "eslint \"app/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"utils/**/*.{ts,tsx}\"",
+    "format": "eslint \"app/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"utils/**/*.{ts,tsx}\" --fix",
     "test": "vitest run",
     "test:watch": "vitest"
   },
