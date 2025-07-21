@@ -20,10 +20,16 @@ export function truncateText(text: string, maxLength: number): string {
 }
 
 export function generateSlug(text: string): string {
-  return text
+  const hasLeadingSpace = /^\s/.test(text);
+  const hasTrailingSpace = /\s$/.test(text);
+
+  const slug = text
+    .trim()
     .toLowerCase()
-    .replace(/[^\w ]+/g, "")
-    .replace(/ +/g, "-");
+    .replace(/[^\w\s]+/g, '')
+    .replace(/\s+/g, '-');
+
+  return `${hasLeadingSpace ? '-' : ''}${slug}${hasTrailingSpace ? '-' : ''}`;
 }
 
 export function calculateReadingTime(text: string): number {
