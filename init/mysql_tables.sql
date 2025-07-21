@@ -8,7 +8,7 @@ CREATE TABLE studio (
 CREATE TABLE designs (
   id CHAR(36) NOT NULL DEFAULT (UUID()),
   `externalId` BIGINT NOT NULL,
-  title VARCHAR(255) NOT NULL DEFAULT '85',
+  title VARCHAR(255) NOT NULL,
   description TEXT NOT NULL,
   keywords TEXT NOT NULL,
   `imageName` VARCHAR(255),

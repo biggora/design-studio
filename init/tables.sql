@@ -11,7 +11,7 @@ create table
     public.designs (
                        id uuid not null default gen_random_uuid (),
                        "externalId" bigint not null,
-                       title character varying not null default '85'::character varying,
+                       title character varying not null,
                        description text not null,
                        keywords text not null,
                        "imageName" character varying null,
