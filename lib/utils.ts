@@ -1,10 +1,16 @@
 export function formatDate(date: Date | string): string {
-  if (typeof date === "string") date = new Date(date);
-  if (!date || (typeof date === "string" && date === "Invalid Date")) return "";
-  return new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+  if (typeof date === 'string') {
+    date = new Date(date);
+  }
+
+  if (!(date instanceof Date) || isNaN(date.getTime())) {
+    throw new Error('Invalid date');
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   }).format(date);
 }
 
