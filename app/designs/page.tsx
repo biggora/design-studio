@@ -47,6 +47,14 @@ export default async function DesignFolio(
   const collections = await fetchCollections();
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
+  const createPageUrl = (targetPage: number) => {
+    const params = new URLSearchParams();
+    params.set("page", targetPage.toString());
+    if (searchQuery) params.set("search", searchQuery);
+    if (selectedCollection) params.set("collection", selectedCollection);
+    return `/designs?${params.toString()}`;
+  };
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Our Designs</h1>
@@ -73,7 +81,7 @@ export default async function DesignFolio(
         <div className="flex justify-center items-center space-x-4 mt-8">
           {currentPage > 1 && (
             <Link
-              href={`/designs?page=${currentPage - 1}&search=${searchQuery}&collection=${selectedCollection}`}
+              href={createPageUrl(currentPage - 1)}
               className="bg-[#124E66] text-white px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
             >
               Previous
@@ -84,7 +92,7 @@ export default async function DesignFolio(
           </span>
           {currentPage < totalPages && (
             <Link
-              href={`/designs?page=${currentPage + 1}&search=${searchQuery}&collection=${selectedCollection}`}
+              href={createPageUrl(currentPage + 1)}
               className="bg-[#124E66] text-white px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
             >
               Next

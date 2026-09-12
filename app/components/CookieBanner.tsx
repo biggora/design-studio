@@ -1,36 +1,28 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
-function subscribe(onStoreChange: () => void) {
-  window.addEventListener("storage", onStoreChange);
-  return () => window.removeEventListener("storage", onStoreChange);
-}
-
-function getSnapshot() {
-  return localStorage.getItem("cookiesAccepted") === "true";
-}
-
-function getServerSnapshot() {
-  return true;
-}
-
 export function CookieBanner() {
-  const cookiesAccepted = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const [showBanner, setShowBanner] = useState(false);
 
-  const acceptCookies = () => {
-    localStorage.setItem("cookiesAccepted", "true");
-    window.dispatchEvent(new Event("storage"));
+  useEffect(() => {
+    try {
+      const accepted = localStorage.getItem("cookiesAccepted");
+      if (accepted !== "true") {
+        setShowBanner(true);
+      }
+    } catch {}
+  }, []);
+
+  const handleAccept = () => {
+    try {
+      localStorage.setItem("cookiesAccepted", "true");
+    } catch {}
+    setShowBanner(false);
   };
 
-  if (cookiesAccepted) {
-    return null;
-  }
+  if (!showBanner) return null;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-[#212A31] text-[#D3D9D4] p-4 shadow-lg">
@@ -46,7 +38,7 @@ export function CookieBanner() {
           </Link>
         </p>
         <button
-          onClick={acceptCookies}
+          onClick={handleAccept}
           className="bg-[#124E66] text-[#D3D9D4] px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
         >
           Accept

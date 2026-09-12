@@ -1,22 +1,44 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { getSiteConfig } from "@/utils/database";
 import { syncRedbubbleToSupabase } from "@/lib/sync/redbubble";
 
-function getSecretFromRequest(request: Request): string | null {
-  const header = request.headers.get("x-sync-secret");
-  if (header) return header;
+let isSyncInProgress = false;
 
-  try {
-    const url = new URL(request.url);
-    return url.searchParams.get("secret");
-  } catch {
-    return null;
-  }
+function constantTimeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
 }
 
-async function handleSync(request: Request) {
+function getSecretFromRequest(request: Request): string | null {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader) {
+    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (match?.[1]) {
+      return match[1].trim();
+    }
+  }
+
+  const syncSecretHeader = request.headers.get("x-sync-secret");
+  if (syncSecretHeader) {
+    return syncSecretHeader.trim();
+  }
+
+  return null;
+}
+
+export async function POST(request: Request) {
+  if (isSyncInProgress) {
+    return NextResponse.json(
+      { error: "Sync operation is already in progress. Please retry later." },
+      { status: 409 },
+    );
+  }
+
   const expected = process.env.SYNC_SECRET;
-  if (!expected) {
+  if (!expected || expected.trim().length === 0) {
     return NextResponse.json(
       { error: "SYNC_SECRET is not configured" },
       { status: 500 },
@@ -24,90 +46,98 @@ async function handleSync(request: Request) {
   }
 
   const provided = getSecretFromRequest(request);
-  if (provided !== expected) {
+  if (!provided || !constantTimeCompare(provided, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const config = await getSiteConfig();
-  const shopUrl =
-    config.representation?.redbubbleShopUrl ||
-    config.representation?.redbuble ||
-    process.env.REDBUBBLE_SHOP_URL ||
-    "";
-
-  if (!shopUrl) {
+  const databaseProvider = (process.env.DATABASE_PROVIDER || "").toLowerCase();
+  if (databaseProvider === "mysql") {
     return NextResponse.json(
-      { error: "Missing Redbubble shop URL" },
+      {
+        error:
+          "Redbubble sync currently supports Supabase provider only. Please configure DATABASE_PROVIDER=supabase.",
+      },
       { status: 400 },
     );
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "";
+  isSyncInProgress = true;
+  try {
+    const config = await getSiteConfig();
+    const shopUrl =
+      config.representation?.redbubbleShopUrl ||
+      config.representation?.redbuble ||
+      process.env.REDBUBBLE_SHOP_URL ||
+      "";
 
-  if (!supabaseUrl || !supabaseKey) {
-    return NextResponse.json(
-      { error: "Missing Supabase environment variables" },
-      { status: 500 },
-    );
+    if (!shopUrl) {
+      return NextResponse.json(
+        { error: "Missing Redbubble shop URL" },
+        { status: 400 },
+      );
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const supabaseKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      "";
+
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { error: "Missing Supabase environment variables" },
+        { status: 500 },
+      );
+    }
+
+    const maxPages = process.env.SYNC_MAX_PAGES
+      ? Number(process.env.SYNC_MAX_PAGES)
+      : 5;
+    const pageDelayMs = process.env.SYNC_PAGE_DELAY_MS
+      ? Number(process.env.SYNC_PAGE_DELAY_MS)
+      : 3000;
+    const minRequestIntervalMs = process.env.SYNC_MIN_REQUEST_INTERVAL_MS
+      ? Number(process.env.SYNC_MIN_REQUEST_INTERVAL_MS)
+      : 2500;
+    const jitterMs = process.env.SYNC_REQUEST_JITTER_MS
+      ? Number(process.env.SYNC_REQUEST_JITTER_MS)
+      : 700;
+    const concurrency = process.env.SYNC_CONCURRENCY
+      ? Number(process.env.SYNC_CONCURRENCY)
+      : 1;
+    const usePlaywright = process.env.SYNC_USE_PLAYWRIGHT
+      ? process.env.SYNC_USE_PLAYWRIGHT === "true"
+      : true;
+    const playwrightHeadless = process.env.SYNC_PLAYWRIGHT_HEADLESS
+      ? process.env.SYNC_PLAYWRIGHT_HEADLESS === "true"
+      : true;
+    const playwrightStorageStatePath =
+      process.env.SYNC_PLAYWRIGHT_STORAGE_STATE_PATH || undefined;
+    const requestHeaders: Record<string, string> = {};
+    if (process.env.REDBUBBLE_USER_AGENT) {
+      requestHeaders["user-agent"] = process.env.REDBUBBLE_USER_AGENT;
+    }
+    if (process.env.REDBUBBLE_COOKIE) {
+      requestHeaders.cookie = process.env.REDBUBBLE_COOKIE;
+    }
+
+    const result = await syncRedbubbleToSupabase({
+      shopUrl,
+      supabaseUrl,
+      supabaseKey,
+      maxPages,
+      pageDelayMs,
+      minRequestIntervalMs,
+      jitterMs,
+      concurrency,
+      requestHeaders,
+      usePlaywright,
+      playwrightHeadless,
+      playwrightStorageStatePath,
+    });
+
+    return NextResponse.json(result);
+  } finally {
+    isSyncInProgress = false;
   }
-
-  const maxPages = process.env.SYNC_MAX_PAGES
-    ? Number(process.env.SYNC_MAX_PAGES)
-    : 5;
-  const pageDelayMs = process.env.SYNC_PAGE_DELAY_MS
-    ? Number(process.env.SYNC_PAGE_DELAY_MS)
-    : 3000;
-  const minRequestIntervalMs = process.env.SYNC_MIN_REQUEST_INTERVAL_MS
-    ? Number(process.env.SYNC_MIN_REQUEST_INTERVAL_MS)
-    : 2500;
-  const jitterMs = process.env.SYNC_REQUEST_JITTER_MS
-    ? Number(process.env.SYNC_REQUEST_JITTER_MS)
-    : 700;
-  const concurrency = process.env.SYNC_CONCURRENCY
-    ? Number(process.env.SYNC_CONCURRENCY)
-    : 1;
-  const usePlaywright = process.env.SYNC_USE_PLAYWRIGHT
-    ? process.env.SYNC_USE_PLAYWRIGHT === "true"
-    : true;
-  const playwrightHeadless = process.env.SYNC_PLAYWRIGHT_HEADLESS
-    ? process.env.SYNC_PLAYWRIGHT_HEADLESS === "true"
-    : true;
-  const playwrightStorageStatePath =
-    process.env.SYNC_PLAYWRIGHT_STORAGE_STATE_PATH || undefined;
-  const requestHeaders: Record<string, string> = {};
-  if (process.env.REDBUBBLE_USER_AGENT) {
-    requestHeaders["user-agent"] = process.env.REDBUBBLE_USER_AGENT;
-  }
-  if (process.env.REDBUBBLE_COOKIE) {
-    requestHeaders.cookie = process.env.REDBUBBLE_COOKIE;
-  }
-
-  const result = await syncRedbubbleToSupabase({
-    shopUrl,
-    supabaseUrl,
-    supabaseKey,
-    maxPages,
-    pageDelayMs,
-    minRequestIntervalMs,
-    jitterMs,
-    concurrency,
-    requestHeaders,
-    usePlaywright,
-    playwrightHeadless,
-    playwrightStorageStatePath,
-  });
-
-  return NextResponse.json(result);
-}
-
-export async function POST(request: Request) {
-  return handleSync(request);
-}
-
-export async function GET(request: Request) {
-  return handleSync(request);
 }

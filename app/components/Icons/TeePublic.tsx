@@ -1,30 +1,21 @@
-import { useState } from "react";
+import React from "react";
 
-export function TeePublic({
-  size,
-  color = "#748d92",
-  hoverColor = "#124e66",
-}: {
-  size: number;
-  color?: string;
-  hoverColor?: string;
-}) {
-  const [isHovered, setHovered] = useState(false);
-  const handleMouseEnter = () => {
-    setHovered(true);
-  };
-  const handleMouseLeave = () => {
-    setHovered(false);
-  };
+export interface IconProps extends React.SVGProps<SVGSVGElement> {
+  size?: number;
+  className?: string;
+}
+
+export function TeePublic({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
-      fill={isHovered ? hoverColor : color}
-      width={`${size}px`}
-      height={`${size}px`}
+      fill="currentColor"
+      width={size}
+      height={size}
       viewBox="0 0 407.2 407.2"
       xmlns="http://www.w3.org/2000/svg"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      aria-hidden="true"
+      className={className}
+      {...props}
     >
       <g id="Layer_1">
         <path

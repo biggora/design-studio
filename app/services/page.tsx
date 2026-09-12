@@ -1,6 +1,13 @@
-"use client";
-
+import { Metadata } from "next";
 import { CheckCircle } from "lucide-react";
+
+export function generateMetadata(): Metadata {
+  return {
+    title: "Our Services | Print-on-Demand Design Studio",
+    description:
+      "Explore our print-on-demand design services, custom thread art, textile branding, and interior thread design.",
+  };
+}
 
 const services = [
   {

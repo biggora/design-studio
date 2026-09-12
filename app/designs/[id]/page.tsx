@@ -6,9 +6,11 @@ import {
   designCardHeight,
   designCardWidth,
 } from "@/lib/image";
+import { notFound } from "next/navigation";
 import {
   formatDate,
   getRedBubbleDesignPageLink,
+  sanitizeUrl,
   truncateText,
 } from "@/lib/utils";
 import { Metadata } from "next";
@@ -61,14 +63,15 @@ export default async function DesignDetails(
   const data = await getDesignById(params.id);
 
   if (!data || !data.design) {
-    return <div className="container mx-auto px-4 py-8">Design not found</div>;
+    notFound();
   }
 
   const { design, relatedDesigns } = data;
 
-  if (!design) {
-    return <div className="container mx-auto px-4 py-8">Loading...</div>;
-  }
+  const collectionParams = new URLSearchParams();
+  if (design.collection) collectionParams.set("collection", design.collection);
+  collectionParams.set("page", "1");
+  const collectionUrl = `/designs?${collectionParams.toString()}`;
 
   const shareUrl = `https://${config.domain}/designs/${params.id}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
@@ -131,9 +134,7 @@ export default async function DesignDetails(
               <div className={`grid grid-cols-1 md:grid-cols-2`}>
                 <p className="text-[#748D92] mb-4">
                   Collection:&nbsp;
-                  <Link
-                    href={`/designs?collection=${design.collection}&page=1`}
-                  >
+                  <Link href={collectionUrl}>
                     {design.collection}
                   </Link>
                 </p>
@@ -142,8 +143,9 @@ export default async function DesignDetails(
                 </p>
               </div>
               <a
-                href={design?.externalLink}
-                target={design?.externalLink ? "_blank" : "_self"}
+                href={sanitizeUrl(design.externalLink)}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="w-full block text-center bg-[#124E66] text-white px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
               >
                 Shop products with this design

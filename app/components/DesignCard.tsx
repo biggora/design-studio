@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { designCardHeight, designCardWidth } from "@/lib/image";
 import Link from "next/link";
 import { Design } from "@/types/design";
 
@@ -8,6 +7,9 @@ type DesignCardProps = {
 };
 
 export function DesignCard({ design }: DesignCardProps) {
+  const imageUrl =
+    design.externalImageUrl?.trim() || "/images/no_image_available.svg";
+
   return (
     <div
       key={design.id}
@@ -15,17 +17,17 @@ export function DesignCard({ design }: DesignCardProps) {
     >
       <Link
         href={`/designs/${design.id}`}
-        className="text-[#124E66] hover:underline mt-auto"
+        className="text-[#124E66] hover:underline"
       >
-        <Image
-          src={decodeURIComponent(
-            design.externalImageUrl || "/placeholder.svg",
-          )}
-          alt={design.title}
-          width={designCardWidth}
-          height={designCardHeight}
-          className={`w-full h-[${designCardWidth}px] object-cover`}
-        />
+        <div className="relative w-full aspect-[3/2] overflow-hidden bg-gray-100">
+          <Image
+            src={imageUrl}
+            alt={design.title}
+            fill
+            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            className="object-cover"
+          />
+        </div>
       </Link>
       <div className="p-4 flex flex-col flex-grow">
         <h2 className="text-xl font-semibold mb-2 text-[#212A31]">

@@ -35,6 +35,8 @@ export function Carousel({
               src={item.image}
               alt={item.title}
               fill
+              priority={index === 0}
+              sizes="100vw"
               style={{ objectFit: "cover" }}
             />
             <div className="absolute inset-0 bg-[#212A31] bg-opacity-60 flex flex-col justify-center items-center text-center p-4">

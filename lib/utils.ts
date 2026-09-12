@@ -1,35 +1,38 @@
-export function formatDate(date: Date | string): string {
-  if (typeof date === 'string') {
-    date = new Date(date);
+export function formatDate(date: Date | string | null | undefined): string {
+  if (!date) {
+    return 'Date unavailable';
   }
 
-  if (!(date instanceof Date) || isNaN(date.getTime())) {
-    throw new Error('Invalid date');
+  const d = typeof date === 'string' ? new Date(date) : date;
+
+  if (!(d instanceof Date) || isNaN(d.getTime())) {
+    return 'Date unavailable';
   }
 
   return new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(date);
+    timeZone: 'UTC',
+  }).format(d);
 }
 
-export function truncateText(text: string, maxLength: number): string {
-  if (text?.length <= maxLength) return text;
-  return text?.slice(0, maxLength) + "...";
+export function truncateText(text: string | null | undefined, maxLength: number): string {
+  if (!text) return '';
+  if (text.length <= maxLength) return text;
+  return text.slice(0, Math.max(0, maxLength)) + '...';
 }
 
 export function generateSlug(text: string): string {
-  const hasLeadingSpace = /^\s/.test(text);
-  const hasTrailingSpace = /\s$/.test(text);
-
-  const slug = text
-    .trim()
+  if (!text) return '';
+  return text
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
-    .replace(/[^\w\s]+/g, '')
-    .replace(/\s+/g, '-');
-
-  return `${hasLeadingSpace ? '-' : ''}${slug}${hasTrailingSpace ? '-' : ''}`;
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export function calculateReadingTime(text: string): number {
@@ -40,4 +43,18 @@ export function calculateReadingTime(text: string): number {
 
 export function getRedBubbleDesignPageLink(designId: number): string {
   return `https://www.redbubble.com/shop/ap/${designId}`;
+}
+
+export function sanitizeUrl(url?: string | null): string {
+  if (!url) return "#";
+  const trimmed = url.trim();
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+      return parsed.toString();
+    }
+  } catch {
+    // Invalid URL
+  }
+  return "#";
 }

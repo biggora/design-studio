@@ -5,45 +5,106 @@ import {mapDataToConfig} from "@/lib/config";
 import {ConfigProp} from "@/types/config";
 import {Design} from "@/types/design";
 
-const provider = process.env.DATABASE_PROVIDER || "supabase";
+const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
 let supabase: ReturnType<typeof createClient> | null = null;
-let pool: mysql.Pool | null = null;
 
-if (provider === "supabase") {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+export function getSupabase(): ReturnType<typeof createClient> {
+    if (!supabase) {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseAnonKey =
+            process.env.SUPABASE_SERVICE_ROLE_KEY ||
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseAnonKey) {
-        throw new Error("Missing Supabase environment variables");
+        if (!supabaseUrl || !supabaseAnonKey) {
+            throw new Error("Missing Supabase environment variables");
+        }
+
+        supabase = createClient(supabaseUrl, supabaseAnonKey);
     }
+    return supabase;
+}
 
-    supabase = createClient(supabaseUrl, supabaseAnonKey);
-} else if (provider === "mysql") {
-    const {MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE} = process.env;
+export function getMySQLPool(): mysql.Pool {
+    if (!globalForMySQL.mysqlPool) {
+        const {MYSQL_HOST, MYSQL_PORT, MYSQL_USER, MYSQL_PASSWORD, MYSQL_DATABASE} = process.env;
 
-    if (!MYSQL_HOST || !MYSQL_USER || !MYSQL_PASSWORD || !MYSQL_DATABASE) {
-        throw new Error("Missing MySQL environment variables");
+        if (!MYSQL_HOST || !MYSQL_USER || !MYSQL_PASSWORD || !MYSQL_DATABASE) {
+            throw new Error("Missing MySQL environment variables");
+        }
+
+        globalForMySQL.mysqlPool = mysql.createPool({
+            host: MYSQL_HOST,
+            port: MYSQL_PORT ? Number(MYSQL_PORT) : 3306,
+            user: MYSQL_USER,
+            password: MYSQL_PASSWORD,
+            database: MYSQL_DATABASE,
+            waitForConnections: true,
+            connectionLimit: 10,
+            queueLimit: 0,
+            dateStrings: true,
+            ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : undefined,
+        });
     }
+    return globalForMySQL.mysqlPool;
+}
 
-    pool = mysql.createPool({
-        host: MYSQL_HOST,
-        port: MYSQL_PORT ? Number(MYSQL_PORT) : 3306,
-        user: MYSQL_USER,
-        password: MYSQL_PASSWORD,
-        database: MYSQL_DATABASE,
-    });
-} else {
-    throw new Error(`Unsupported DATABASE_PROVIDER: ${provider}`);
+export async function closeDatabaseConnections(): Promise<void> {
+    const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
+    if (globalForMySQL.mysqlPool) {
+        await globalForMySQL.mysqlPool.end();
+        globalForMySQL.mysqlPool = undefined;
+    }
+}
+
+function getProvider(): string {
+    const provider = process.env.DATABASE_PROVIDER || "supabase";
+    if (provider !== "supabase" && provider !== "mysql") {
+        throw new Error(`Unsupported DATABASE_PROVIDER: ${provider}`);
+    }
+    return provider;
+}
+
+export function mapRowToDesign(row: mysql.RowDataPacket): Design {
+    return {
+        id: row.id as string,
+        externalId: row.externalId as number,
+        title: row.title as string,
+        externalLink: row.externalLink as string,
+        externalImageUrl: row.externalImageUrl as string,
+        category: row.category as string,
+        collection: row.collection as string,
+        imageName: row.imageName as string,
+        description: row.description as string,
+        keywords: row.keywords as string,
+        backgroundColors: row.backgroundColors as string,
+        backgroundColor: row.backgroundColor as string,
+        createdAt:
+            row.createdAt instanceof Date
+                ? row.createdAt.toISOString()
+                : String(row.createdAt || new Date().toISOString()),
+        updatedAt: (row.updatedAt instanceof Date
+            ? row.updatedAt.toISOString()
+            : (row.updatedAt ? String(row.updatedAt) : undefined)) as string,
+        dimensions: row.dimensions as string | undefined,
+        material: row.material as string | undefined,
+        price: row.price as number | undefined,
+        inStock: row.inStock as boolean | undefined,
+        shared: Boolean(row.shared),
+        props: row.props as object | undefined,
+    };
 }
 
 export async function getSiteConfig(): Promise<SiteConfig> {
+    const provider = getProvider();
     if (provider === "supabase") {
-        const {data} = await supabase!.from("studio").select("*").returns<ConfigProp[]>();
+        const supabaseClient = getSupabase();
+        const {data} = await supabaseClient.from("studio").select("*").returns<ConfigProp[]>();
         return mapDataToConfig(data || []);
     }
 
-    const [rows] = await pool!.query<mysql.RowDataPacket[] & ConfigProp[]>("SELECT * FROM studio");
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[] & ConfigProp[]>("SELECT * FROM studio");
     return mapDataToConfig(rows);
 }
 
@@ -53,17 +114,25 @@ export async function fetchDesigns(
     collection: string,
     itemsPerPage = 12,
 ): Promise<{ designs: Design[]; total: number }> {
-    if (provider === "supabase") {
-        const start = (page - 1) * itemsPerPage;
-        const end = start + itemsPerPage - 1;
+    const safePage = Math.max(1, Number.isInteger(page) ? page : 1);
+    const safeLimit = Math.max(1, Math.min(100, Number.isInteger(itemsPerPage) ? itemsPerPage : 12));
+    const offset = (safePage - 1) * safeLimit;
 
-        let query = supabase!.from("designs").select("*", {count: "exact"});
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const start = offset;
+        const end = offset + safeLimit - 1;
+
+        let query = supabaseClient.from("designs").select("*", {count: "exact"});
         if (searchQuery) {
             query = query.ilike("title", `%${searchQuery}%`);
         }
         if (collection) {
             query = query.eq("collection", collection);
         }
+
+        query = query.order("createdAt", { ascending: false });
 
         const {data, error, count} = await query.range(start, end);
         if (error) {
@@ -98,7 +167,7 @@ export async function fetchDesigns(
         return {designs, total: count || 0};
     }
 
-    const offset = (page - 1) * itemsPerPage;
+    const pool = getMySQLPool();
     let base = "FROM designs WHERE 1";
     const params: (string | number)[] = [];
 
@@ -111,38 +180,17 @@ export async function fetchDesigns(
         params.push(collection);
     }
 
-    const [rows] = await pool!.query<mysql.RowDataPacket[]>(
-        `SELECT * ${base} LIMIT ? OFFSET ?`,
-        [...params, itemsPerPage, offset],
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        `SELECT * ${base} ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+        [...params, safeLimit, offset],
     );
-    const [countRows] = await pool!.query<mysql.RowDataPacket[]>(
+    const [countRows] = await pool.query<mysql.RowDataPacket[]>(
         `SELECT COUNT(*) as total ${base}`,
         params,
     );
 
     // Convert rows to Design[]
-    const designs: Design[] = rows.map(row => ({
-        id: row.id as string,
-        externalId: row.externalId as number,
-        title: row.title as string,
-        externalLink: row.externalLink as string,
-        externalImageUrl: row.externalImageUrl as string,
-        category: row.category as string,
-        collection: row.collection as string,
-        imageName: row.imageName as string,
-        description: row.description as string,
-        keywords: row.keywords as string,
-        backgroundColors: row.backgroundColors as string,
-        backgroundColor: row.backgroundColor as string,
-        createdAt: row.createdAt as string,
-        updatedAt: row.updatedAt as string,
-        dimensions: row.dimensions as string | undefined,
-        material: row.material as string | undefined,
-        price: row.price as number | undefined,
-        inStock: row.inStock as boolean | undefined,
-        shared: row.shared as boolean | undefined,
-        props: row.props as object | undefined,
-    }));
+    const designs: Design[] = rows.map(mapRowToDesign);
 
     const total = countRows[0]?.total ? Number(countRows[0].total) : 0;
     return {designs, total};
@@ -151,8 +199,10 @@ export async function fetchDesigns(
 export async function getDesignById(
     id: string,
 ): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
+    const provider = getProvider();
     if (provider === "supabase") {
-        const {data: designData, error} = await supabase!
+        const supabaseClient = getSupabase();
+        const {data: designData, error} = await supabaseClient
             .from("designs")
             .select("*")
             .eq("id", id)
@@ -187,7 +237,7 @@ export async function getDesignById(
             props: designData.props as object | undefined,
         };
 
-        const {data: relatedData, error: relatedError} = await supabase!
+        const {data: relatedData, error: relatedError} = await supabaseClient
             .from("designs")
             .select("*")
             .eq("collection", design.collection || "")
@@ -225,7 +275,8 @@ export async function getDesignById(
         return {design, relatedDesigns};
     }
 
-    const [rows] = await pool!.query<mysql.RowDataPacket[]>(
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
         "SELECT * FROM designs WHERE id = ?",
         [id],
     );
@@ -235,68 +286,29 @@ export async function getDesignById(
     }
     
     // Convert to Design
-    const row = rows[0];
-    const design: Design = {
-        id: row.id as string,
-        externalId: row.externalId as number,
-        title: row.title as string,
-        externalLink: row.externalLink as string,
-        externalImageUrl: row.externalImageUrl as string,
-        category: row.category as string,
-        collection: row.collection as string,
-        imageName: row.imageName as string,
-        description: row.description as string,
-        keywords: row.keywords as string,
-        backgroundColors: row.backgroundColors as string,
-        backgroundColor: row.backgroundColor as string,
-        createdAt: row.createdAt as string,
-        updatedAt: row.updatedAt as string,
-        dimensions: row.dimensions as string | undefined,
-        material: row.material as string | undefined,
-        price: row.price as number | undefined,
-        inStock: row.inStock as boolean | undefined,
-        shared: row.shared as boolean | undefined,
-        props: row.props as object | undefined,
-    };
+    const design: Design = mapRowToDesign(rows[0]);
 
-    const [relatedRows] = await pool!.query<mysql.RowDataPacket[]>(
+    const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
         "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 3",
         [design.collection || "", id],
     );
 
     // Convert to Design[]
-    const relatedDesigns: Design[] = relatedRows.map(row => ({
-        id: row.id as string,
-        externalId: row.externalId as number,
-        title: row.title as string,
-        externalLink: row.externalLink as string,
-        externalImageUrl: row.externalImageUrl as string,
-        category: row.category as string,
-        collection: row.collection as string,
-        imageName: row.imageName as string,
-        description: row.description as string,
-        keywords: row.keywords as string,
-        backgroundColors: row.backgroundColors as string,
-        backgroundColor: row.backgroundColor as string,
-        createdAt: row.createdAt as string,
-        updatedAt: row.updatedAt as string,
-        dimensions: row.dimensions as string | undefined,
-        material: row.material as string | undefined,
-        price: row.price as number | undefined,
-        inStock: row.inStock as boolean | undefined,
-        shared: row.shared as boolean | undefined,
-        props: row.props as object | undefined,
-    }));
+    const relatedDesigns: Design[] = relatedRows.map(mapRowToDesign);
 
     return {design, relatedDesigns};
 }
 
 export async function fetchCollections(): Promise<string[]> {
+    const provider = getProvider();
     if (provider === "supabase") {
-        const {data, error} = await supabase!
+        const supabaseClient = getSupabase();
+        const {data, error} = await supabaseClient
             .from("designs")
             .select("collection")
-            .not("collection", "is", null);
+            .not("collection", "is", null)
+            .neq("collection", "")
+            .neq("collection", "no_collection");
 
         if (error) {
             console.error("Error fetching collections:", error);
@@ -310,8 +322,9 @@ export async function fetchCollections(): Promise<string[]> {
         return Array.from(new Set(collections));
     }
 
-    const [rows] = await pool!.query<mysql.RowDataPacket[]>(
-        "SELECT DISTINCT collection FROM designs WHERE collection IS NOT NULL",
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT DISTINCT collection FROM designs WHERE collection IS NOT NULL AND collection != '' AND collection != 'no_collection' ORDER BY collection ASC",
     );
     
     return rows.map(row => row.collection as string);

@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { getSiteConfig } from "../utils/database";
+import { closeDatabaseConnections, getSiteConfig } from "../utils/database";
 import { syncRedbubbleToSupabase } from "../lib/sync/redbubble";
 
 async function run() {
@@ -70,12 +70,22 @@ async function run() {
     playwrightStorageStatePath,
   });
 
-  // eslint-disable-next-line no-console
   console.log(JSON.stringify(result, null, 2));
 }
 
-run().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error(error);
-  process.exit(1);
-});
+async function main() {
+  try {
+    await run();
+  } catch (error) {
+    console.error(error);
+    process.exitCode = 1;
+  } finally {
+    await closeDatabaseConnections();
+    if (process.exitCode && process.exitCode !== 0) {
+      process.exit(process.exitCode);
+    }
+    process.exit(0);
+  }
+}
+
+main();

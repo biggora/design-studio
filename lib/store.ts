@@ -17,7 +17,7 @@ export interface AnalyticsProps {
   [key: string]: string;
 }
 
-export type ConfigValue = string & SocialMedia;
+export type ConfigValue = string | SocialMedia | Record<string, string>;
 
 export interface SiteConfig {
   name: string;

@@ -1,30 +1,21 @@
-import { useState } from "react";
+import React from "react";
 
-export function Amazon({
-  size,
-  color = "#748d92",
-  hoverColor = "#124e66",
-}: {
-  size: number;
-  color?: string;
-  hoverColor?: string;
-}) {
-  const [isHovered, setHovered] = useState(false);
-  const handleMouseEnter = () => {
-    setHovered(true);
-  };
-  const handleMouseLeave = () => {
-    setHovered(false);
-  };
+export interface IconProps extends React.SVGProps<SVGSVGElement> {
+  size?: number;
+  className?: string;
+}
+
+export function Amazon({ size = 24, className, ...props }: IconProps) {
   return (
     <svg
-      fill={isHovered ? hoverColor : color}
-      width={`${size}px`}
-      height={`${size}px`}
+      fill="currentColor"
+      width={size}
+      height={size}
       viewBox="0 0 35.418 35.418"
       xmlns="http://www.w3.org/2000/svg"
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      aria-hidden="true"
+      className={className}
+      {...props}
     >
       <path
         d="M20.948,9.891c-0.857,0.068-1.847,0.136-2.837,0.269c-1.516,0.195-3.032,0.461-4.284,1.053

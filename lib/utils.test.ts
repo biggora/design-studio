@@ -5,7 +5,8 @@ import {
   generateSlug,
   calculateReadingTime,
   getRedBubbleDesignPageLink,
-} from './utils';
+  sanitizeUrl,
+} from '@/lib/utils';
 
 // formatDate
 
@@ -19,8 +20,13 @@ describe('formatDate', () => {
     expect(formatDate('2021-12-25T00:00:00Z')).toBe('December 25, 2021');
   });
 
-  it('throws for invalid date strings', () => {
-    expect(() => formatDate('not-a-date')).toThrow();
+  it('returns "Date unavailable" for invalid date strings', () => {
+    expect(formatDate('not-a-date')).toBe('Date unavailable');
+  });
+
+  it('returns "Date unavailable" for null or undefined', () => {
+    expect(formatDate(null)).toBe('Date unavailable');
+    expect(formatDate(undefined)).toBe('Date unavailable');
   });
 });
 
@@ -33,6 +39,11 @@ describe('truncateText', () => {
 
   it('truncates long text and adds ellipsis', () => {
     expect(truncateText('hello world', 5)).toBe('hello...');
+  });
+
+  it('returns empty string for null or undefined', () => {
+    expect(truncateText(null, 10)).toBe('');
+    expect(truncateText(undefined, 10)).toBe('');
   });
 });
 
@@ -47,8 +58,12 @@ describe('generateSlug', () => {
     expect(generateSlug('Hello, World!!!')).toBe('hello-world');
   });
 
-  it('handles multiple spaces', () => {
-    expect(generateSlug(' multiple   spaces ')).toBe('-multiple-spaces-');
+  it('handles multiple spaces without leading or trailing hyphens', () => {
+    expect(generateSlug(' multiple   spaces ')).toBe('multiple-spaces');
+  });
+
+  it('normalizes unicode characters', () => {
+    expect(generateSlug('Café & Restaurant')).toBe('cafe-restaurant');
   });
 });
 
@@ -75,5 +90,30 @@ describe('calculateReadingTime', () => {
 describe('getRedBubbleDesignPageLink', () => {
   it('generates a proper design page URL', () => {
     expect(getRedBubbleDesignPageLink(123)).toBe('https://www.redbubble.com/shop/ap/123');
+  });
+});
+
+// sanitizeUrl
+
+describe('sanitizeUrl', () => {
+  it('returns valid http/https URLs unchanged', () => {
+    expect(sanitizeUrl('https://example.com/test')).toBe('https://example.com/test');
+    expect(sanitizeUrl('http://example.com/')).toBe('http://example.com/');
+    expect(sanitizeUrl('  https://example.com/path  ')).toBe('https://example.com/path');
+  });
+
+  it('returns "#" for javascript: URLs', () => {
+    expect(sanitizeUrl('javascript:alert(1)')).toBe('#');
+    expect(sanitizeUrl('javascript:void(0)')).toBe('#');
+  });
+
+  it('returns "#" for empty, null, undefined, or invalid strings', () => {
+    expect(sanitizeUrl('')).toBe('#');
+    expect(sanitizeUrl('   ')).toBe('#');
+    expect(sanitizeUrl(null)).toBe('#');
+    expect(sanitizeUrl(undefined)).toBe('#');
+    expect(sanitizeUrl('not-a-valid-url')).toBe('#');
+    expect(sanitizeUrl('data:text/html,<script>alert(1)</script>')).toBe('#');
+    expect(sanitizeUrl('vbscript:msgbox(1)')).toBe('#');
   });
 });

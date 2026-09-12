@@ -60,47 +60,79 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-class RequestPacer {
+export class RequestPacer {
   private lastRequestAt = 0;
-  private readonly minIntervalMs: number;
-  private readonly jitterMs: number;
+  private queue: Promise<void> = Promise.resolve();
 
-  constructor(minIntervalMs: number, jitterMs: number) {
+  constructor(
+    private readonly minIntervalMs: number,
+    private readonly jitterMs: number,
+  ) {
     this.minIntervalMs = Math.max(0, minIntervalMs);
     this.jitterMs = Math.max(0, jitterMs);
   }
 
   async waitTurn(): Promise<void> {
-    const now = Date.now();
-    const elapsed = now - this.lastRequestAt;
-    const baseWait = Math.max(0, this.minIntervalMs - elapsed);
-    const jitter = this.jitterMs > 0 ? Math.floor(Math.random() * this.jitterMs) : 0;
-    const totalWait = baseWait + jitter;
-    if (totalWait > 0) {
-      await sleep(totalWait);
-    }
-    this.lastRequestAt = Date.now();
+    this.queue = this.queue.then(async () => {
+      const now = Date.now();
+      const elapsed = now - this.lastRequestAt;
+      const baseWait = Math.max(0, this.minIntervalMs - elapsed);
+      const jitter = this.jitterMs > 0 ? Math.floor(Math.random() * this.jitterMs) : 0;
+      const totalWait = baseWait + jitter;
+      if (totalWait > 0) {
+        await sleep(totalWait);
+      }
+      this.lastRequestAt = Date.now();
+    });
+    return this.queue;
   }
 }
 
-function normalizeShopUrl(input: string): string {
+const TRUSTED_HOSTS = new Set(["www.redbubble.com", "redbubble.com"]);
+
+export function normalizeShopUrl(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return "";
 
-  if (/redbubble\.com/i.test(trimmed)) {
+  if (trimmed.includes("://") || trimmed.startsWith("//")) {
     try {
-      const url = new URL(trimmed);
-      if (url.pathname.includes("/explore")) {
-        url.pathname = url.pathname.replace("/explore", "/shop");
+      const parsed = new URL(trimmed.startsWith("//") ? `https:${trimmed}` : trimmed);
+      if (parsed.protocol !== "https:") {
+        return "";
       }
-      return url.toString().replace(/\/$/, "");
+      if (!TRUSTED_HOSTS.has(parsed.hostname.toLowerCase())) {
+        return "";
+      }
+      if (parsed.pathname.includes("/explore")) {
+        parsed.pathname = parsed.pathname.replace("/explore", "/shop");
+      }
+      return `${parsed.origin}${parsed.pathname.replace(/\/$/, "")}`;
     } catch {
-      return trimmed.replace(/\/$/, "");
+      return "";
     }
   }
 
-  const username = trimmed.replace(/^@/, "");
-  return `https://www.redbubble.com/people/${username}/shop`;
+  if (trimmed.startsWith("www.redbubble.com/") || trimmed.startsWith("redbubble.com/")) {
+    try {
+      const parsed = new URL(`https://${trimmed}`);
+      if (parsed.pathname.includes("/explore")) {
+        parsed.pathname = parsed.pathname.replace("/explore", "/shop");
+      }
+      return `${parsed.origin}${parsed.pathname.replace(/\/$/, "")}`;
+    } catch {
+      return "";
+    }
+  }
+
+  if (trimmed.includes("/") || trimmed.includes("?") || trimmed.includes("#")) {
+    return "";
+  }
+
+  const rawUsername = trimmed.replace(/^@/, "");
+  if (!/^[a-zA-Z0-9_-]+$/.test(rawUsername)) {
+    return "";
+  }
+  return `https://www.redbubble.com/people/${rawUsername}/shop`;
 }
 
 function buildShopPageUrl(base: string, page: number): string {
@@ -109,10 +141,14 @@ function buildShopPageUrl(base: string, page: number): string {
   return url.toString();
 }
 
-function extractExternalIdFromUrl(url: string): number | null {
-  const match = url.match(/\/(?:shop\/ap|i)\/[^\/]+\/([0-9]{5,})/i);
-  if (match && match[1]) return Number(match[1]);
-  const fallback = url.match(/\/([0-9]{5,})(?:\?|$)/);
+export function extractExternalIdFromUrl(url: string): number | null {
+  const match = url.match(
+    /(?:\/shop\/ap\/|\/works\/|\/i\/[^\/]+\/[^\/]+\/|[\/-])([0-9]{5,})(?:\.[a-z0-9]+|-[^\/?#]+|\/|\?|#|$)/i,
+  );
+  if (match && match[1]) {
+    return Number(match[1]);
+  }
+  const fallback = url.match(/([0-9]{6,})/);
   return fallback ? Number(fallback[1]) : null;
 }
 
@@ -402,20 +438,23 @@ async function createPlaywrightSession(options: {
       return normalized;
     },
     async close(): Promise<void> {
-      if (options.storageStatePath) {
-        const parent = path.dirname(options.storageStatePath);
-        if (!fs.existsSync(parent)) {
-          fs.mkdirSync(parent, { recursive: true });
+      try {
+        if (options.storageStatePath) {
+          const parent = path.dirname(options.storageStatePath);
+          if (!fs.existsSync(parent)) {
+            fs.mkdirSync(parent, { recursive: true });
+          }
+          await context.storageState({ path: options.storageStatePath }).catch(() => {});
         }
-        await context.storageState({ path: options.storageStatePath });
+      } finally {
+        await context.close().catch(() => {});
+        await browser.close().catch(() => {});
       }
-      await context.close();
-      await browser.close();
     },
   };
 }
 
-async function getProductLinksFromShopPage(
+export async function getProductLinksFromShopPage(
   pageUrl: string,
   requestHeaders?: Record<string, string>,
 ): Promise<string[]> {
@@ -500,23 +539,7 @@ export async function fetchRedbubbleDesigns(options: RedbubbleSyncOptions): Prom
           if (!rows.length) break;
           rows.forEach((row) => listingDesigns.set(row.externalId, row));
         } else {
-          const pageHtml = await fetchHtml(pageUrl, options.requestHeaders);
-          const links = await (async () => {
-            const $ = load(pageHtml);
-            const discovered = new Set<string>();
-            $("a[href]").each((_, el) => {
-              const href = $(el).attr("href");
-              if (!href) return;
-              if (href.includes("/i/") || href.includes("/shop/ap/")) {
-                try {
-                  discovered.add(new URL(href, pageUrl).toString());
-                } catch {
-                  return;
-                }
-              }
-            });
-            return Array.from(discovered);
-          })();
+          const links = await getProductLinksFromShopPage(pageUrl, options.requestHeaders);
           if (!links.length) break;
           links.forEach((link) => allProductLinks.add(link));
         }
@@ -565,7 +588,7 @@ export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Pr
 
   const inserted = 0;
   let updated = 0;
-  let skipped = 0;
+  const skipped = 0;
   let errorsCount = errors.length;
   const errorMessages = [...errors];
 
@@ -581,21 +604,22 @@ export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Pr
     };
   }
 
+  const uniqueMap = new Map<number, (typeof rows)[0]>();
+  for (const r of rows) {
+    uniqueMap.set(r.externalId, r);
+  }
+  const dedupedRows = Array.from(uniqueMap.values());
+
   const { data, error } = await supabase
     .from("designs")
-    .upsert(rows, { onConflict: "externalId" })
-    .select("externalId");
+    .upsert(dedupedRows, { onConflict: "externalId", ignoreDuplicates: false })
+    .select("id, externalId");
 
   if (error) {
-    errorsCount += 1;
+    errorsCount += dedupedRows.length;
     errorMessages.push(error.message);
-  }
-
-  const affected = data?.length || 0;
-  if (affected) {
-    updated = affected;
   } else {
-    skipped = rows.length;
+    updated += data?.length || 0;
   }
 
   return {

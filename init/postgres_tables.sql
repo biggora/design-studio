@@ -29,3 +29,12 @@ create table
                        constraint designs_externalid_key unique ("externalId"),
                        constraint designs_title_key unique (title)
 ) tablespace pg_default;
+
+ALTER TABLE public.studio ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.designs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public Read Studio" ON public.studio FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public Read Designs" ON public.designs FOR SELECT TO anon, authenticated USING (true);
+
+CREATE POLICY "Service Role Studio All" ON public.studio FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Designs All" ON public.designs FOR ALL TO service_role USING (true) WITH CHECK (true);

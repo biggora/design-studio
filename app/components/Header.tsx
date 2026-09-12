@@ -49,7 +49,9 @@ export default function Header() {
           <div className="md:hidden">
             <button
               onClick={toggleMenu}
-              className="text-[#D3D9D4] hover:text-[#748D92] focus:outline-none"
+              aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMenuOpen}
+              className="text-[#D3D9D4] hover:text-[#748D92] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#124E66]"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>

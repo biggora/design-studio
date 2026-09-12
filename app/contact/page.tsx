@@ -42,7 +42,10 @@ export default async function Contact() {
             title="Our Shops"
             redBubble={config.representation.redbuble}
             teePublic={config.representation.teepublic}
-            tostaDora={config.representation.tostaDora}
+            tostaDora={
+              config.representation?.tostaDora ||
+              config.representation?.tostadora
+            }
           />
           {/*<div className="mt-6">*/}
           {/*  <p className="text-[#212A31]">Email: {config.email}</p>*/}
