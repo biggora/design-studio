@@ -77,3 +77,39 @@ psql -f init/functions.sql
 mysql -u <user> -p <database> < init/mysql_tables.sql
 mysql -u <user> -p <database> < init/mysql_functions.sql
 ```
+
+## Redbubble Sync
+
+The catalog is populated by syncing your public Redbubble shop pages into the `designs` table.
+
+### Required config
+
+- `representation.redbubbleShopUrl` in `config/config.json` (or in the `studio` table via config).
+- `SYNC_SECRET` in `.env` (used by the API route).
+- `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+Optional:
+
+- `SYNC_MAX_PAGES` (default `5`)
+- `SYNC_PAGE_DELAY_MS` (default `3000`)
+- `SYNC_MIN_REQUEST_INTERVAL_MS` (default `2500`)
+- `SYNC_REQUEST_JITTER_MS` (default `700`)
+- `SYNC_CONCURRENCY` (default `1`)
+- `SYNC_USE_PLAYWRIGHT` (default `true`)
+- `SYNC_PLAYWRIGHT_HEADLESS` (default `true`)
+- `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` (default `.cache/redbubble-storage-state.json`)
+- `REDBUBBLE_USER_AGENT` and `REDBUBBLE_COOKIE` (recommended if Redbubble returns Cloudflare challenge / 403)
+
+Notes:
+- Browser mode may still need one manual challenge pass. Run once with `SYNC_PLAYWRIGHT_HEADLESS=false`, complete the challenge, and keep the storage state file for scheduled runs.
+- Serverless environments may not support persistent browser storage; prefer running sync script on a machine/VM for stable Playwright sessions.
+
+### Manual sync
+
+```bash
+npm run sync:redbubble
+```
+
+### Scheduled sync (Vercel Cron)
+
+`vercel.json` defines a daily cron calling `/api/sync/redbubble`. Replace `YOUR_SYNC_SECRET` in the path with your real value, or send `x-sync-secret` in another scheduler.

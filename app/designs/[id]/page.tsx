@@ -18,11 +18,12 @@ import ShopLinks from "@/app/components/ShopLinks";
 import ShareLinks from "@/app/components/ShareLinks";
 
 type Props = {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 };
 
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(props: Props): Promise<Metadata> {
+  const params = await props.params;
   const id = params.id;
   const data = await getDesignById(id);
   const config: SiteConfig = await getSiteConfig();
@@ -50,11 +51,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function DesignDetails({
-  params,
-}: {
-  params: { id: string };
-}) {
+export default async function DesignDetails(
+  props: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const params = await props.params;
   const config: SiteConfig = await getSiteConfig();
   const data = await getDesignById(params.id);
 
@@ -68,7 +70,7 @@ export default async function DesignDetails({
     return <div className="container mx-auto px-4 py-8">Loading...</div>;
   }
 
-  const shareUrl = `https://${config.domain}/prints/${params.id}`; // Replace with your actual domain
+  const shareUrl = `https://${config.domain}/designs/${params.id}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
   return (

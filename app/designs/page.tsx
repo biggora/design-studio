@@ -28,11 +28,12 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function DesignFolio({
-  searchParams,
-}: {
-  searchParams: { page?: string; search?: string; collection?: string };
-}) {
+export default async function DesignFolio(
+  props: {
+    searchParams: Promise<{ page?: string; search?: string; collection?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const currentPage = Number(searchParams.page) || 1;
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";

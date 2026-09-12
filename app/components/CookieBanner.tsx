@@ -1,24 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 
-export function CookieBanner() {
-  const [showBanner, setShowBanner] = useState(false);
+function subscribe(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
 
-  useEffect(() => {
-    const cookiesAccepted = localStorage.getItem("cookiesAccepted");
-    if (cookiesAccepted !== "true") {
-      setShowBanner(true);
-    }
-  }, []);
+function getSnapshot() {
+  return localStorage.getItem("cookiesAccepted") === "true";
+}
+
+function getServerSnapshot() {
+  return true;
+}
+
+export function CookieBanner() {
+  const cookiesAccepted = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot,
+  );
 
   const acceptCookies = () => {
     localStorage.setItem("cookiesAccepted", "true");
-    setShowBanner(false);
+    window.dispatchEvent(new Event("storage"));
   };
 
-  if (!showBanner) {
+  if (cookiesAccepted) {
     return null;
   }
 

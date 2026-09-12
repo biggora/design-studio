@@ -73,7 +73,7 @@ export async function fetchDesigns(
 
         // Convert data to Design[] using appropriate type checking
         const designs: Design[] = (data || []).map(item => ({
-            id: item.id as number,
+            id: item.id as string,
             externalId: item.externalId as number,
             title: item.title as string,
             externalLink: item.externalLink as string,
@@ -122,7 +122,7 @@ export async function fetchDesigns(
 
     // Convert rows to Design[]
     const designs: Design[] = rows.map(row => ({
-        id: row.id as number,
+        id: row.id as string,
         externalId: row.externalId as number,
         title: row.title as string,
         externalLink: row.externalLink as string,
@@ -165,7 +165,7 @@ export async function getDesignById(
 
         // Convert to Design
         const design: Design = {
-            id: designData.id as number,
+            id: designData.id as string,
             externalId: designData.externalId as number,
             title: designData.title as string,
             externalLink: designData.externalLink as string,
@@ -200,7 +200,7 @@ export async function getDesignById(
 
         // Convert to Design[]
         const relatedDesigns: Design[] = (relatedData || []).map(item => ({
-            id: item.id as number,
+            id: item.id as string,
             externalId: item.externalId as number,
             title: item.title as string,
             externalLink: item.externalLink as string,
@@ -237,7 +237,7 @@ export async function getDesignById(
     // Convert to Design
     const row = rows[0];
     const design: Design = {
-        id: row.id as number,
+        id: row.id as string,
         externalId: row.externalId as number,
         title: row.title as string,
         externalLink: row.externalLink as string,
@@ -266,7 +266,7 @@ export async function getDesignById(
 
     // Convert to Design[]
     const relatedDesigns: Design[] = relatedRows.map(row => ({
-        id: row.id as number,
+        id: row.id as string,
         externalId: row.externalId as number,
         title: row.title as string,
         externalLink: row.externalLink as string,

@@ -1,5 +1,5 @@
 export interface Design {
-  id: number;
+  id: string;
   externalId: number;
   title: string;
   externalLink: string;

@@ -22,30 +22,30 @@ export default async function RootLayout({
   const themeLink = newConfig?.themeLink;
 
   return (
-    <ContextWrapper config={newConfig}>
-      <html lang="en">
-        <head>
-          {newConfig?.verification?.pinterest ? (
-            <meta
-              name="p:domain_verify"
-              content={newConfig?.verification?.pinterest as string}
-            />
-          ) : null}
-          {newConfig?.analytics?.google ? (
-            <GoogleAnalytics gaId={newConfig.analytics.google} />
-          ) : null}
-          {themeLink ? (
-            <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
-          ) : null}
-          <link rel="icon" href={favIcon} />
-        </head>
-        <body className={`${inter.className} bg-[#D3D9D4]`}>
+    <html lang="en">
+      <head>
+        {newConfig?.verification?.pinterest ? (
+          <meta
+            name="p:domain_verify"
+            content={newConfig?.verification?.pinterest as string}
+          />
+        ) : null}
+        {newConfig?.analytics?.google ? (
+          <GoogleAnalytics gaId={newConfig.analytics.google} />
+        ) : null}
+        {themeLink ? (
+          <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
+        ) : null}
+        <link rel="icon" href={favIcon} />
+      </head>
+      <body className={`${inter.className} bg-[#D3D9D4]`}>
+        <ContextWrapper config={newConfig}>
           <Header />
           <main className="main-container pt-16">{children}</main>
           <Footer />
           <CookieBanner />
-        </body>
-      </html>
-    </ContextWrapper>
+        </ContextWrapper>
+      </body>
+    </html>
   );
 }
