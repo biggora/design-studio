@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-24T06:59:56Z",
+  "title": "Design System: Design Studio",
+  "extensions": {
+    "colorMeta": {
+      "indigo-thread": {
+        "role": "primary",
+        "displayName": "Indigo Thread",
+        "canonical": "hsl(197 70% 24%)",
+        "tonalRamp": ["#08212B", "#0D384A", "#124E66", "#1A7193", "#2296C3", "#49B4DF", "#86CDEA", "#C2E6F4"]
+      },
+      "thread-shadow": {
+        "role": "secondary",
+        "displayName": "Thread Shadow",
+        "canonical": "hsl(210 19% 22%)",
+        "tonalRamp": ["#151A1E", "#212931", "#2E3944", "#3E4D5B", "#536679", "#6D859C", "#92A3B5", "#BCC7D2"]
+      },
+      "loom-ink": {
+        "role": "neutral",
+        "displayName": "Loom Ink",
+        "canonical": "hsl(206 20% 16%)",
+        "tonalRamp": ["#101518", "#212A31", "#313F49", "#415462", "#566E81", "#6C889D", "#91A6B6", "#BCC8D2"]
+      },
+      "warp-grey": {
+        "role": "neutral",
+        "displayName": "Warp Grey",
+        "canonical": "hsl(190 12% 51%)",
+        "tonalRamp": ["#242C2E", "#3A484A", "#516367", "#60767B", "#748D92", "#92A6AA", "#B5C2C5", "#D7DEE0"]
+      },
+      "linen-mist": {
+        "role": "neutral",
+        "displayName": "Linen Mist",
+        "canonical": "hsl(132 8% 84%)",
+        "tonalRamp": ["#2F3730", "#4B584D", "#67796A", "#869889", "#A7B4A9", "#BDC7BF", "#D3D9D4", "#E9ECEA"]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Card White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#C2C7C9", "#CDD1D3", "#D8DCDD", "#E3E6E7", "#EDEFEF", "#F5F6F6", "#FAFBFB", "#FFFFFF"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero carousel titles over imagery; the largest voice on the site." },
+      "headline": { "displayName": "Headline", "purpose": "Page-level H1s on light fields." },
+      "title": { "displayName": "Title", "purpose": "Section H2s and the design-detail H1." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, paragraphs, nav items." },
+      "label": { "displayName": "Label", "purpose": "Footer links, cookie-banner copy, copyright line." }
+    },
+    "shadows": [
+      { "name": "structural-card", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Cards and the fixed header; constant at rest and on hover (Tailwind shadow-md)." },
+      { "name": "overlay-bar", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "The cookie banner, the only element floating above everything (Tailwind shadow-lg)." }
+    ],
+    "motion": [
+      { "name": "color-shift", "value": "color 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default transition for all interactive state changes (links, buttons, icon links)." },
+      { "name": "carousel-slide", "value": "500ms ease", "purpose": "Hero carousel slide transition." },
+      { "name": "carousel-autoplay", "value": "5000ms interval", "purpose": "Hero carousel autoplay cadence." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single button style: Indigo Thread fill, Thread Shadow hover; used for submits, pagination, consent.",
+      "html": "<button class=\"ds-btn-primary\">Send Message</button>",
+      "css": ".ds-btn-primary { background: #124E66; color: #D3D9D4; padding: 8px 24px; border: none; border-radius: 6px; font-family: Inter, system-ui, sans-serif; font-size: 16px; line-height: 1.5; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: #2E3944; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Catalog search field with trailing icon; Warp Grey border, teal focus ring.",
+      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input-search\" type=\"text\" placeholder=\"Search designs...\" aria-label=\"Search designs\" /><span class=\"ds-input-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg></span></div>",
+      "css": ".ds-input-wrap { position: relative; } .ds-input-search { width: 100%; padding: 8px 40px 8px 16px; border: 1px solid #748D92; border-radius: 6px; background: #FFFFFF; color: #212A31; font-family: Inter, system-ui, sans-serif; font-size: 16px; } .ds-input-search:focus { outline: none; box-shadow: 0 0 0 2px #124E66; } .ds-input-icon { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #748D92; display: inline-flex; transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-input-icon:hover { color: #124E66; }"
+    },
+    {
+      "name": "Collection Select",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Collection filter select sharing the input treatment: white fill, Warp Grey border, 6px radius.",
+      "html": "<select class=\"ds-select-collection\" aria-label=\"Filter by collection\"><option value=\"\">All Collections</option><option>Quirky Type</option><option>Nature Threads</option></select>",
+      "css": ".ds-select-collection { padding: 8px 16px; border: 1px solid #748D92; border-radius: 6px; background: #FFFFFF; color: #212A31; font-family: Inter, system-ui, sans-serif; font-size: 16px; } .ds-select-collection:focus { outline: none; box-shadow: 0 0 0 2px #124E66; }"
+    },
+    {
+      "name": "Design Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Catalog card: white surface, structural shadow, 3:2 media crop, teal CTA pinned to the bottom.",
+      "html": "<article class=\"ds-card\"><div class=\"ds-card-media\"></div><div class=\"ds-card-body\"><h3 class=\"ds-card-title\">Threaded Salmon</h3><p class=\"ds-card-meta\">Collection: <a class=\"ds-card-link\" href=\"#\">Quirky Type</a></p><a class=\"ds-card-link ds-card-cta\" href=\"#\">View Design Details</a></div></article>",
+      "css": ".ds-card { background: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; max-width: 360px; font-family: Inter, system-ui, sans-serif; } .ds-card-media { aspect-ratio: 3 / 2; background: #F3F4F6; } .ds-card-body { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; } .ds-card-title { font-size: 20px; font-weight: 600; color: #212A31; margin: 0 0 8px; } .ds-card-meta { font-size: 16px; color: #748D92; margin: 0 0 16px; } .ds-card-link { color: #124E66; text-decoration: none; } .ds-card-link:hover { text-decoration: underline; } .ds-card-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; border-radius: 2px; } .ds-card-cta { margin-top: auto; }"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "description": "Fixed Loom Ink band at 80% opacity: brand left, light links that hover to Warp Grey.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-brand\">Design Studio</span><nav class=\"ds-nav-links\"><a href=\"#\" class=\"ds-nav-link\">Home</a><a href=\"#\" class=\"ds-nav-link\">Our Designs</a><a href=\"#\" class=\"ds-nav-link\">About Us</a><a href=\"#\" class=\"ds-nav-link\">Contact</a></nav></header>",
+      "css": ".ds-nav { background: rgba(33, 42, 49, 0.8); color: #D3D9D4; height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); font-family: Inter, system-ui, sans-serif; } .ds-nav-brand { font-size: 24px; font-weight: 700; color: #D3D9D4; } .ds-nav-links { display: flex; } .ds-nav-link { color: #D3D9D4; text-decoration: none; font-size: 16px; margin-left: 24px; transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-link:hover { color: #748D92; } .ds-nav-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; border-radius: 2px; }"
+    },
+    {
+      "name": "Pagination",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Catalog pagination: teal previous/next buttons around a plain page counter.",
+      "html": "<nav class=\"ds-pagination\" aria-label=\"Catalog pages\"><a href=\"#\" class=\"ds-page-btn\">Previous</a><span class=\"ds-page-status\">Page 1 of 8</span><a href=\"#\" class=\"ds-page-btn\">Next</a></nav>",
+      "css": ".ds-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; font-family: Inter, system-ui, sans-serif; } .ds-page-btn { background: #124E66; color: #FFFFFF; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-size: 16px; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-page-btn:hover { background: #2E3944; } .ds-page-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; } .ds-page-status { color: #212A31; font-size: 16px; }"
+    },
+    {
+      "name": "Shop Icon Links",
+      "kind": "custom",
+      "refersTo": "icon-link",
+      "description": "Marketplace link row (glyphs render from the project's brand icon set): 24px marks, Warp Grey to Indigo Thread on hover.",
+      "html": "<div class=\"ds-icon-row\"><a class=\"ds-icon-link\" href=\"#\" aria-label=\"Redbubble\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"/><path d=\"M3 6h18\"/><path d=\"M16 10a4 4 0 0 1-8 0\"/></svg></a><a class=\"ds-icon-link\" href=\"#\" aria-label=\"TeePublic\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z\"/></svg></a></div>",
+      "css": ".ds-icon-row { display: flex; gap: 16px; } .ds-icon-link { color: #748D92; display: inline-flex; transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-icon-link:hover { color: #124E66; } .ds-icon-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; border-radius: 4px; }"
+    },
+    {
+      "name": "Cookie Banner",
+      "kind": "custom",
+      "description": "Fixed-bottom consent bar: Loom Ink surface, overlay shadow, inline privacy link, primary accept button.",
+      "html": "<div class=\"ds-cookie\"><p class=\"ds-cookie-text\">We use cookies to enhance your experience. <a class=\"ds-cookie-link\" href=\"#\">Learn more</a></p><button class=\"ds-cookie-btn\">Accept</button></div>",
+      "css": ".ds-cookie { background: #212A31; color: #D3D9D4; padding: 16px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: Inter, system-ui, sans-serif; } .ds-cookie-text { font-size: 14px; margin: 0; } .ds-cookie-link { color: #D3D9D4; text-decoration: underline; } .ds-cookie-link:hover { color: #748D92; } .ds-cookie-btn { background: #124E66; color: #D3D9D4; padding: 8px 16px; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-cookie-btn:hover { background: #2E3944; } .ds-cookie-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Misty Loom — a calm, atmospheric default skin stretched over a fully configurable chassis.",
+    "overview": "The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the :root CSS custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nKnown debt, not precedent: current components carry ~130 literal hex values, and the Tailwind config references vars that were never defined (--card, --popover, --border, --input, --ring, --radius); the --muted var is darker than the #748D92 actually rendered. The values documented here are the rendered truth; new work closes the gap by moving toward the token layer, never by adding more literals.",
+    "keyCharacteristics": [
+      "Misty, low-chroma palette with a single saturated teal reserved for interaction",
+      "Dark bands (header, footer) frame a light field; white cards carry content",
+      "One type family (Inter by default); hierarchy by size and weight only",
+      "Flat surfaces; shadows are structural and constant, never reactive",
+      "Hover is a color shift only; focus is a 2px teal ring",
+      "Fully token-driven and theme-swappable; zero hardcoded brand assumptions"
+    ],
+    "rules": [
+      { "name": "The No-Hardcode Rule", "body": "Colors enter components only through the token layer (:root custom properties consumed via the Tailwind theme mapping). Literal hex values are legal in exactly one place: the token definition file. The ~130 literals in today's components are debt to migrate, never precedent to copy.", "section": "colors" },
+      { "name": "The One Thread Rule", "body": "Indigo Thread is the only hue that means interactive. Links, buttons, focus rings, and active states all draw from it; it should stay under ~10% of any screen's pixels.", "section": "colors" },
+      { "name": "The Single Family Rule", "body": "One family at a time across all roles. Weight and size do the differentiating; no secondary or accent face unless a deployment's theme config introduces one.", "section": "typography" },
+      { "name": "The Color-Only Hover Rule", "body": "Hover and focus change color, underline, or opacity — never shadow, scale, or transform. All interactive transitions are transition-colors at ~150ms with default easing.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping — and define the still-missing mapped vars (--card, --popover, --border, --input, --ring, --radius) when you touch that layer.",
+      "Do keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
+      "Do give every interactive element a visible 2px Indigo Thread focus ring (focus-visible).",
+      "Do crop catalog media to 3:2 with object-cover and lazy-load below the fold.",
+      "Do treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values."
+    ],
+    "donts": [
+      "Don't copy the literal hex values scattered through existing components into new code — that is documented migration debt, not the system.",
+      "Don't introduce hues outside the token set; green/red pairs are reserved for form success/error semantics only.",
+      "Don't animate hover with elevation, scale, or transform — color shifts and underlines only.",
+      "Don't letter-space or uppercase labels; the family runs at natural spacing in sentence case.",
+      "Don't bake any single deployment's brand (name, logo, shop, imagery) into a component — the product is white-label and every brand touchpoint is configuration."
+    ]
+  }
+}
