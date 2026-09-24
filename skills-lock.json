@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "ec48c58ca973b42c826d5d3be9069b7023d2361ebf7f89ee56b0bae7eb92390a"
+    },
     "next-best-practices": {
       "source": "biggora/claude-plugins-registry",
       "sourceType": "github",
@@ -12,6 +18,12 @@
       "sourceType": "github",
       "skillPath": "src/skills/seo-best-practices/SKILL.md",
       "computedHash": "27cde75a055324ce46a868d51b131b415133966abb868b8acc50511690d6665c"
+    },
+    "supabase": {
+      "source": "supabase/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/supabase/SKILL.md",
+      "computedHash": "a6260582f48df8ba53380bb9b9e870ed2ae5fe147799e90ed783b8aa25167d50"
     },
     "tailwindcss-best-practices": {
       "source": "biggora/claude-plugins-registry",
