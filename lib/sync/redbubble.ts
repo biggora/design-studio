@@ -78,9 +78,10 @@ export type SyncResult = {
 };
 
 // Used to check whether a design already exists in the database and, for props.mockup_tshirt
-// backfill, to read its current `props`/`externalImageUrl` — its full curated content is
-// otherwise never read; nothing but `collection`/`props`/`updatedAt` may be sent back on update.
-const EXISTENCE_CHECK_COLUMNS = "externalId, props, externalImageUrl";
+// backfill, to read its current `props` (to know whether a mockup is already stored, and to
+// preserve any other keys already in it) — its full curated content is otherwise never read;
+// nothing but `collection`/`props`/`updatedAt` may be sent back on update.
+const EXISTENCE_CHECK_COLUMNS = "externalId, props";
 
 // Used once a design is known to exist/have just been written, to resolve its uuid `id`
 // for the design_collections write.
@@ -231,18 +232,23 @@ export function buildArtworkImageUrl(previewUrl: string): string {
   return `${match[1]}/flat,500x,075,f.u2.jpg`;
 }
 
-// Redbubble's signed black-color token for the adult classic-tee flatlay mockup — valid for
-// any design's image id, verified against several live externalImageUrls. Adult tees only
-// support the `tall_portrait` aspect for the flatlay variant.
-const MOCKUP_TSHIRT_SUFFIX = "ssrco,classic_tee,flatlay,000000:44f0b734a5,front,tall_portrait,x1000.jpg";
-
-// Builds the T-shirt mockup image URL from any Redbubble image URL for the same work
-// (`https://<host>/image.<A>.<B>/<variant>...` -> `.../${MOCKUP_TSHIRT_SUFFIX}`). Returns
-// null when the input isn't a recognizable Redbubble image URL.
-export function buildMockupTshirtUrl(imageUrl: string): string | null {
-  const match = imageUrl.match(/^(https:\/\/[a-z0-9.-]+\/image\.[^/]+)\//i);
+// Extracts the artist's own Classic T-Shirt mockup color for this work from a
+// `/shop/ap/<workId>` page's HTML (Apollo state, where slashes are encoded as `{{%2F}}`).
+// The page also embeds Classic T-Shirt previews for *related* works — the preview image id's
+// suffix (the part after the dot) equals the last 4 digits of the work id it belongs to, so
+// matching on `<last4>` picks this work's own preview and ignores the others. Returns null
+// when no matching preview is found (e.g. layout change, or the work has no Classic T-Shirt
+// listing). Adult tees only support the `tall_portrait` aspect for the flatlay variant.
+export function extractClassicTeeMockupUrl(html: string, workId: number): string | null {
+  const decoded = html.replace(/\{\{%2F\}\}/g, "/");
+  const last4 = String(workId).slice(-4);
+  const pattern = new RegExp(
+    `https://(ih\\d\\.redbubble\\.net)/image\\.(\\d+)\\.${last4}/ssrco,classic_tee,[a-z0-9_]+,([0-9a-f]{6}(?:~[0-9a-f]{6})?:[0-9a-f]{10}),`,
+  );
+  const match = decoded.match(pattern);
   if (!match) return null;
-  return `${match[1]}/${MOCKUP_TSHIRT_SUFFIX}`;
+  const [, host, imageId, colorToken] = match;
+  return `https://${host}/image.${imageId}.${last4}/ssrco,classic_tee,flatlay,${colorToken},front,tall_portrait,x1000.jpg`;
 }
 
 function sanitizeText(value: string | undefined | null): string {
@@ -377,7 +383,6 @@ export function parseShopNextData(html: string): ParsedShopPage {
     seen.add(externalId);
 
     const externalImageUrl = buildArtworkImageUrl(previewUrl);
-    const mockupTshirtUrl = buildMockupTshirtUrl(externalImageUrl);
 
     designs.push({
       externalId,
@@ -392,7 +397,10 @@ export function parseShopNextData(html: string): ParsedShopPage {
       backgroundColor: "#FFFFFF",
       backgroundColors: "",
       shared: false,
-      props: mockupTshirtUrl ? { mockup_tshirt: mockupTshirtUrl } : null,
+      // mockup_tshirt is never known at listing time — it's only extracted from the
+      // /shop/ap/<workId> page (see fetchShopApPages), which is fetched once for new
+      // designs and once for existing designs still missing it.
+      props: null,
     });
   }
 
@@ -569,29 +577,47 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-// Fetches the work description from `/shop/ap/<workId>` (`<meta name="description">`) for a
-// batch of work ids, through whichever fetch path the active mode uses, paced by `pacer`.
-// Only ever called for designs that don't exist in the DB yet (see `writeDesignsToSupabase`).
-async function fetchDescriptions(
+export type ShopApPageData = { description: string; mockupUrl: string | null };
+
+// Fetches `/shop/ap/<workId>` for a batch of work ids, through whichever fetch path the
+// active mode uses, paced by `pacer`, and extracts both the work description
+// (`<meta name="description">`) and the artist's Classic T-Shirt mockup color
+// (`extractClassicTeeMockupUrl`). Called for every new design (description + mockup) and
+// every existing design still missing `props.mockup_tshirt` (mockup only) — see
+// `writeDesignsToSupabase`. A work id missing from the returned map means the fetch itself
+// failed (`onError` was called for it); a work id present with `mockupUrl: null` means the
+// page was fetched fine but no Classic T-Shirt preview was found for it.
+async function fetchShopApPages(
   workIds: number[],
   browserSession: BrowserSession | null,
   requestHeaders: Record<string, string> | undefined,
   pacer: RequestPacer,
   concurrency: number,
   onError: (workId: number, error: unknown) => void,
-): Promise<Map<number, string>> {
-  const entries = await runWithConcurrency(workIds, concurrency, async (workId): Promise<[number, string]> => {
-    const url = buildShopApUrl(workId);
-    try {
-      await pacer.waitTurn();
-      const html = browserSession ? await browserSession.fetchHtml(url) : await fetchHtml(url, requestHeaders);
-      return [workId, extractMetaDescription(html)];
-    } catch (error) {
-      onError(workId, error);
-      return [workId, ""];
-    }
-  });
-  return new Map(entries);
+): Promise<Map<number, ShopApPageData>> {
+  const entries = await runWithConcurrency(
+    workIds,
+    concurrency,
+    async (workId): Promise<[number, ShopApPageData] | null> => {
+      const url = buildShopApUrl(workId);
+      try {
+        await pacer.waitTurn();
+        const html = browserSession ? await browserSession.fetchHtml(url) : await fetchHtml(url, requestHeaders);
+        return [
+          workId,
+          { description: extractMetaDescription(html), mockupUrl: extractClassicTeeMockupUrl(html, workId) },
+        ];
+      } catch (error) {
+        onError(workId, error);
+        return null;
+      }
+    },
+  );
+  const map = new Map<number, ShopApPageData>();
+  for (const entry of entries) {
+    if (entry) map.set(entry[0], entry[1]);
+  }
+  return map;
 }
 
 export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Promise<{
@@ -601,13 +627,13 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
   collectionsComplete: boolean;
   errors: string[];
   warnings: string[];
-  // Fetches `/shop/ap/<workId>` descriptions for the given work ids (new designs only —
-  // see `writeDesignsToSupabase`). Kept open here so it can reuse the same browser
-  // session/pacer as the listing crawl; callers must call `close()` when done.
-  fetchDescriptions: (
+  // Fetches `/shop/ap/<workId>` (description + Classic T-Shirt mockup color) for the given
+  // work ids. Kept open here so it can reuse the same browser session/pacer as the listing
+  // crawl; callers must call `close()` when done.
+  fetchShopApPages: (
     workIds: number[],
     onError: (workId: number, error: unknown) => void,
-  ) => Promise<Map<number, string>>;
+  ) => Promise<Map<number, ShopApPageData>>;
   close: () => Promise<void>;
 }> {
   const shopUrl = normalizeShopUrl(options.shopUrl);
@@ -699,8 +725,8 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
       collectionsComplete,
       errors,
       warnings,
-      fetchDescriptions: (workIds, onError) =>
-        fetchDescriptions(workIds, browserSession, options.requestHeaders, pacer, concurrency, onError),
+      fetchShopApPages: (workIds, onError) =>
+        fetchShopApPages(workIds, browserSession, options.requestHeaders, pacer, concurrency, onError),
       close: async () => {
         if (browserSession) await browserSession.close();
       },
@@ -726,7 +752,7 @@ export async function writeDesignsToSupabase(
     collectionsComplete,
     errors,
     warnings: fetchWarnings,
-    fetchDescriptions: fetchNewDescriptions,
+    fetchShopApPages: fetchNewShopApPages,
     close,
   } = fetchResult;
   const dryRun = options.dryRun ?? false;
@@ -788,10 +814,7 @@ export async function writeDesignsToSupabase(
         const failedExternalIds = new Set<number>();
 
         const existingExternalIds = new Set<number>();
-        const existingRowByExternalId = new Map<
-          number,
-          { props: { mockup_tshirt?: string } | null; externalImageUrl: string }
-        >();
+        const existingRowByExternalId = new Map<number, { props: { mockup_tshirt?: string } | null }>();
         for (const rowChunk of chunk(batchRows, 100)) {
           const idChunk = rowChunk.map((r) => r.externalId);
           const { data, error } = await supabase
@@ -804,13 +827,10 @@ export async function writeDesignsToSupabase(
             continue;
           }
           for (const row of (data as
-            | { externalId: number; props: { mockup_tshirt?: string } | null; externalImageUrl: string }[]
+            | { externalId: number; props: { mockup_tshirt?: string } | null }[]
             | null) || []) {
             existingExternalIds.add(row.externalId);
-            existingRowByExternalId.set(row.externalId, {
-              props: row.props,
-              externalImageUrl: row.externalImageUrl,
-            });
+            existingRowByExternalId.set(row.externalId, { props: row.props });
           }
         }
 
@@ -836,6 +856,13 @@ export async function writeDesignsToSupabase(
         errorsCount += failedExternalIds.size;
 
         const newRows: (typeof rows)[0][] = [];
+        // Existing rows that survived the id/title checks — their update is finalized after
+        // the shop/ap fetch below, once we know whether a missing mockup was found.
+        const existingCandidates: {
+          row: (typeof rows)[0];
+          existingProps: { mockup_tshirt?: string } | null;
+          needsMockupBackfill: boolean;
+        }[] = [];
 
         for (const r of batchRows) {
           if (failedExternalIds.has(r.externalId)) {
@@ -852,53 +879,77 @@ export async function writeDesignsToSupabase(
           }
 
           if (existingExternalIds.has(r.externalId)) {
-            const existingRow = existingRowByExternalId.get(r.externalId);
-            const existingProps = existingRow?.props ?? null;
-            let propsUpdate: { mockup_tshirt: string } | undefined;
-            if (!existingProps?.mockup_tshirt) {
-              const mockupUrl = buildMockupTshirtUrl(existingRow?.externalImageUrl || r.externalImageUrl);
-              if (mockupUrl) {
-                propsUpdate = { ...(existingProps || {}), mockup_tshirt: mockupUrl };
-              }
-            }
-
-            // Redbubble is the source of truth for `collection` once the collections crawl
-            // succeeded; otherwise the existing row's collection is left untouched, but a
-            // missing mockup_tshirt is still backfilled independently.
-            if (!collectionsComplete) {
-              if (propsUpdate) {
-                updateRows.push({ externalId: r.externalId, props: propsUpdate });
-              } else {
-                unchanged++;
-              }
-              continue;
-            }
-            updateRows.push({
-              externalId: r.externalId,
-              collection: r.collection,
-              ...(propsUpdate ? { props: propsUpdate } : {}),
+            const existingProps = existingRowByExternalId.get(r.externalId)?.props ?? null;
+            existingCandidates.push({
+              row: r,
+              existingProps,
+              needsMockupBackfill: !existingProps?.mockup_tshirt,
             });
           } else {
             newRows.push(r);
           }
         }
 
-        // Descriptions are only ever fetched for designs that don't exist in the DB yet.
-        let descriptionErrors = 0;
-        const descriptions = newRows.length
-          ? await fetchNewDescriptions(
-              newRows.map((r) => r.externalId),
-              (workId, error) => {
-                descriptionErrors++;
-                errorMessages.push(`Failed to fetch description for ${workId}: ${error}`);
-              },
-            )
-          : new Map<number, string>();
-        errorsCount += descriptionErrors;
+        // One /shop/ap/<workId> fetch per new design (description + mockup color) and per
+        // existing design still missing props.mockup_tshirt (mockup color only) — a design
+        // that already has a mockup is never fetched.
+        const backfillCandidates = existingCandidates.filter((c) => c.needsMockupBackfill);
+        const shopApWorkIds = [
+          ...newRows.map((r) => r.externalId),
+          ...backfillCandidates.map((c) => c.row.externalId),
+        ];
+        let shopApFetchErrors = 0;
+        const shopApData = shopApWorkIds.length
+          ? await fetchNewShopApPages(shopApWorkIds, (workId, error) => {
+              shopApFetchErrors++;
+              errorMessages.push(`Failed to fetch /shop/ap/${workId}: ${error}`);
+            })
+          : new Map<number, ShopApPageData>();
+        errorsCount += shopApFetchErrors;
 
         const nowIso = new Date().toISOString();
         for (const r of newRows) {
-          insertRows.push({ ...r, description: descriptions.get(r.externalId) ?? "", updatedAt: nowIso });
+          const data = shopApData.get(r.externalId);
+          let props: { mockup_tshirt: string } | null = null;
+          if (data) {
+            if (data.mockupUrl) {
+              props = { mockup_tshirt: data.mockupUrl };
+            } else {
+              warnings.push(`No Classic T-Shirt preview for ${r.externalId}; mockup_tshirt not set`);
+            }
+          }
+          insertRows.push({ ...r, description: data?.description ?? "", props, updatedAt: nowIso });
+        }
+
+        for (const c of existingCandidates) {
+          let propsUpdate: { mockup_tshirt: string } | undefined;
+          if (c.needsMockupBackfill) {
+            const data = shopApData.get(c.row.externalId);
+            if (data) {
+              if (data.mockupUrl) {
+                propsUpdate = { ...(c.existingProps || {}), mockup_tshirt: data.mockupUrl };
+              } else {
+                warnings.push(`No Classic T-Shirt preview for ${c.row.externalId}; mockup_tshirt not set`);
+              }
+            }
+          }
+
+          // Redbubble is the source of truth for `collection` once the collections crawl
+          // succeeded; otherwise the existing row's collection is left untouched, but a
+          // missing mockup_tshirt is still backfilled independently.
+          if (!collectionsComplete) {
+            if (propsUpdate) {
+              updateRows.push({ externalId: c.row.externalId, props: propsUpdate });
+            } else {
+              unchanged++;
+            }
+            continue;
+          }
+          updateRows.push({
+            externalId: c.row.externalId,
+            collection: c.row.collection,
+            ...(propsUpdate ? { props: propsUpdate } : {}),
+          });
         }
 
         if (unchanged > 0) {
