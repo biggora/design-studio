@@ -261,7 +261,7 @@ For selecting random designs (e.g. for a promo block or dynamic recommendations)
 ```sql
 -- Select a single random design
 CREATE OR REPLACE FUNCTION get_random_design()
-RETURNS SETOF design
+RETURNS SETOF designs
 LANGUAGE SQL
 AS $$
     SELECT * FROM designs
@@ -279,8 +279,6 @@ AS $$
     LIMIT 3;
 $$;
 ```
-
-> Note: the first function is declared `RETURNS SETOF design` (singular) in the current `init/postgres_functions.sql`, while the table (and therefore its composite type) is named `designs`. Verify the script executes cleanly in your environment before relying on it.
 
 ### 3.2 MySQL (`init/mysql_functions.sql`)
 

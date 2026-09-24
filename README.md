@@ -95,7 +95,7 @@ npm run sync:redbubble
 
 ### Scheduled sync
 
-The repository ships **no** `vercel.json`; use any external scheduler (Vercel Cron, GitHub Actions, crontab) to call `POST /api/sync/redbubble` with your real secret in the `x-sync-secret` request header. See [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) for cron recipes and the Docker-based Playwright runner.
+The sync cannot run on Vercel — Cloudflare blocks both Cheerio and headless Playwright there. Schedule `npm run sync:redbubble` with `SYNC_PLAYWRIGHT_HEADLESS=false` via the OS scheduler (Windows Task Scheduler / cron) on a machine/VM with a display; `POST /api/sync/redbubble` (authenticated via the `x-sync-secret` header) remains available as an optional manual trigger from that machine. See [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) for scheduler recipes and the Docker-based Playwright runner.
 
 ## Documentation
 

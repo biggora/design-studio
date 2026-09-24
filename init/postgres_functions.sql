@@ -1,5 +1,5 @@
 create or replace function get_random_design()
-returns setof design
+returns setof designs
 language sql
 as $$
 select * from designs
