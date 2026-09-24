@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Design } from "@/types/design";
+import { Card, CardContent } from "@/components/ui/card";
 
 type DesignCardProps = {
   design: Design;
@@ -11,15 +12,12 @@ export function DesignCard({ design }: DesignCardProps) {
     design.externalImageUrl?.trim() || "/images/no_image_available.svg";
 
   return (
-    <div
-      key={design.id}
-      className="bg-white shadow-md rounded-lg overflow-hidden flex flex-col"
-    >
+    <Card key={design.id}>
       <Link
         href={`/designs/${design.id}`}
-        className="text-[#124E66] hover:underline"
+        className="text-accent hover:underline"
       >
-        <div className="relative w-full aspect-[3/2] overflow-hidden bg-gray-100">
+        <div className="relative w-full aspect-[3/2] overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={design.title}
@@ -29,12 +27,12 @@ export function DesignCard({ design }: DesignCardProps) {
           />
         </div>
       </Link>
-      <div className="p-4 flex flex-col flex-grow">
-        <h2 className="text-xl font-semibold mb-2 text-[#212A31]">
+      <CardContent className="p-4 flex flex-col flex-grow">
+        <h2 className="text-xl font-semibold mb-2 text-foreground">
           {design.title}
         </h2>
-        <p className="text-[#748D92] mb-4">{design.description}</p>
-        <p className="text-[#748D92] mb-2">
+        <p className="text-muted-foreground mb-4">{design.description}</p>
+        <p className="text-muted-foreground mb-2">
           Collection:&nbsp;
           <Link href={`/designs?collection=${design.collection}&page=1`}>
             {design.collection}
@@ -42,11 +40,11 @@ export function DesignCard({ design }: DesignCardProps) {
         </p>
         <Link
           href={`/designs/${design.id}`}
-          className="text-[#124E66] hover:underline mt-auto"
+          className="text-accent hover:underline mt-auto"
         >
           View Design Details
         </Link>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

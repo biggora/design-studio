@@ -104,7 +104,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#D3D9D4]`}>
+      <body className={`${inter.className} bg-background`}>
         <JsonLd data={jsonLdData} />
         {isAllowedThemeUrl(themeLink) ? (
           <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />

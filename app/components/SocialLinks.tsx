@@ -15,7 +15,7 @@ export default function SocialLinks() {
 
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-4 text-[#212A31]">
+      <h2 className="text-2xl font-semibold mb-4 text-foreground">
         Connect With Us
       </h2>
       <div className="flex justify-start space-x-4 mb-4">
@@ -24,7 +24,7 @@ export default function SocialLinks() {
             href={config.social.facebook}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#748D92] hover:text-[#124E66] transition-colors"
+            className="text-muted-foreground hover:text-accent transition-colors"
           >
             <SiFacebook size={24} />
             <span className="sr-only">Facebook</span>
@@ -35,7 +35,7 @@ export default function SocialLinks() {
             href={config.social.twitter}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#748D92] hover:text-[#124E66] transition-colors"
+            className="text-muted-foreground hover:text-accent transition-colors"
           >
             <SiX size={24} />
             <span className="sr-only">Twitter</span>
@@ -46,7 +46,7 @@ export default function SocialLinks() {
             href={config.social.instagram}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#748D92] hover:text-[#124E66] transition-colors"
+            className="text-muted-foreground hover:text-accent transition-colors"
           >
             <SiInstagram size={24} />
             <span className="sr-only">Instagram</span>
@@ -57,7 +57,7 @@ export default function SocialLinks() {
             href={config.social.linkedin}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#748D92] hover:text-[#124E66] transition-colors"
+            className="text-muted-foreground hover:text-accent transition-colors"
           >
             <SiLinkedin size={24} />
             <span className="sr-only">LinkedIn</span>
@@ -68,7 +68,7 @@ export default function SocialLinks() {
             href={config.social.pinterest}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#748D92] hover:text-[#124E66] transition-colors"
+            className="text-muted-foreground hover:text-accent transition-colors"
           >
             <SiPinterest size={24} />
             <span className="sr-only">Pinterest</span>

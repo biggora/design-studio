@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { getSiteConfig } from "@/utils/database";
 import { SiteConfig } from "@/lib/store";
+import { buttonVariants } from "@/components/ui/button";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -65,8 +66,8 @@ export default async function Services() {
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-bold mb-8">Our Services</h1>
-        <p className="text-gray-600 mb-8">
+        <h1 className="text-4xl font-bold mb-8 text-foreground">Our Services</h1>
+        <p className="text-muted-foreground mb-8">
           {config.name} creates original designs and turns them into
           print-on-demand apparel and merch, sold through our marketplace
           partners.
@@ -74,13 +75,13 @@ export default async function Services() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service, index) => (
-            <div key={index} className="bg-white shadow-md rounded-lg p-6">
+            <div key={index} className="bg-card shadow-md rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4">{service.title}</h2>
-              <p className="text-gray-600 mb-4">{service.description}</p>
+              <p className="text-muted-foreground mb-4">{service.description}</p>
               <ul className="space-y-2">
                 {service.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-center">
-                    <CheckCircle className="text-green-500 mr-2" size={20} />
+                    <CheckCircle className="text-accent mr-2" size={20} />
                     <span>{feature}</span>
                   </li>
                 ))}
@@ -91,18 +92,15 @@ export default async function Services() {
 
         <div className="mt-12">
           <h2 className="text-2xl font-semibold mb-4">Where to Buy</h2>
-          <p className="text-gray-600 mb-4">
+          <p className="text-muted-foreground mb-4">
             Our designs are printed and shipped by our marketplace partners,
             including Redbubble, TeePublic and Tostadora.
           </p>
           <div className="flex flex-wrap gap-4">
-            <Link href="/designs" className="text-[#124E66] hover:underline">
+            <Link href="/designs" className="text-accent hover:underline">
               Browse our designs
             </Link>
-            <Link
-              href="/contact"
-              className="bg-[#212A31] text-[#D3D9D4] px-4 py-2 rounded"
-            >
+            <Link href="/contact" className={buttonVariants()}>
               Request a custom design
             </Link>
           </div>

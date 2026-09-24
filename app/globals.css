@@ -2,13 +2,49 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens — the theme layer (see DESIGN.md).
+ * Single source of truth for color and radius; components consume these
+ * through the Tailwind theme mapping (bg-primary, text-accent, border-input,
+ * ring-ring, …), never literal values. A deployment re-skins the site by
+ * overriding this block or pointing the `themeLink` config at a hosted
+ * override stylesheet. Values are HSL triplets (Tailwind convention).
+ */
 :root {
+  /* Loom Ink — structural dark: bands, headings, body text */
   --primary: 206 20% 16%;
+  --primary-foreground: 132 8% 84%;
+  /* Thread Shadow — secondary dark: footer band, button hover */
   --secondary: 210 19% 22%;
+  --secondary-foreground: 132 8% 84%;
+  /* Indigo Thread — the single interactive hue */
   --accent: 197 70% 24%;
-  --muted: 190 12% 43%;
+  --accent-foreground: 132 8% 84%;
+  /* Warp Grey — muted text and borders; --muted is its light surface tint */
+  --muted: 190 12% 90%;
+  --muted-foreground: 190 12% 51%;
+  /* Linen Mist field */
   --background: 132 8% 84%;
   --foreground: 206 20% 16%;
+  /* Card White surfaces */
+  --card: 0 0% 100%;
+  --card-foreground: 206 20% 16%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 206 20% 16%;
+  /* Semantic status, reserved for form feedback */
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+  /* Lines and focus */
+  --border: 190 12% 51%;
+  --input: 190 12% 51%;
+  --ring: 197 70% 24%;
+  --radius: 0.5rem;
+  /* Chart ramp (mapped by Tailwind; no charts in the app yet) */
+  --chart-1: 197 70% 24%;
+  --chart-2: 190 12% 51%;
+  --chart-3: 210 19% 22%;
+  --chart-4: 206 20% 16%;
+  --chart-5: 132 8% 60%;
 }
 
 .main-container {
@@ -17,16 +53,16 @@
 
 /* Custom styles for the carousel */
 .slick-dots li button:before {
-  color: #748d92 !important;
+  color: hsl(var(--muted-foreground)) !important;
 }
 
 .slick-dots li.slick-active button:before {
-  color: #124e66 !important;
+  color: hsl(var(--accent)) !important;
 }
 
 .slick-prev:before,
 .slick-next:before {
-  color: #124e66 !important;
+  color: hsl(var(--accent)) !important;
 }
 
 .slick-prev {

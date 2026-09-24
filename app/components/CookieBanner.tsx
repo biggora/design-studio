@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export function CookieBanner() {
   const [showBanner, setShowBanner] = useState(false);
@@ -25,24 +26,21 @@ export function CookieBanner() {
   if (!showBanner) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-[#212A31] text-[#D3D9D4] p-4 shadow-lg">
+    <div className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground p-4 shadow-lg">
       <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between">
         <p className="text-sm mb-4 sm:mb-0">
           We use cookies to enhance your experience. By continuing to visit this
           site you agree to our use of cookies.{" "}
           <Link
             href="/privacy-policy"
-            className="underline hover:text-[#748D92]"
+            className="underline hover:text-muted-foreground"
           >
             Learn more
           </Link>
         </p>
-        <button
-          onClick={handleAccept}
-          className="bg-[#124E66] text-[#D3D9D4] px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
-        >
+        <Button size="sm" onClick={handleAccept}>
           Accept
-        </button>
+        </Button>
       </div>
     </div>
   );

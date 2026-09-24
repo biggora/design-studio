@@ -16,12 +16,12 @@ export default function Footer() {
   const config = useContext(ConfigContext);
 
   return (
-    <footer className="bg-[#2E3944] text-[#D3D9D4]">
+    <footer className="bg-secondary text-primary-foreground">
       <div className="container mx-auto px-6 py-4">
         <div className="flex flex-wrap justify-between items-center">
           <div className="w-full md:w-1/3 text-center md:text-left">
             <h3 className="text-lg font-semibold">{config.name}</h3>
-            <p className="mt-2 text-sm text-[#748D92]">
+            <p className="mt-2 text-sm text-muted-foreground">
               Innovative designs that weave stories.
             </p>
           </div>
@@ -31,7 +31,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/privacy-policy"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   Privacy Policy
                 </Link>
@@ -39,7 +39,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/terms-of-service"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   Terms of Service
                 </Link>
@@ -54,7 +54,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.facebook)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   <SiFacebook size={24} />
                   <span className="sr-only">Facebook</span>
@@ -65,7 +65,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.twitter)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   <SiX size={24} />
                   <span className="sr-only">Twitter</span>
@@ -76,7 +76,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   <SiInstagram size={24} />
                   <span className="sr-only">Instagram</span>
@@ -87,7 +87,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.linkedin)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   <SiLinkedin size={24} />
                   <span className="sr-only">LinkedIn</span>
@@ -98,7 +98,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.pinterest)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[#748D92] hover:text-[#D3D9D4] transition-colors"
+                  className="text-muted-foreground hover:text-primary-foreground transition-colors"
                 >
                   <SiPinterest size={24} />
                   <span className="sr-only">Pinterest</span>
@@ -107,7 +107,7 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-8 text-center text-sm text-[#748D92]">
+        <div className="mt-8 text-center text-sm text-muted-foreground">
           &copy; {new Date().getFullYear()} {config.name}. All rights reserved.
         </div>
       </div>
