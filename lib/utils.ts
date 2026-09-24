@@ -48,6 +48,13 @@ export function calculateReadingTime(text: string): number {
   return Math.ceil(numberOfWords / wordsPerMinute);
 }
 
+/** Parses a page query param into a safe 1-based integer, defaulting to 1 for anything not a plain positive integer string. */
+export function parsePageParam(value: string | undefined): number {
+  if (value === undefined || !/^\d+$/.test(value)) return 1;
+  const parsed = parseInt(value, 10);
+  return parsed >= 1 ? parsed : 1;
+}
+
 export function getRedBubbleDesignPageLink(designId: number): string {
   return `https://www.redbubble.com/shop/ap/${designId}`;
 }

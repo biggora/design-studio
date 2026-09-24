@@ -2,11 +2,16 @@ import {describe, it, expect, beforeEach, vi} from "vitest";
 
 vi.mock("next/cache", () => ({unstable_cache: (fn: unknown) => fn}));
 
+type DesignsQueryResponse = { data: unknown; error: unknown; count: number | null };
+
 let studioResponse: { data: unknown; error: unknown } = {data: [], error: null};
 let designResponse: { data: unknown; error: unknown } = {data: null, error: null};
 let relatedResponse: { data: unknown; error: unknown } = {data: [], error: null};
-let designsQueryResponse: { data: unknown; error: unknown; count: number | null } = {data: [], error: null, count: 0};
-let legacyDesignsQueryResponse: { data: unknown; error: unknown; count: number | null } = {data: [], error: null, count: 0};
+// A queue of responses consumed in order across successive `.range()` calls
+// (e.g. the initial call, then a PGRST103 count-only re-run). A single
+// non-array value is reused for every call.
+let designsQueryResponse: DesignsQueryResponse | DesignsQueryResponse[] = {data: [], error: null, count: 0};
+let legacyDesignsQueryResponse: DesignsQueryResponse | DesignsQueryResponse[] = {data: [], error: null, count: 0};
 let legacyCollectionsResponse: { data: unknown; error: unknown } = {data: [], error: null};
 let collectionsTableResponse: { data: unknown; error: unknown } = {data: [], error: null};
 
@@ -20,6 +25,16 @@ function legacyChain(response: { data: unknown; error: unknown }) {
         neq: () => obj,
     };
     return obj;
+}
+
+const orderCalls: unknown[][] = [];
+const rangeCalls: unknown[][] = [];
+
+function nextResponse(response: DesignsQueryResponse | DesignsQueryResponse[]): DesignsQueryResponse {
+    if (Array.isArray(response)) {
+        return response.length > 1 ? (response.shift() as DesignsQueryResponse) : response[0];
+    }
+    return response;
 }
 
 function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
@@ -38,9 +53,14 @@ function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
             }
             return builder;
         },
-        order: () => builder,
-        range: () =>
-            Promise.resolve(isJoin ? designsQueryResponse : legacyDesignsQueryResponse),
+        order: (...args: unknown[]) => {
+            orderCalls.push(args);
+            return builder;
+        },
+        range: (from: number, to: number) => {
+            rangeCalls.push([from, to]);
+            return Promise.resolve(nextResponse(isJoin ? designsQueryResponse : legacyDesignsQueryResponse));
+        },
     };
     return builder;
 }
@@ -111,6 +131,8 @@ describe("utils/database", () => {
         legacyCollectionsResponse = {data: [], error: null};
         collectionsTableResponse = {data: [], error: null};
         mysqlQuery.mockReset();
+        orderCalls.length = 0;
+        rangeCalls.length = 0;
     });
 
     describe("getSiteConfig", () => {
@@ -236,6 +258,32 @@ describe("utils/database", () => {
             expect(total).toBe(1);
             expect(designs).toHaveLength(1);
         });
+
+        it("returns the real total (not 0) when the requested page is past the end (PGRST103)", async () => {
+            legacyDesignsQueryResponse = [
+                {data: null, error: {code: "PGRST103", message: "offset out of range"}, count: null},
+                {data: [], error: null, count: 224},
+            ];
+
+            const {fetchDesigns} = await import("@/utils/database");
+            const {designs, total} = await fetchDesigns(99, "", "", 12);
+
+            expect(designs).toEqual([]);
+            expect(total).toBe(224);
+            expect(rangeCalls[rangeCalls.length - 1]).toEqual([0, 0]);
+            expect(console.error).not.toHaveBeenCalled();
+        });
+
+        it("orders by id as a tiebreaker after createdAt to keep pagination stable", async () => {
+            legacyDesignsQueryResponse = {data: [{...joinRow, design_collections: undefined}], error: null, count: 1};
+            const {fetchDesigns} = await import("@/utils/database");
+            await fetchDesigns(1, "", "", 12);
+
+            expect(orderCalls).toEqual([
+                ["createdAt", {ascending: false}],
+                ["id", {ascending: false}],
+            ]);
+        });
     });
 
     describe("fetchCollections (supabase)", () => {
@@ -321,6 +369,20 @@ describe("utils/database", () => {
 
             expect(total).toBe(1);
             expect(designs).toHaveLength(1);
+        });
+
+        it("orders by id as a tiebreaker after createdAt to keep pagination stable", async () => {
+            stubMySQLEnv();
+            mysqlQuery.mockImplementation((sql: string) => {
+                if (sql.startsWith("SELECT * FROM designs")) {
+                    expect(sql).toContain("ORDER BY createdAt DESC, id DESC");
+                    return Promise.resolve([[row]]);
+                }
+                return Promise.resolve([[{total: 1}]]);
+            });
+
+            const {fetchDesigns} = await import("@/utils/database");
+            await fetchDesigns(1, "", "", 12);
         });
     });
 

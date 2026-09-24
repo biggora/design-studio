@@ -44,10 +44,9 @@ export function CatalogSearchBar({
       params.set("collection", newCollection);
     }
 
-    params.set("page", "1");
-
+    const query = params.toString();
     startTransition(() => {
-      router.push(`/designs?${params.toString()}`);
+      router.push(query ? `/designs?${query}` : "/designs");
     });
   };
 
