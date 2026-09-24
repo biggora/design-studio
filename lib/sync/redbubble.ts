@@ -71,15 +71,16 @@ export type SyncResult = {
   collections: { found: number; upserted: number; links: number };
   plan?: {
     insert: object[];
-    update: { externalId: number; collection: string }[];
+    update: { externalId: number; collection?: string; props?: object }[];
     collections?: object[];
     links?: { externalId: number; collections: number[] }[];
   };
 };
 
-// Used only to check whether a design already exists in the database (its full curated
-// content is never read — nothing but `collection`/`updatedAt` may be sent back on update).
-const EXISTENCE_CHECK_COLUMN = "externalId";
+// Used to check whether a design already exists in the database and, for props.mockup_tshirt
+// backfill, to read its current `props`/`externalImageUrl` — its full curated content is
+// otherwise never read; nothing but `collection`/`props`/`updatedAt` may be sent back on update.
+const EXISTENCE_CHECK_COLUMNS = "externalId, props, externalImageUrl";
 
 // Used once a design is known to exist/have just been written, to resolve its uuid `id`
 // for the design_collections write.
@@ -230,6 +231,20 @@ export function buildArtworkImageUrl(previewUrl: string): string {
   return `${match[1]}/flat,500x,075,f.u2.jpg`;
 }
 
+// Redbubble's signed black-color token for the adult classic-tee flatlay mockup — valid for
+// any design's image id, verified against several live externalImageUrls. Adult tees only
+// support the `tall_portrait` aspect for the flatlay variant.
+const MOCKUP_TSHIRT_SUFFIX = "ssrco,classic_tee,flatlay,000000:44f0b734a5,front,tall_portrait,x1000.jpg";
+
+// Builds the T-shirt mockup image URL from any Redbubble image URL for the same work
+// (`https://<host>/image.<A>.<B>/<variant>...` -> `.../${MOCKUP_TSHIRT_SUFFIX}`). Returns
+// null when the input isn't a recognizable Redbubble image URL.
+export function buildMockupTshirtUrl(imageUrl: string): string | null {
+  const match = imageUrl.match(/^(https:\/\/[a-z0-9.-]+\/image\.[^/]+)\//i);
+  if (!match) return null;
+  return `${match[1]}/${MOCKUP_TSHIRT_SUFFIX}`;
+}
+
 function sanitizeText(value: string | undefined | null): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
@@ -361,20 +376,23 @@ export function parseShopNextData(html: string): ParsedShopPage {
     if (seen.has(externalId)) continue;
     seen.add(externalId);
 
+    const externalImageUrl = buildArtworkImageUrl(previewUrl);
+    const mockupTshirtUrl = buildMockupTshirtUrl(externalImageUrl);
+
     designs.push({
       externalId,
       title,
       description: "",
       keywords: (item.work?.tags || []).join(", "),
       externalLink: buildShopApUrl(externalId),
-      externalImageUrl: buildArtworkImageUrl(previewUrl),
+      externalImageUrl,
       category: "no_category",
       collection: "no_collection",
       imageName: null,
       backgroundColor: "#FFFFFF",
       backgroundColors: "",
       shared: false,
-      props: null,
+      props: mockupTshirtUrl ? { mockup_tshirt: mockupTshirtUrl } : null,
     });
   }
 
@@ -738,7 +756,7 @@ export async function writeDesignsToSupabase(
   const collectionByTitle = new Map(collections.map((c) => [c.title, c]));
 
   const insertRows: (typeof rows)[0][] = [];
-  const updateRows: { externalId: number; collection: string }[] = [];
+  const updateRows: { externalId: number; collection?: string; props?: object }[] = [];
   const successfulExternalIds: number[] = [];
 
   try {
@@ -770,19 +788,29 @@ export async function writeDesignsToSupabase(
         const failedExternalIds = new Set<number>();
 
         const existingExternalIds = new Set<number>();
+        const existingRowByExternalId = new Map<
+          number,
+          { props: { mockup_tshirt?: string } | null; externalImageUrl: string }
+        >();
         for (const rowChunk of chunk(batchRows, 100)) {
           const idChunk = rowChunk.map((r) => r.externalId);
           const { data, error } = await supabase
             .from("designs")
-            .select(EXISTENCE_CHECK_COLUMN)
+            .select(EXISTENCE_CHECK_COLUMNS)
             .in("externalId", idChunk);
           if (error) {
             errorMessages.push(error.message);
             idChunk.forEach((id) => failedExternalIds.add(id));
             continue;
           }
-          for (const row of (data as { externalId: number }[] | null) || []) {
+          for (const row of (data as
+            | { externalId: number; props: { mockup_tshirt?: string } | null; externalImageUrl: string }[]
+            | null) || []) {
             existingExternalIds.add(row.externalId);
+            existingRowByExternalId.set(row.externalId, {
+              props: row.props,
+              externalImageUrl: row.externalImageUrl,
+            });
           }
         }
 
@@ -824,13 +852,32 @@ export async function writeDesignsToSupabase(
           }
 
           if (existingExternalIds.has(r.externalId)) {
+            const existingRow = existingRowByExternalId.get(r.externalId);
+            const existingProps = existingRow?.props ?? null;
+            let propsUpdate: { mockup_tshirt: string } | undefined;
+            if (!existingProps?.mockup_tshirt) {
+              const mockupUrl = buildMockupTshirtUrl(existingRow?.externalImageUrl || r.externalImageUrl);
+              if (mockupUrl) {
+                propsUpdate = { ...(existingProps || {}), mockup_tshirt: mockupUrl };
+              }
+            }
+
             // Redbubble is the source of truth for `collection` once the collections crawl
-            // succeeded; otherwise the existing row is left untouched entirely.
+            // succeeded; otherwise the existing row's collection is left untouched, but a
+            // missing mockup_tshirt is still backfilled independently.
             if (!collectionsComplete) {
-              unchanged++;
+              if (propsUpdate) {
+                updateRows.push({ externalId: r.externalId, props: propsUpdate });
+              } else {
+                unchanged++;
+              }
               continue;
             }
-            updateRows.push({ externalId: r.externalId, collection: r.collection });
+            updateRows.push({
+              externalId: r.externalId,
+              collection: r.collection,
+              ...(propsUpdate ? { props: propsUpdate } : {}),
+            });
           } else {
             newRows.push(r);
           }
@@ -916,10 +963,10 @@ export async function writeDesignsToSupabase(
     // batch upsert with only these columns would violate NOT NULL constraints on the other
     // columns when Postgres builds the (never-taken) insert branch of ON CONFLICT DO UPDATE.
     for (const r of updateRows) {
-      const { error } = await supabase
-        .from("designs")
-        .update({ collection: r.collection, updatedAt: nowIso })
-        .eq("externalId", r.externalId);
+      const changes: { collection?: string; props?: object; updatedAt: string } = { updatedAt: nowIso };
+      if (r.collection !== undefined) changes.collection = r.collection;
+      if (r.props !== undefined) changes.props = r.props;
+      const { error } = await supabase.from("designs").update(changes).eq("externalId", r.externalId);
       if (error) {
         errorsCount += 1;
         errorMessages.push(error.message);

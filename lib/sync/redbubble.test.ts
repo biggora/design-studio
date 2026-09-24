@@ -6,7 +6,10 @@ import {
   syncRedbubbleToSupabase,
   parseShopNextData,
   buildArtworkImageUrl,
+  buildMockupTshirtUrl,
 } from "@/lib/sync/redbubble";
+
+const MOCKUP_TSHIRT_SUFFIX = "ssrco,classic_tee,flatlay,000000:44f0b734a5,front,tall_portrait,x1000.jpg";
 
 // ---------------------------------------------------------------------------
 // normalizeShopUrl
@@ -112,6 +115,30 @@ describe("buildArtworkImageUrl", () => {
     expect(buildArtworkImageUrl("https://example.com/not-an-image")).toBe(
       "https://example.com/not-an-image",
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// buildMockupTshirtUrl
+// ---------------------------------------------------------------------------
+
+describe("buildMockupTshirtUrl", () => {
+  it("builds the T-shirt mockup URL from an ih1 preview URL, preserving host and image id", () => {
+    expect(
+      buildMockupTshirtUrl(
+        "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
+      ),
+    ).toBe(`https://ih1.redbubble.net/image.5909636501.6884/${MOCKUP_TSHIRT_SUFFIX}`);
+  });
+
+  it("preserves an ih0 host unchanged", () => {
+    expect(
+      buildMockupTshirtUrl("https://ih0.redbubble.net/image.123.4/st,small,507x507.jpg"),
+    ).toBe(`https://ih0.redbubble.net/image.123.4/${MOCKUP_TSHIRT_SUFFIX}`);
+  });
+
+  it("returns null when the input isn't a recognizable Redbubble image URL", () => {
+    expect(buildMockupTshirtUrl("https://example.com/not-an-image")).toBeNull();
   });
 });
 
@@ -438,7 +465,9 @@ describe("syncRedbubbleToSupabase", () => {
     expect(row.backgroundColor).toBe("#FFFFFF");
     expect(row.backgroundColors).toBe("");
     expect(row.shared).toBe(false);
-    expect(row.props).toBeNull();
+    expect(row.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.5909636501.6884/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
     expect(row.description).toBe("A hand-drawn design.\n\nPrinted on demand.");
     expect(typeof row.updatedAt).toBe("string");
 
@@ -524,7 +553,7 @@ describe("syncRedbubbleToSupabase", () => {
     }
   });
 
-  it("updates an existing row by sending only externalId, collection, and updatedAt", async () => {
+  it("updates an existing row by sending externalId, collection, props, and updatedAt when a mockup needs backfilling", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
     const shopPage = nextDataHtml({
       results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
@@ -554,8 +583,13 @@ describe("syncRedbubbleToSupabase", () => {
     expect(inserts).toHaveLength(0);
     expect(updates).toHaveLength(1);
     expect(updates[0].table).toBe("designs");
-    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
     expect(updates[0].changes.collection).toBe("no_collection");
+    // The DB row (mocked via existingRow()) has no stored props, so a missing mockup is
+    // backfilled from the freshly scraped externalImageUrl alongside the collection sync.
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.111.1/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
     expect(typeof updates[0].changes.updatedAt).toBe("string");
     expect(updates[0].filters).toEqual([{ col: "externalId", val: 11111111 }]);
 
@@ -567,7 +601,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.updated).toBe(1);
   });
 
-  it("collectionsComplete=false: does not update existing rows at all", async () => {
+  it("collectionsComplete=false: leaves collection untouched but still backfills a missing mockup", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
     const shopPage = nextDataHtml({
       results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
@@ -589,11 +623,19 @@ describe("syncRedbubbleToSupabase", () => {
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
-    expect(updateCalls()).toHaveLength(0);
     expect(insertCalls()).toHaveLength(0);
-    expect(result.updated).toBe(0);
     expect(result.inserted).toBe(0);
-    expect(result.warnings.some((w) => /left unchanged/.test(w))).toBe(true);
+
+    // Collection sync is skipped (collectionsComplete=false), but a missing mockup_tshirt is
+    // backfilled independently, so a props-only update is still sent.
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.111.1/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
+    expect(result.updated).toBe(1);
+    expect(result.warnings.some((w) => /left unchanged/.test(w))).toBe(false);
   });
 
   it("skips the second row of an in-batch title collision and records a warning", async () => {
@@ -670,7 +712,15 @@ describe("syncRedbubbleToSupabase", () => {
     expect(upsertCalls()).toHaveLength(0);
     expect(result.dryRun).toBe(true);
     expect(result.plan?.insert).toHaveLength(1);
-    expect(result.plan?.update).toEqual([{ externalId: 22222222, collection: "no_collection" }]);
+    expect(result.plan?.update).toEqual([
+      {
+        externalId: 22222222,
+        collection: "no_collection",
+        props: {
+          mockup_tshirt: `https://ih1.redbubble.net/image.222.1/${MOCKUP_TSHIRT_SUFFIX}`,
+        },
+      },
+    ]);
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(1);
   });
@@ -942,8 +992,25 @@ describe("parseShopNextData", () => {
       backgroundColor: "#FFFFFF",
       backgroundColors: "",
       shared: false,
-      props: null,
+      props: { mockup_tshirt: `https://ih1.redbubble.net/image.5909636486.6884/${MOCKUP_TSHIRT_SUFFIX}` },
     });
+  });
+
+  it("sets props to null when the preview image URL isn't a recognizable Redbubble image URL", () => {
+    const html = nextDataHtml({
+      results: [
+        {
+          inventoryItem: {
+            productPageUrl: "https://www.redbubble.com/i/mug/Foo/11111111",
+            previewSet: { previews: [{ previewTypeId: "product_close", url: "https://example.com/not-an-image" }] },
+            work: { id: "11111111", title: "Foo", tags: [] },
+          },
+        },
+      ],
+    });
+
+    const result = parseShopNextData(html);
+    expect(result.designs[0].props).toBeNull();
   });
 
   it("prefers the product_close preview over other preview types", () => {
@@ -1273,7 +1340,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     );
   });
 
-  it("collectionsComplete=false: skips collections/links writes, leaves existing rows unchanged, and warns", async () => {
+  it("collectionsComplete=false: skips collections/links writes, leaves collection untouched, backfills mockup, and warns", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       const u = url.toString();
       if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
@@ -1295,12 +1362,18 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(result.collections.links).toBe(0);
     expect(result.warnings.some((w) => /Collections crawl incomplete/.test(w))).toBe(true);
 
-    // Existing row (Design A, externalId 11111111) must not be updated at all.
-    expect(updateCalls()).toHaveLength(0);
-    expect(result.updated).toBe(0);
+    // Existing row (Design A, externalId 11111111): collection must not be touched, but a
+    // missing mockup_tshirt is still backfilled independently of collectionsComplete.
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.1.1/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
+    expect(result.updated).toBe(1);
   });
 
-  it("truncated collection (totalPages > maxPages): collectionsComplete=false, no collections/links writes, existing row not updated", async () => {
+  it("truncated collection (totalPages > maxPages): collectionsComplete=false, no collections/links writes, mockup still backfilled", async () => {
     const catsPageTruncated = nextDataHtml({
       results: [
         rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
@@ -1333,8 +1406,14 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(result.collections.upserted).toBe(0);
     expect(result.collections.links).toBe(0);
 
-    expect(updateCalls()).toHaveLength(0);
-    expect(result.updated).toBe(0);
+    // Collection sync is skipped, but the missing mockup is still backfilled independently.
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.1.1/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
+    expect(result.updated).toBe(1);
   });
 
   it("link upsert failure: issues no deletes for that chunk and counts the error", async () => {
@@ -1378,5 +1457,195 @@ describe("syncRedbubbleToSupabase — collections", () => {
     for (const deleteIndex of linkDeleteIndexes) {
       expect(deleteIndex).toBeGreaterThan(linkUpsertIndex);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// props.mockup_tshirt backfill on existing rows
+// ---------------------------------------------------------------------------
+
+describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
+  beforeEach(() => {
+    calls = [];
+    selectByIdResponses = [];
+    selectByTitleResponses = [];
+    insertResponses = [];
+    updateResponses = [];
+    upsertResponses = [];
+    collectionsUpsertResponses = [];
+    designIdLookupResponses = [];
+    designCollectionsUpsertResponses = [];
+    designCollectionsDeleteResponses = [];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+
+  // No collections declared: collectionsComplete stays true with nothing to crawl, so the
+  // "existing row is updated" path always includes `collection` — isolating the props effect.
+  function mockSimpleShop() {
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    return mockShop(shopPage, {});
+  }
+
+  it("existing row with props: null gets its mockup backfilled, alongside the collection update", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop());
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: null,
+            externalImageUrl: "https://ih1.redbubble.net/image.999.9/existing.jpg",
+          },
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
+    // Built from the DB row's own externalImageUrl, not the freshly scraped one.
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: `https://ih1.redbubble.net/image.999.9/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
+    expect(result.updated).toBe(1);
+  });
+
+  it("existing row with other props keys keeps them and adds mockup_tshirt alongside", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop());
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: { foo: "bar" },
+            externalImageUrl: "https://ih1.redbubble.net/image.888.8/existing.jpg",
+          },
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(updates[0].changes.props).toEqual({
+      foo: "bar",
+      mockup_tshirt: `https://ih1.redbubble.net/image.888.8/${MOCKUP_TSHIRT_SUFFIX}`,
+    });
+    expect(result.updated).toBe(1);
+  });
+
+  it("existing row that already has mockup_tshirt: update omits props entirely (collection still synced)", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop());
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+            externalImageUrl: "https://ih1.redbubble.net/image.777.7/existing.jpg",
+          },
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(updates[0].changes).not.toHaveProperty("props");
+    expect(result.updated).toBe(1);
+  });
+
+  it("existing row that already has mockup_tshirt, collectionsComplete=false: no update at all", async () => {
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        throw new Error("network error fetching Cats collection");
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) return new Response(shopPage, { status: 200 });
+      if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+            externalImageUrl: "https://ih1.redbubble.net/image.777.7/existing.jpg",
+          },
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(updateCalls()).toHaveLength(0);
+    expect(result.updated).toBe(0);
+    expect(result.warnings.some((w) => /left unchanged/.test(w))).toBe(true);
+  });
+
+  it("dry-run: plan.update includes props for a row whose mockup needs backfilling", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop());
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: null,
+            externalImageUrl: "https://ih1.redbubble.net/image.555.5/existing.jpg",
+          },
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, dryRun: true }));
+
+    expect(updateCalls()).toHaveLength(0);
+    expect(result.plan?.update).toEqual([
+      {
+        externalId: 11111111,
+        collection: "no_collection",
+        props: { mockup_tshirt: `https://ih1.redbubble.net/image.555.5/${MOCKUP_TSHIRT_SUFFIX}` },
+      },
+    ]);
   });
 });
