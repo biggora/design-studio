@@ -1,26 +1,27 @@
-# Подсистема синхронизации с Redbubble
+# Redbubble Synchronization Subsystem
 
-## 1. Введение и назначение
+## 1. Introduction and Purpose
 
-Подсистема синхронизации (`lib/sync/redbubble.ts`) предназначена для автоматического импорта и обновления каталога дизайнов из магазина автора на маркетплейсе **Redbubble**. 
+The synchronization subsystem (`lib/sync/redbubble.ts`) automates importing and updating the design catalog from the author's shop on the **Redbubble** marketplace.
 
-Она решает задачи:
-- Сбора актуального списка товаров магазина автора.
-- Извлечения графических материалов высокого разрешения, заголовков, описаний, категорий и тегов.
-- Сохранения и обновления (Upsert) карточек в базе данных без дублирования.
-- Обхода защиты от ботов (Cloudflare Bot Management, Turnstile) и предотвращения блокировок по IP.
+It solves the following tasks:
+
+- Collecting the current list of the author's shop products.
+- Extracting high-resolution artwork, titles, descriptions, categories, and tags.
+- Saving and updating (upsert) cards in the database without duplicates.
+- Bypassing anti-bot protection (Cloudflare Bot Management, Turnstile) and avoiding IP blocks.
 
 ---
 
-## 2. Архитектура и диаграмма последовательности
+## 2. Architecture and Sequence Diagram
 
-Синхронизация может инициироваться либо внешним планировщиком (Vercel Cron / HTTP Webhook), либо администратором вручную через терминал (CLI).
+Synchronization can be triggered either by an external scheduler (HTTP call to the API route) or manually by an administrator from the terminal (CLI).
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor AdminOrCron as Cron / Admin / Webhook
-    participant API as Route / CLI (API/Script)
+    actor AdminOrCron as Scheduler / Admin
+    participant API as API Route / CLI Script
     participant Core as lib/sync/redbubble.ts
     participant Pacer as RequestPacer
     participant Playwright as Playwright Chromium
@@ -28,55 +29,56 @@ sequenceDiagram
     participant Redbubble as Redbubble Shop
     participant Supabase as Supabase (designs table)
 
-    AdminOrCron->>API: Запуск синхронизации (POST /api/sync/redbubble или npm run sync:redbubble)
-    API->>API: Проверка SYNC_SECRET
+    AdminOrCron->>API: Trigger sync (POST /api/sync/redbubble or npm run sync:redbubble)
+    API->>API: Verify SYNC_SECRET (Authorization / x-sync-secret header, constant-time compare)
     API->>Core: syncRedbubbleToSupabase(options)
 
-    alt Режим Playwright (usePlaywright = true)
-        Core->>Playwright: Инициализация сессии (Stealth-скрипты, User-Agent, StorageState)
-        loop Для каждой страницы (от 1 до maxPages)
-            Core->>Pacer: waitTurn() (Интервал + Джиттер)
-            Pacer-->>Core: Разрешение запроса
+    alt Playwright mode (usePlaywright = true)
+        Core->>Playwright: Init session (stealth script, User-Agent, StorageState)
+        loop For each page (1..maxPages, stop when a page yields no cards)
+            Core->>Pacer: waitTurn() (interval + jitter)
+            Pacer-->>Core: Request granted
             Core->>Playwright: scrapeListingCards(pageUrl)
-            Playwright->>Redbubble: page.goto(pageUrl) + Скролл вниз
-            Redbubble-->>Playwright: HTML DOM с карточками товаров
-            Playwright-->>Core: Массив извлеченных карточек (DesignRecord[])
+            Playwright->>Redbubble: page.goto(pageUrl) + scroll down
+            Redbubble-->>Playwright: HTML DOM with product cards
+            Playwright-->>Core: Extracted cards (DesignRecord[])
         end
-        Core->>Playwright: Сохранение storageState + close()
-    else Режим Cheerio (usePlaywright = false)
-        loop Для страниц витрины
+        Core->>Playwright: Save storageState + close()
+    else Cheerio mode (usePlaywright = false)
+        loop For shop listing pages
             Core->>Pacer: waitTurn()
             Core->>Cheerio: getProductLinksFromShopPage(pageUrl)
             Cheerio->>Redbubble: fetch(pageUrl)
-            Redbubble-->>Cheerio: HTML витрины
-            Cheerio-->>Core: Список ссылок на товары
+            Redbubble-->>Cheerio: Listing HTML
+            Cheerio-->>Core: Product link list
         end
-        loop Для каждой ссылки на товар
+        loop For each product link (SYNC_CONCURRENCY workers)
             Core->>Pacer: waitTurn()
             Core->>Cheerio: parseProductHtml(html, url)
             Cheerio->>Redbubble: fetch(productUrl)
-            Redbubble-->>Cheerio: HTML страницы товара
-            Cheerio-->>Core: Извлечение JSON-LD Schema.org + OpenGraph
+            Redbubble-->>Cheerio: Product page HTML
+            Cheerio-->>Core: Extract JSON-LD Schema.org + OpenGraph
         end
     end
 
-    Core->>Supabase: upsert(rows, onConflict: "externalId")
-    Supabase-->>Core: Результат (affected rows)
-    Core-->>API: SyncResult (fetched, inserted, updated, errors)
-    API-->>AdminOrCron: JSON-ответ со статистикой
+    Core->>Supabase: upsert(dedupedRows, onConflict: "externalId")
+    Supabase-->>Core: Result (affected rows)
+    Core-->>API: SyncResult (fetchedProductLinks, parsedProducts, inserted, updated, skipped, errors)
+    API-->>AdminOrCron: JSON response with statistics
 ```
 
 ---
 
-## 3. Двухрежимный сбор данных (Dual-Mode Scraping)
+## 3. Dual-Mode Scraping
 
-В зависимости от флага `SYNC_USE_PLAYWRIGHT` (или аргумента `usePlaywright: boolean`), конвейер синхронизации работает в одном из двух режимов:
+Depending on the `SYNC_USE_PLAYWRIGHT` flag (or the `usePlaywright: boolean` option), the pipeline runs in one of two modes.
 
-### 3.1 Режим Playwright (Рекомендуемый для локального запуска / выделенных серверов)
-Использует полноценный headless-браузер Chromium для рендеринга клиентского JavaScript на стороне Redbubble.
+### 3.1 Playwright mode (recommended for local runs / dedicated servers)
 
-- **Скрытие признаков автоматизации (Stealth Evasions)**:
-  При создании каждой новой страницы внедряется инъекционный скрипт:
+Uses a full headless Chromium browser to render Redbubble's client-side JavaScript.
+
+- **Automation-detection hiding (stealth evasions)**:
+  An injection script is installed when each new session is created:
   ```typescript
   await context.addInitScript(() => {
     Object.defineProperty(navigator, "webdriver", { get: () => false });
@@ -85,8 +87,8 @@ sequenceDiagram
     Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
   });
   ```
-- **Эмуляция скролла (Infinite Scroll & Lazy Loading)**:
-  В функции `scrapeListingCards` выполняется серия из до 8 последовательных прокруток с проверкой `scrollHeight`:
+- **Scroll emulation (infinite scroll & lazy loading)**:
+  `scrapeListingCards` performs up to 8 consecutive scrolls, checking `scrollHeight`:
   ```typescript
   for (let i = 0; i < 8; i += 1) {
     const previous = await page.evaluate(() => document.body.scrollHeight);
@@ -96,70 +98,87 @@ sequenceDiagram
     if (current === previous) break;
   }
   ```
-- **Извлечение карточек прямо из листинга**:
-  Парсятся узлы DOM `.xblock` и `[data-testid='search-result-card']`, что исключает необходимость отправлять отдельные HTTP-запросы к каждой странице товара. Это снижает количество запросов к Redbubble в 30–50 раз!
-- **Персистентность сессии (`storageState`)**:
-  При указании `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` куки и localStorage сохраняются в JSON-файл на диске (например, `.cache/redbubble-storage-state.json`). При последующих запусках браузер стартует с уже пройденными проверками безопасности.
+- **Extracting cards directly from the listing**:
+  DOM nodes matching `.xblock` and `[data-testid='search-result-card']` are parsed, which removes the need to send a separate HTTP request to every product page and cuts the number of requests to Redbubble by roughly an order of magnitude. The trade-off: cards scraped from the listing carry only `externalId`, `title`, `externalLink`, and `externalImageUrl`; `description` and `keywords` are stored as empty strings and `collection` is set to `no_collection`. Full metadata is only available in Cheerio mode (3.2). Pagination stops as soon as a page yields no cards.
+- **Session persistence (`storageState`)**:
+  When `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` is set (`.env.example` ships `.cache/redbubble-storage-state.json`), cookies and localStorage are written to a JSON file on disk when the session closes, and the file is loaded again on the next run — so the browser starts with the security checks already passed. The `.cache` directory is created automatically if missing.
 
-### 3.2 Режим Cheerio (Легковесный HTTP-клиент для Serverless)
-Не требует запуска браузера и бинарных файлов Chromium, что делает его совместимым с бессерверными средами (Vercel Serverless Functions).
+### 3.2 Cheerio mode (lightweight HTTP client for serverless)
 
-- **Шаг 1: Сканирование страниц витрины**:
-  Запрашивает HTML витрины `buildShopPageUrl(shopUrl, page)` и с помощью Cheerio ищет ссылки, содержащие `/i/` или `/shop/ap/`.
-- **Шаг 2: Парсинг страниц товаров**:
-  Для каждой найденной ссылки отправляется HTTP GET-запрос.
-- **Шаг 3: Извлечение микроразметки JSON-LD**:
-  На странице товара парсятся теги `<script type="application/ld+json">`. Скрипт ищет сущность со схемой `"@type": "Product"`:
+Requires no browser or Chromium binaries, which makes it compatible with serverless environments (Vercel Serverless Functions).
+
+- **Step 1: Scan shop listing pages**:
+  Requests the listing HTML `buildShopPageUrl(shopUrl, page)` and uses Cheerio to collect links containing `/i/` or `/shop/ap/`.
+- **Step 2: Parse product pages**:
+  An HTTP GET request is issued for every discovered link, with concurrency capped by `SYNC_CONCURRENCY` (default 1).
+- **Step 3: Extract JSON-LD microdata**:
+  On the product page, `<script type="application/ld+json">` tags are parsed, looking for the entity with `"@type": "Product"`:
   ```typescript
   const title = sanitizeText((jsonLd?.name as string) || ogTitle || $("h1").first().text());
   const description = sanitizeText((jsonLd?.description as string) || ogDescription || "");
   const image = sanitizeText((Array.isArray(jsonLd?.image) ? jsonLd?.image?.[0] : jsonLd?.image) as string);
   ```
-- **Шаг 4: Fallback на OpenGraph и HTML**:
-  Если микроразметка отсутствует или заблокирована, данные извлекаются из мета-тегов:
+- **Step 4: OpenGraph and HTML fallback**:
+  If microdata is missing or blocked, data is extracted from meta tags:
   `meta[property='og:title']`, `meta[property='og:image']`, `meta[property='og:description']`, `meta[name='keywords']`.
+
+### 3.3 Shop URL normalization and SSRF protection
+
+Before any request is made, `normalizeShopUrl()` (`lib/sync/redbubble.ts`) validates the shop URL:
+
+- Only `https://` URLs on `www.redbubble.com` / `redbubble.com` are accepted (a bare username like `your-shop` is expanded to `https://www.redbubble.com/people/your-shop/shop`).
+- An `/explore` path segment is rewritten to `/shop`, and trailing slashes are stripped.
+- Anything else (other protocols, other hosts, malformed input) is rejected, and the run fails with `Missing Redbubble shop URL`.
 
 ---
 
-## 4. Механизмы защиты от блокировок и рейт-лимитинга
+## 4. Anti-Blocking and Rate-Limiting Mechanisms
 
-Redbubble активно использует сервисы защиты от парсинга (Cloudflare Bot Management). В коде реализован комплекс контрмер:
+Redbubble actively uses anti-scraping services (Cloudflare Bot Management). The code implements a set of countermeasures.
 
-### 4.1 Пейсер запросов (`RequestPacer`)
-Класс `RequestPacer` гарантирует соблюдение минимальной паузы между сетевыми обращениями и добавляет случайное отклонение (джиттер), симулируя естественное поведение человека:
+### 4.1 Request pacer (`RequestPacer`)
+
+The `RequestPacer` class guarantees a minimum pause between network calls and adds random jitter to mimic natural human behavior. Calls are serialized through an internal promise queue, so concurrent workers (Cheerio mode) cannot race past the interval:
 
 ```typescript
-class RequestPacer {
+export class RequestPacer {
   private lastRequestAt = 0;
-  private readonly minIntervalMs: number;
-  private readonly jitterMs: number;
+  private queue: Promise<void> = Promise.resolve();
 
-  constructor(minIntervalMs: number, jitterMs: number) {
+  constructor(
+    private readonly minIntervalMs: number,
+    private readonly jitterMs: number,
+  ) {
     this.minIntervalMs = Math.max(0, minIntervalMs);
     this.jitterMs = Math.max(0, jitterMs);
   }
 
   async waitTurn(): Promise<void> {
-    const now = Date.now();
-    const elapsed = now - this.lastRequestAt;
-    const baseWait = Math.max(0, this.minIntervalMs - elapsed);
-    const jitter = this.jitterMs > 0 ? Math.floor(Math.random() * this.jitterMs) : 0;
-    const totalWait = baseWait + jitter;
-    if (totalWait > 0) {
-      await sleep(totalWait);
-    }
-    this.lastRequestAt = Date.now();
+    this.queue = this.queue.then(async () => {
+      const now = Date.now();
+      const elapsed = now - this.lastRequestAt;
+      const baseWait = Math.max(0, this.minIntervalMs - elapsed);
+      const jitter = this.jitterMs > 0 ? Math.floor(Math.random() * this.jitterMs) : 0;
+      const totalWait = baseWait + jitter;
+      if (totalWait > 0) {
+        await sleep(totalWait);
+      }
+      this.lastRequestAt = Date.now();
+    });
+    return this.queue;
   }
 }
 ```
 
-По умолчанию:
-- `SYNC_MIN_REQUEST_INTERVAL_MS=2500` (минимум 2.5 секунды между запросами).
-- `SYNC_REQUEST_JITTER_MS=700` (дополнительная случайная задержка от 0 до 700 мс).
-- `SYNC_PAGE_DELAY_MS=3000` (3 секунды паузы между страницами каталога).
+Defaults (overridable via environment variables):
 
-### 4.2 Детекция проверок Cloudflare
-Функция `isCloudflareChallengePage` анализирует тело ответа на маркеры блокировки:
+- `SYNC_MIN_REQUEST_INTERVAL_MS=2500` — at least 2.5 seconds between requests.
+- `SYNC_REQUEST_JITTER_MS=700` — extra random delay from 0 to 700 ms.
+- `SYNC_PAGE_DELAY_MS=3000` — 3-second pause between catalog pages.
+
+### 4.2 Cloudflare challenge detection
+
+`isCloudflareChallengePage` analyzes the response body for block markers:
 ```typescript
 function isCloudflareChallengePage(html: string): boolean {
   return (
@@ -171,28 +190,48 @@ function isCloudflareChallengePage(html: string): boolean {
   );
 }
 ```
-При обнаружении заглушки генератор выбрасывает подробное исключение с рекомендацией запустить Playwright в не-headless режиме (`SYNC_PLAYWRIGHT_HEADLESS=false`), один раз вручную решить капчу и переиспользовать сохраненный `storageState`.
+
+When a challenge page is detected, a descriptive error is thrown whose advice depends on the mode:
+
+- **Cheerio mode**: *"Set REDBUBBLE_COOKIE and REDBUBBLE_USER_AGENT from a real browser session."*
+- **Playwright mode**: *"Run once with SYNC_PLAYWRIGHT_HEADLESS=false and complete challenge, then reuse SYNC_PLAYWRIGHT_STORAGE_STATE_PATH."*
 
 ---
 
-## 5. Интерфейсы запуска
+## 5. Invocation Interfaces
 
-### 5.1 API Эндпоинт (`app/api/sync/redbubble/route.ts`)
-Поддерживает методы `GET` и `POST`. Предназначен для вызова планировщиками (Vercel Cron, GitHub Actions, n8n, Cloudflare Workers).
+### 5.1 API endpoint (`app/api/sync/redbubble/route.ts`)
 
-#### Аутентификация
-Запрос обязан содержать секретный токен, совпадающий со значением переменной `SYNC_SECRET`:
-- Либо в заголовке запроса: `x-sync-secret: <YOUR_SECRET>`
-- Либо в query-параметре: `?secret=<YOUR_SECRET>`
+Exports a single `POST` handler, intended to be called by schedulers (n8n, GitHub Actions, Cloudflare Workers, system crontab). Guards applied before any scraping:
 
-#### Пример запроса через cURL:
+| Condition | Response |
+|---|---|
+| Another sync is still running | `409` — `Sync operation is already in progress. Please retry later.` |
+| `SYNC_SECRET` not configured | `500` — `SYNC_SECRET is not configured` |
+| Missing/incorrect secret | `401` — `Unauthorized` |
+| `DATABASE_PROVIDER=mysql` | `400` — sync supports the Supabase provider only (see 6.2) |
+| No shop URL resolvable | `400` — `Missing Redbubble shop URL` |
+| Supabase env vars missing | `500` — `Missing Supabase environment variables` |
+
+#### Authentication
+
+The request must carry a secret token matching `SYNC_SECRET`:
+
+- either in the `Authorization` header: `Authorization: Bearer <YOUR_SECRET>`
+- or in the `x-sync-secret` header: `x-sync-secret: <YOUR_SECRET>`
+
+The comparison uses `crypto.timingSafeEqual` (constant time) to prevent timing attacks. There is **no query-parameter authentication** — `?secret=...` is not accepted.
+
+#### cURL example
+
 ```bash
 curl -X POST https://your-domain.com/api/sync/redbubble \
   -H "x-sync-secret: super-secret-token" \
   -H "Content-Type: application/json"
 ```
 
-#### Формат успешного ответа:
+#### Successful response shape
+
 ```json
 {
   "fetchedProductLinks": 48,
@@ -205,35 +244,61 @@ curl -X POST https://your-domain.com/api/sync/redbubble \
 }
 ```
 
-### 5.2 Запуск через CLI (`scripts/sync-redbubble.ts`)
-Удобен для локальной разработки, первичного наполнения базы и выполнения в выделенных контейнерах:
+Note on counters: because the pipeline writes with a single upsert call, `inserted` always reports `0` and all upserted rows are counted in `updated`; `skipped` reports `0` on the upsert path, or the fetched product-link count when no rows parse (e.g., a fully Cloudflare-blocked run reports every link as skipped).
+
+#### Shop URL resolution order
+
+Both the API route and the CLI resolve the target shop as:
+
+```typescript
+const shopUrl =
+  config.representation?.redbubbleShopUrl ||
+  config.representation?.redbuble ||   // legacy key kept for backward compatibility
+  process.env.REDBUBBLE_SHOP_URL ||
+  "";
+```
+
+i.e. the `studio` table value wins over the `REDBUBBLE_SHOP_URL` environment variable.
+
+### 5.2 CLI invocation (`scripts/sync-redbubble.ts`)
+
+Convenient for local development, initial catalog population, and dedicated containers:
 
 ```bash
 npm run sync:redbubble
 ```
-Скрипт автоматически подгружает переменные из `.env` через `dotenv/config`, считывает настройки магазина из `getSiteConfig()` и выводит форматированный JSON-результат в консоль.
+
+The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `getSiteConfig()`, runs the same `syncRedbubbleToSupabase()` core, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure.
 
 ---
 
-## 6. Логика Upsert и важный архитектурный нюанс
+## 6. Upsert Logic and an Important Architectural Caveat
 
-### 6.1 Логика Upsert в Supabase
-Синхронизация обновляет записи в БД по уникальному ключу `externalId`:
+### 6.1 Upsert logic in Supabase
+
+Synchronization writes records keyed by the unique `externalId`. The batch is first deduplicated by `externalId` in memory, then upserted in one call:
+
 ```typescript
 const { data, error } = await supabase
   .from("designs")
-  .upsert(rows, { onConflict: "externalId" })
-  .select("externalId");
+  .upsert(dedupedRows, { onConflict: "externalId", ignoreDuplicates: false })
+  .select("id, externalId");
 ```
-Если дизайн с таким `externalId` уже существует, его поля `title`, `description`, `externalImageUrl`, `externalLink`, `keywords` и `updatedAt` актуализируются, а первичный ключ `id` (UUID) и дата создания `createdAt` остаются неизменными.
 
-### 6.2 Архитектурный нюанс: целевая база данных для синхронизации
-> **ВАЖНОЕ ЗАМЕЧАНИЕ ПО АРХИТЕКТУРЕ**:  
-> В текущей версии кодовой базы функция синхронизации `syncRedbubbleToSupabase` (`lib/sync/redbubble.ts`) подключается **напрямую к Supabase через `@supabase/supabase-js`**, используя `NEXT_PUBLIC_SUPABASE_URL` и `SUPABASE_SERVICE_ROLE_KEY`.  
-> Если в приложении включен `DATABASE_PROVIDER=mysql`, витрина и страницы сайта будут читать данные из MySQL, но процесс синхронизации по-прежнему запишет спарсенные данные в Supabase.
+If a design with the given `externalId` already exists, its `title`, `description`, `keywords`, `externalLink`, `externalImageUrl`, `category`, `collection`, `imageName`, `backgroundColor`/`backgroundColors`, `shared`, `props`, and `updatedAt` columns are refreshed, while the primary key `id` (UUID) and creation date `createdAt` stay untouched. On an upsert error, all rows of the batch are added to the `errors` counter and the Supabase error message is appended to `errorMessages`.
 
-#### Рекомендация для полной поддержки MySQL:
-Для унификации записи данных при использовании MySQL рекомендуется расширить `syncRedbubbleToSupabase` или добавить абстрактную функцию `upsertDesigns(designs)` в `utils/database.ts`, использующую конструкцию:
+### 6.2 Architectural caveat: target database of the sync
+
+> **IMPORTANT ARCHITECTURAL NOTE**:
+> The sync core `syncRedbubbleToSupabase` (`lib/sync/redbubble.ts`) connects **directly to Supabase via `@supabase/supabase-js`**, using `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (falling back to `NEXT_PUBLIC_SUPABASE_ANON_KEY`). It never writes to MySQL. The two entry points differ in how they handle `DATABASE_PROVIDER=mysql`:
+>
+> - **API route** (`app/api/sync/redbubble/route.ts`): rejects the call upfront with HTTP `400` — *"Redbubble sync currently supports Supabase provider only. Please configure DATABASE_PROVIDER=supabase."*
+> - **CLI script** (`scripts/sync-redbubble.ts`): has no such guard. It reads site config (including the shop URL) from whichever provider `DATABASE_PROVIDER` selects — so with `mysql` the `studio` table is read from MySQL — but the scraped designs are still written to Supabase.
+
+#### Recommendation for full MySQL support
+
+To unify writes when using MySQL, extend `syncRedbubbleToSupabase` or add an abstract `upsertDesigns(designs)` function in `utils/database.ts` using:
+
 ```sql
 INSERT INTO designs (id, `externalId`, title, description, keywords, `imageName`, `externalImageUrl`, `externalLink`, category, collection, `updatedAt`)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())

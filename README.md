@@ -1,24 +1,25 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Design Studio
+
+A self-hostable, **white-label storefront for print-on-demand artists**. Each deployment automatically mirrors the artist's marketplace shop (Redbubble today) into a fast, searchable catalog on their own domain and funnels buyers to the marketplace listing to purchase — there is no on-site checkout. Brand, domain, social links, and even the color theme are runtime configuration, not code. See [PRODUCT.md](PRODUCT.md) for the product brief and [DESIGN.md](DESIGN.md) for the design system of record.
+
+## Tech Stack
+
+- **Next.js** `^16.3.6` (App Router, React Server Components) with **React** `^19.2.4`
+- **Tailwind CSS** `^3.4.1` driven by a design-token layer (`:root` CSS custom properties in `app/globals.css`) and `components/ui` primitives (shadcn convention, no Radix)
+- **Zustand** `^5.0.2` for client config state
+- **Supabase** (`@supabase/supabase-js` `^2.47.1`, PostgreSQL — default) or **MySQL** (`mysql2` `^3.11.0`) via the `utils/database.ts` facade
+- **Playwright** `^1.52.0` / **Cheerio** `^1.0.0-rc.12` for catalog sync, **Vitest** `^3.2.4` for tests
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+npm install
+npx playwright install chromium   # only needed for catalog sync
+cp .env.example .env              # then fill in your settings
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Open [http://localhost:3000](http://localhost:3000) with your browser. The app uses `next/font` to self-host **Inter** (no external font requests). Useful scripts: `npm run build`, `npm run start`, `npm run lint`, `npm run lint:fix`, `npm run format`, `npm run prettier`.
 
 ## Environment Variables
 
@@ -26,49 +27,29 @@ Copy `.env.example` to `.env` and fill in your settings.
 
 `DATABASE_PROVIDER` determines which database is used:
 
-- `supabase` (default) – requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+- `supabase` (default) – requires `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` (writes prefer `SUPABASE_SERVICE_ROLE_KEY`).
 - `mysql` – requires `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` and `MYSQL_DATABASE`.
 
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Sync-related variables (`SYNC_SECRET`, `SYNC_MAX_PAGES`, `REDBUBBLE_SHOP_URL`, …) are listed in the [Redbubble Sync](#redbubble-sync) section below; the full reference is in [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md).
 
 ## Running Tests
 
-This project uses [Vitest](https://vitest.dev/) for unit testing.
-To execute the tests run:
+This project uses [Vitest](https://vitest.dev/) for unit testing. `lib/utils.test.ts` holds 18 tests (a gitignored worktree copy under `.claude/worktrees/` may double the reported count in some runs).
 
 ```bash
-npm test
-```
-
-During development you can use watch mode:
-
-```bash
-npm run test:watch
+npm test          # one-shot run
+npm run test:watch  # watch mode during development
 ```
 
 ## Database Setup
 
 The `init/` directory contains SQL scripts for PostgreSQL and MySQL.
 
-### PostgreSQL
+### PostgreSQL (Supabase)
 
 ```bash
-psql -f init/tables.sql
-psql -f init/functions.sql
+psql -f init/postgres_tables.sql
+psql -f init/postgres_functions.sql
 ```
 
 ### MySQL
@@ -78,13 +59,15 @@ mysql -u <user> -p <database> < init/mysql_tables.sql
 mysql -u <user> -p <database> < init/mysql_functions.sql
 ```
 
+Schemas and migration notes are documented in [docs/DATABASE.md](docs/DATABASE.md).
+
 ## Redbubble Sync
 
 The catalog is populated by syncing your public Redbubble shop pages into the `designs` table.
 
 ### Required config
 
-- `representation.redbubbleShopUrl` in `config/config.json` (or in the `studio` table via config).
+- `representation.redbubbleShopUrl` in `config/config.json` (or in the `studio` table via config). The runner falls back to `config.representation.redbuble`, then to the `REDBUBBLE_SHOP_URL` env var.
 - `SYNC_SECRET` in `.env` (used by the API route).
 - `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (preferred) or `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
@@ -98,7 +81,7 @@ Optional:
 - `SYNC_USE_PLAYWRIGHT` (default `true`)
 - `SYNC_PLAYWRIGHT_HEADLESS` (default `true`)
 - `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` (default `.cache/redbubble-storage-state.json`)
-- `REDBUBBLE_USER_AGENT` and `REDBUBBLE_COOKIE` (recommended if Redbubble returns Cloudflare challenge / 403)
+- `REDBUBBLE_USER_AGENT` and `REDBUBBLE_COOKIE` (recommended if Redbubble returns a Cloudflare challenge / 403)
 
 Notes:
 - Browser mode may still need one manual challenge pass. Run once with `SYNC_PLAYWRIGHT_HEADLESS=false`, complete the challenge, and keep the storage state file for scheduled runs.
@@ -110,6 +93,20 @@ Notes:
 npm run sync:redbubble
 ```
 
-### Scheduled sync (Vercel Cron)
+### Scheduled sync
 
-`vercel.json` defines a daily cron calling `/api/sync/redbubble`. Replace `YOUR_SYNC_SECRET` in the path with your real value, or send `x-sync-secret` in another scheduler.
+The repository ships **no** `vercel.json`; use any external scheduler (Vercel Cron, GitHub Actions, crontab) to call `POST /api/sync/redbubble` with your real secret in the `x-sync-secret` request header. See [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) for cron recipes and the Docker-based Playwright runner.
+
+## Documentation
+
+The full technical documentation set lives in [docs/](docs/):
+
+- [docs/README.md](docs/README.md) — documentation portal and developer quick start
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system architecture
+- [docs/DATABASE.md](docs/DATABASE.md) — database schemas and procedures
+- [docs/SYNC_SYSTEM.md](docs/SYNC_SYSTEM.md) — the Redbubble sync pipeline
+- [docs/FRONTEND_AND_UI.md](docs/FRONTEND_AND_UI.md) — frontend, UI components, and the design-token system
+- [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) — deployment and configuration guide
+- [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — release plan
+
+Root-level references: [PRODUCT.md](PRODUCT.md) (product truth) and [DESIGN.md](DESIGN.md) (design system of record — token names, the No-Hardcode Rule, component contracts).

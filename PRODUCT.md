@@ -21,7 +21,7 @@ A storefront that maintains itself. The artist publishes once on their marketpla
 
 ## Operating Context
 
-- **Operator workflow:** publish designs on Redbubble → scheduled sync (Vercel Cron daily at 03:00 UTC hitting `/api/sync/redbubble`, or manual `npm run sync:redbubble`) upserts the `designs` table → the storefront reflects the shop.
+- **Operator workflow:** publish designs on Redbubble → scheduled sync (an external scheduler POSTing `/api/sync/redbubble` with the `x-sync-secret` header, or manual `npm run sync:redbubble`) upserts the `designs` table → the storefront reflects the shop. Note: Vercel Cron cannot drive the sync endpoint as-is — it issues GET while the route is POST-only with header auth (see `docs/DEPLOYMENT_AND_CONFIGURATION.md`).
 - **Buyer workflow:** land on home (hero carousel, featured designs) → browse/search/filter the `/designs` catalog with pagination → open a design detail → follow a shop link to the marketplace listing → purchase there; share links for social redistribution.
 - **Deployment:** Vercel (with cron) or Docker; database is Supabase (PostgreSQL, default) or MySQL via `DATABASE_PROVIDER`; all brand, domain, social, and marketplace-link settings are runtime config.
 - **Sync reality:** Redbubble sits behind Cloudflare. Browser mode may require one manual challenge pass persisted to a storage-state file; serverless environments cannot hold persistent browser sessions, so the Playwright runner prefers a machine/VM. Cheerio fallback trades coverage for simplicity.
@@ -41,8 +41,8 @@ Constraints: no on-site checkout — purchases happen on external marketplaces; 
 
 - Reference deployment shops ([docs/MY_SHOPS.md](docs/MY_SHOPS.md)): Redbubble `redbubble.com/people/ThreadQuirk/shop`, TeePublic `teepublic.com/user/threadquirk`.
 - Marketplace logo SVGs and hero-carousel slides in `public/images`.
-- Technical documentation set in [docs/](docs/) (architecture, database, sync system, frontend, deployment — written in Russian); SQL schemas and stored procedures for PostgreSQL and MySQL in `init/`.
-- 12 passing Vitest unit tests; a verified production build of all 11 routes (per release plan).
+- Technical documentation set in [docs/](docs/) (architecture, database, sync system, frontend, deployment — in English).
+- 18 unit tests in `lib/utils.test.ts` (`npm test`); a verified production build of all 11 routes (route set unchanged since the v0.1.0 release plan).
 - **Absences future work must not fabricate:** no real testimonials, customers, or usage numbers; no filled-in brand identity (logo, banner, domain are placeholders); no live product screenshots beyond the local carousel slides; no pricing or licensing claims.
 
 ## Product Principles

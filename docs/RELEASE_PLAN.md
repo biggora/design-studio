@@ -1,89 +1,109 @@
-# План релиза: Design Studio (v0.1.0)
+# Release Plan: Design Studio (v0.1.0)
 
-## 1. Резюме релиза (Release Summary)
+> **Historical document.** This is the original release plan for **v0.1.0**, kept for reference.
+> It reflects the codebase **as of that release**: dependency versions, test counts (12 tests at
+> the time), and endpoint behavior all describe v0.1.0 and have changed since — for example, the
+> sync API route later became POST-only with header-based authentication, dropping the
+> `?secret=` query parameter shown in Step 3 below.
+> The **current** state of the project is documented in `README.md` and the sibling documents in
+> `docs/` (`ARCHITECTURE.md`, `DATABASE.md`, `SYNC_SYSTEM.md`, `FRONTEND_AND_UI.md`,
+> `DEPLOYMENT_AND_CONFIGURATION.md`).
 
-Версия **v0.1.0** знаменует готовность первого стабильного производственного релиза платформы **Design Studio** — автономной SaaS-витрины для Print-on-Demand дизайнеров с автоматической синхронизацией каталога из Redbubble, поддержкой двух СУБД (Supabase / MySQL) и полным пакетом технической документации.
+## 1. Release Summary
 
----
-
-## 2. Ключевые возможности релиза (Scope & Changelog)
-
-### Новые возможности (Features)
-- **Конвейер синхронизации Redbubble (Playwright + Cheerio)**:
-  - Автономный импорт продуктов через CLI (`npm run sync:redbubble`) и HTTP API (`/api/sync/redbubble`).
-  - Умный антидетект: обход проверок Cloudflare, адаптивный джиттер (`RequestPacer`), сохранение сессионных куки в `.cache/redbubble-storage-state.json`.
-  - Извлечение микроразметки Schema.org (`Product`) и метатегов OpenGraph.
-- **Поддержка двух СУБД (Dual DB Provider)**:
-  - Прозрачное переключение провайдера базы данных через `DATABASE_PROVIDER` (`supabase` или `mysql`).
-  - Единый фасад методов выборки (`getSiteConfig`, `fetchDesigns`, `getDesignById`, `fetchCollections`).
-  - SQL-схемы и процедуры для PostgreSQL и MySQL.
-- **UI и витрина на Next.js 16 + React 19**:
-  - Адаптивный каталог с поиском, фильтрацией по коллекциям и пагинацией.
-  - Детальные карточки товаров со ссылками на внешние маркетплейсы (`ShopLinks`) и соцсети (`ShareLinks`).
-  - Hero-карусель и блок рекомендуемых работ.
-  - Безопасный баннер куки (`CookieBanner`) на `useSyncExternalStore`.
-  - Динамический sitemap (`/sitemap.xml`) и OpenGraph метаданные.
-- **Полная техническая документация (`docs/`)**:
-  - `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SYNC_SYSTEM.md`, `docs/FRONTEND_AND_UI.md`, `docs/DEPLOYMENT_AND_CONFIGURATION.md`, `docs/README.md`.
+Version **v0.1.0** marks the readiness of the first stable production release of the
+**Design Studio** platform — a standalone SaaS storefront for print-on-demand designers with
+automatic catalog synchronization from Redbubble, dual database support (Supabase / MySQL),
+and a complete set of technical documentation.
 
 ---
 
-## 3. Контрольный список готовности к релизу (Release Readiness Checklist)
+## 2. Key Release Features (Scope & Changelog)
 
-| Этап | Задача | Статус | Примечание |
+### New capabilities (Features)
+- **Redbubble synchronization pipeline (Playwright + Cheerio)**:
+  - Standalone product import via CLI (`npm run sync:redbubble`) and HTTP API
+    (`/api/sync/redbubble`).
+  - Smart anti-detection: Cloudflare challenge handling, adaptive jitter (`RequestPacer`),
+    session cookie persistence in `.cache/redbubble-storage-state.json`.
+  - Extraction of Schema.org microdata (`Product`) and OpenGraph meta tags.
+- **Dual database support (Dual DB Provider)**:
+  - Transparent database provider switching via `DATABASE_PROVIDER` (`supabase` or `mysql`).
+  - A single facade of fetch methods (`getSiteConfig`, `fetchDesigns`, `getDesignById`,
+    `fetchCollections`).
+  - SQL schemas and procedures for PostgreSQL and MySQL.
+- **UI and storefront on Next.js 16 + React 19**:
+  - Responsive catalog with search, collection filtering, and pagination.
+  - Detailed product cards with links to external marketplaces (`ShopLinks`) and social sharing
+    (`ShareLinks`).
+  - Hero carousel and a featured-designs block.
+  - A safe cookie banner (`CookieBanner`) built on `useSyncExternalStore`.
+  - Dynamic sitemap (`/sitemap.xml`) and OpenGraph metadata.
+- **Complete technical documentation (`docs/`)**:
+  - `docs/ARCHITECTURE.md`, `docs/DATABASE.md`, `docs/SYNC_SYSTEM.md`,
+    `docs/FRONTEND_AND_UI.md`, `docs/DEPLOYMENT_AND_CONFIGURATION.md`, `docs/README.md`.
+
+---
+
+## 3. Release Readiness Checklist
+
+| Stage | Task | Status | Note |
 |---|---|:---:|---|
-| **Код и тесты** | Прогон unit-тестов Vitest (`npm test`) | ✅ Пройдено | 12/12 тестов пройдены успешно |
-| **Сборка** | Проверка production build (`npm run build`) | ✅ Пройдено | Успешная компиляция Turbopack (11/11 страниц) |
-| **Линтинг** | Проверка ESLint 9 (`npm run lint`) | ✅ Готово | Flat-config настроен в `eslint.config.mjs` |
-| **Документация** | Наличие инструкций по развертыванию | ✅ Пройдено | Описаны Vercel, Docker и MySQL |
-| **Безопасность** | Проверка секретов в коде | ✅ Пройдено | Пароли и API-ключи только в `.env` / `.env.example` |
-| **Версионирование** | Фиксация тега релиза `v0.1.0` в Git | ⏳ К исполнению | Создание аннотированного тега |
+| **Code and tests** | Run Vitest unit tests (`npm test`) | ✅ Passed | 12/12 tests passed successfully |
+| **Build** | Production build check (`npm run build`) | ✅ Passed | Successful Turbopack compilation (11/11 pages) |
+| **Linting** | ESLint 9 check (`npm run lint`) | ✅ Done | Flat config set up in `eslint.config.mjs` |
+| **Documentation** | Deployment instructions available | ✅ Passed | Vercel, Docker, and MySQL covered |
+| **Security** | Secrets check in code | ✅ Passed | Passwords and API keys only in `.env` / `.env.example` |
+| **Versioning** | Pin the `v0.1.0` release tag in Git | ⏳ To do | Create an annotated tag |
 
 ---
 
-## 4. Пошаговый план развертывания (Rollout Steps)
+## 4. Step-by-Step Rollout Plan
 
-### Шаг 1: Подготовка окружения (Pre-flight)
-1. Убедиться, что в базе данных (Supabase или MySQL) применены DDL-скрипты:
-   - Supabase: `init/postgres_tables.sql` и `init/postgres_functions.sql`.
-   - MySQL: `init/mysql_tables.sql` и `init/mysql_functions.sql`.
-2. Заполнить базовые параметры бренда в таблице `studio` (или положиться на `config/config.json`).
-3. Настроить переменные окружения в панели Vercel / хостинга:
-   - `DATABASE_PROVIDER`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-   - `SYNC_SECRET` (произвольная надежная строка для защиты API cron-задач).
-   - `REDBUBBLE_SHOP_URL` (URL магазина).
+### Step 1: Environment preparation (pre-flight)
+1. Make sure the DDL scripts have been applied to the database (Supabase or MySQL):
+   - Supabase: `init/postgres_tables.sql` and `init/postgres_functions.sql`.
+   - MySQL: `init/mysql_tables.sql` and `init/mysql_functions.sql`.
+2. Populate the basic brand parameters in the `studio` table (or rely on `config/config.json`).
+3. Configure the environment variables in the Vercel / hosting panel:
+   - `DATABASE_PROVIDER`, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+     `SUPABASE_SERVICE_ROLE_KEY`.
+   - `SYNC_SECRET` (an arbitrary strong string protecting the API cron jobs).
+   - `REDBUBBLE_SHOP_URL` (the shop URL).
 
-### Шаг 2: Первичная синхронизация каталога
-- Выполнить команду начального импорта товаров:
+### Step 2: Initial catalog synchronization
+- Run the initial product import command:
   ```bash
   npm run sync:redbubble
   ```
-- Проверить появление записей в таблице `designs`.
+- Verify that records appeared in the `designs` table.
 
-### Шаг 3: Деплой приложения (Deployment)
-- Подключить репозиторий к Vercel.
-- Добавить `vercel.json` с конфигурацией Cron для ежедневного обновления каталога в 03:00 UTC:
+### Step 3: Deploying the application
+- Connect the repository to Vercel.
+- Add a `vercel.json` with the cron configuration for daily catalog updates at 03:00 UTC:
   ```json
   {
     "crons": [
       {
-        "path": "/api/sync/redbubble?secret=ВАШ_SYNC_SECRET",
+        "path": "/api/sync/redbubble?secret=YOUR_SYNC_SECRET",
         "schedule": "0 3 * * *"
       }
     ]
   }
   ```
 
-### Шаг 4: Пострелизная валидация (Smoke Testing)
-- [ ] Проверить отдачу главной страницы `/` (Hero, карусель, рандомные дизайны).
-- [ ] Проверить каталог `/designs`: поиск по названию, фильтр коллекций, пагинация.
-- [ ] Проверить карточку товара `/designs/[id]`: корректность ссылок на покупку и расшаривание.
-- [ ] Проверить динамический `/sitemap.xml`.
-- [ ] Проверить срабатывание API `/api/sync/redbubble` с передачей секретного заголовка `x-sync-secret`.
+### Step 4: Post-release validation (smoke testing)
+- [ ] Check the home page `/` (hero, carousel, featured designs).
+- [ ] Check the catalog `/designs`: title search, collection filter, pagination.
+- [ ] Check a product card `/designs/[id]`: purchase and sharing links work.
+- [ ] Check the dynamic `/sitemap.xml`.
+- [ ] Check that `/api/sync/redbubble` responds when the secret header `x-sync-secret` is passed.
 
 ---
 
-## 5. План отката (Rollback Strategy)
-- При сбоях фронтенда: мгновенный Rollback на предыдущий deployment в панели Vercel.
-- При сбоях синхронизации: отключение cron-задачи или временный возврат `SYNC_USE_PLAYWRIGHT=false` (переход на Cheerio) либо ручное обновление сессии `storageState`.
-- База данных: схема не содержит деструктивных миграций; при необходимости отката данных достаточно очистить таблицу `designs`.
+## 5. Rollback Strategy
+- Frontend failures: instant rollback to the previous deployment in the Vercel dashboard.
+- Synchronization failures: disable the cron job, temporarily switch to `SYNC_USE_PLAYWRIGHT=false`
+  (Cheerio mode), or manually refresh the `storageState` session.
+- Database: the schema contains no destructive migrations; rolling data back is enough to clear
+  the `designs` table.

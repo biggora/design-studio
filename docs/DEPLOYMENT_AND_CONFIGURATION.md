@@ -1,113 +1,127 @@
-# Развертывание, Конфигурация и Эксплуатация
+# Deployment, Configuration and Operations
 
-## 1. Справочник переменных окружения
+## 1. Environment Variable Reference
 
-Все настройки окружения конфигурируются в файле `.env` (шаблон доступен в `.env.example`).
+All environment settings are configured in the `.env` file (see `.env.example` in the repository root for the full template).
 
-### 1.1 Переменные базы данных (Supabase / PostgreSQL)
-| Переменная | Обязательна | Значение по умолчанию | Описание |
+### 1.1 Database variables (Supabase / PostgreSQL)
+| Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_PROVIDER` | Нет | `supabase` | Выбор движка базы данных: `supabase` или `mysql`. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Да (при Supabase) | — | URL проекта Supabase (например: `https://xyzproject.supabase.co`). |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Да (при Supabase) | — | Публичный анонимный ключ Supabase для клиентских и серверных операций чтения. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Да (для sync) | — | Секретный сервисный ключ с правами обхода RLS для записи/upsert спарсенных данных. |
+| `DATABASE_PROVIDER` | No | `supabase` | Database engine selector: `supabase` or `mysql`. Any other value throws `Unsupported DATABASE_PROVIDER` at runtime. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes (Supabase) | — | Supabase project URL (e.g. `https://xyzproject.supabase.co`). |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes (Supabase) | — | Public anonymous Supabase key for client-side and read operations. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes (for sync) | — | Secret service key that bypasses RLS; required for writing/upserting scraped data (the init schema enables RLS with public read-only policies). |
 
-### 1.2 Переменные базы данных (MySQL)
-| Переменная | Обязательна | Значение по умолчанию | Описание |
+### 1.2 Database variables (MySQL)
+| Variable | Required | Default | Description |
 |---|---|---|---|
-| `MYSQL_HOST` | Да (при MySQL) | — | Хост сервера MySQL (например, `127.0.0.1` или `db.production.internal`). |
-| `MYSQL_PORT` | Нет | `3306` | Порт подключения к MySQL. |
-| `MYSQL_USER` | Да (при MySQL) | — | Имя пользователя базы данных. |
-| `MYSQL_PASSWORD` | Да (при MySQL) | — | Пароль пользователя. |
-| `MYSQL_DATABASE` | Да (при MySQL) | — | Имя базы данных проекта. |
+| `MYSQL_HOST` | Yes (MySQL) | — | MySQL server host (e.g. `127.0.0.1` or `db.production.internal`). |
+| `MYSQL_PORT` | No | `3306` | MySQL connection port. |
+| `MYSQL_USER` | Yes (MySQL) | — | Database user name. |
+| `MYSQL_PASSWORD` | Yes (MySQL) | — | User password. |
+| `MYSQL_DATABASE` | Yes (MySQL) | — | Project database name. |
 
-### 1.3 Переменные подсистемы синхронизации
-| Переменная | Обязательна | Значение по умолчанию | Описание |
+### 1.3 Synchronization subsystem variables
+| Variable | Required | Default | Description |
 |---|---|---|---|
-| `SYNC_SECRET` | Да (для API) | — | Секретный токен для авторизации вызовов `/api/sync/redbubble`. |
-| `REDBUBBLE_SHOP_URL` | Да | — | URL магазина (например: `https://www.redbubble.com/people/yourname/shop`). |
-| `SYNC_MAX_PAGES` | Нет | `5` | Максимальное количество сканируемых страниц каталога. |
-| `SYNC_PAGE_DELAY_MS` | Нет | `3000` | Пауза (в мс) между обработкой страниц витрины. |
-| `SYNC_MIN_REQUEST_INTERVAL_MS`| Нет | `2500`| Минимальный интервал между последовательными сетевыми запросами. |
-| `SYNC_REQUEST_JITTER_MS` | Нет | `700` | Максимальный рандомизированный джиттер к задержке запросов. |
-| `SYNC_CONCURRENCY` | Нет | `1` | Степень параллелизма при Cheerio-парсинге карточек товаров. |
-| `SYNC_USE_PLAYWRIGHT` | Нет | `true` | Использовать ли браузер Chromium для парсинга (true) или Cheerio (false). |
-| `SYNC_PLAYWRIGHT_HEADLESS` | Нет | `true` | Запуск Chromium в фоновом режиме (false для ручного прохождения капчи). |
-| `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` | Нет | `.cache/redbubble-storage-state.json` | Путь к файлу сохранения сессии (cookies, localStorage). |
-| `REDBUBBLE_USER_AGENT` | Нет | — | Кастомный User-Agent реального браузера для обхода фильтрации. |
-| `REDBUBBLE_COOKIE` | Нет | — | Строка cookie из реальной сессии браузера (для обхода Cloudflare). |
+| `SYNC_SECRET` | Yes (for API) | — | Secret token authorizing calls to `/api/sync/redbubble` (sent via the `Authorization: Bearer` or `x-sync-secret` header). |
+| `REDBUBBLE_SHOP_URL` | Yes | — | Shop URL (e.g. `https://www.redbubble.com/people/yourname/shop`); used only if the `studio` table does not define `representation.redbubbleShopUrl`. |
+| `SYNC_MAX_PAGES` | No | `5` | Maximum number of catalog pages to scan. |
+| `SYNC_PAGE_DELAY_MS` | No | `3000` | Pause (ms) between shop listing pages. |
+| `SYNC_MIN_REQUEST_INTERVAL_MS` | No | `2500` | Minimum interval between consecutive network requests. |
+| `SYNC_REQUEST_JITTER_MS` | No | `700` | Maximum randomized jitter added to request delays. |
+| `SYNC_CONCURRENCY` | No | `1` | Concurrency of Cheerio-mode product-page parsing. |
+| `SYNC_USE_PLAYWRIGHT` | No | `true` | Use the Chromium browser for scraping (`true`) or Cheerio (`false`). |
+| `SYNC_PLAYWRIGHT_HEADLESS` | No | `true` | Run Chromium in the background (`false` to solve a CAPTCHA manually). |
+| `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` | No | unset (`.env.example`: `.cache/redbubble-storage-state.json`) | Path to the persisted session file (cookies, localStorage). When unset, no storage state is saved or loaded. |
+| `REDBUBBLE_USER_AGENT` | No | — | Custom real-browser User-Agent sent with sync requests. |
+| `REDBUBBLE_COOKIE` | No | — | Cookie string from a real browser session (to bypass Cloudflare in Cheerio mode). |
 
 ---
 
-## 2. Развертывание на платформе Vercel
+## 2. Deploying on Vercel
 
-Vercel является рекомендуемой платформой для хостинга веб-приложения благодаря нативной поддержке Next.js 16 и встроенному планировщику Cron Jobs.
+Vercel is the recommended platform for hosting the web application thanks to native Next.js 16 support and a built-in Cron Jobs scheduler.
 
-### 2.1 Шаги развертывания
-1. Запушьте репозиторий в GitHub / GitLab / Bitbucket.
-2. В панели [Vercel Dashboard](https://vercel.com) нажмите **Add New... -> Project** и импортируйте репозиторий.
-3. В блоке **Environment Variables** добавьте все необходимые переменные:
+### 2.1 Deployment steps
+
+1. Push the repository to GitHub / GitLab / Bitbucket.
+2. In the [Vercel dashboard](https://vercel.com), click **Add New... -> Project** and import the repository.
+3. In the **Environment Variables** block, add all required variables:
    - `DATABASE_PROVIDER=supabase`
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SYNC_SECRET`
    - `REDBUBBLE_SHOP_URL`
-   - `SYNC_USE_PLAYWRIGHT=false` *(критически важно для Vercel Serverless Functions)*
-4. Нажмите **Deploy**.
+   - `SYNC_USE_PLAYWRIGHT=false` *(critical for Vercel Serverless Functions)*
+4. Click **Deploy**.
 
-### 2.2 Настройка автоматической синхронизации через Vercel Cron
-Для запуска синхронизации по расписанию добавьте файл конфигурации `vercel.json` в корень проекта:
+### 2.2 Scheduling automatic synchronization
+
+The repository does **not** include a `vercel.json` — adding one at the project root is part of deployment. A cron entry looks like this:
 
 ```json
 {
   "crons": [
     {
-      "path": "/api/sync/redbubble?secret=YOUR_LONG_RANDOM_SYNC_SECRET",
+      "path": "/api/sync/redbubble",
       "schedule": "0 4 * * *"
     }
   ]
 }
 ```
-*Расписание `0 4 * * *` означает ежедневный запуск в 04:00 утра UTC.*
 
-> **ВАЖНО**: В среде Vercel Serverless Function размер бинарного пакета Chromium превышает стандартный лимит бессерверной функции (50 МБ). Поэтому на Vercel синхронизация через эндпоинт `/api/sync/redbubble` должна работать в режиме Cheerio (`SYNC_USE_PLAYWRIGHT=false`).
+*The `0 4 * * *` schedule means daily at 04:00 UTC.*
+
+> **IMPORTANT — check these caveats against the current code before using Vercel Cron**:
+> 1. Vercel Cron jobs issue **GET** requests, while the sync route currently exports a **POST-only** handler; a cron call would be answered with `405 Method Not Allowed`. Using Vercel Cron therefore requires extending `app/api/sync/redbubble/route.ts` with an authenticated `GET` handler.
+> 2. The route authenticates via request **headers** only (`Authorization: Bearer ...` or `x-sync-secret`, compared in constant time); the `?secret=...` query parameter is **not** accepted. Secrets cannot be injected from environment variables into `vercel.json`, so any header value would have to be hardcoded in a committed file — avoid this.
+>
+> The scheduling method that works with the code as-is is an external scheduler that sends a POST with the secret header — e.g. a system crontab on any host, cron-job.org, GitHub Actions, or n8n:
+> ```bash
+> 0 4 * * * curl -fsS -X POST "https://your-domain.com/api/sync/redbubble" -H "x-sync-secret: YOUR_LONG_RANDOM_SYNC_SECRET" >/dev/null
+> ```
+
+> **ALSO IMPORTANT**: in the Vercel Serverless Functions environment the Chromium binary bundle exceeds the standard serverless function size limit, so on Vercel the `/api/sync/redbubble` endpoint must run in Cheerio mode (`SYNC_USE_PLAYWRIGHT=false`). For Playwright-based sync, use the dedicated runner described in section 3.
 
 ---
 
-## 3. Развертывание постоянного Playwright Sync Runner (Docker / VM)
+## 3. Deploying a Permanent Playwright Sync Runner (Docker / VM)
 
-Если Redbubble блокирует прямые HTTP-запросы Cheerio, рекомендуется вынести процесс синхронизации на выделенный контейнер или виртуальную машину (DigitalOcean, Hetzner, AWS EC2), где запущен полноценный headless-браузер Chromium.
+If Redbubble blocks direct Cheerio HTTP requests, move the sync process to a dedicated container or virtual machine (DigitalOcean, Hetzner, AWS EC2) running a full headless Chromium browser.
 
-### 3.1 Dockerfile для автономного синхронизатора
+### 3.1 Dockerfile for a standalone synchronizer
 
-Создайте файл `Dockerfile.sync` в корне репозитория:
+Create a `Dockerfile.sync` in the repository root (the file is not part of the repository):
 
 ```dockerfile
 FROM mcr.microsoft.com/playwright:v1.52.0-jammy
 
 WORKDIR /app
 
-# Копирование манифестов зависимостей
+# Copy dependency manifests
 COPY package*.json ./
 
-# Установка зависимостей проекта и бинарников Playwright
+# Install project dependencies and Playwright binaries
 RUN npm ci
 RUN npx playwright install chromium --with-deps
 
-# Копирование исходного кода
+# Copy the source code
 COPY . .
 
-# Создание директории для кеширования сессии
+# Create the session cache directory
 RUN mkdir -p .cache
 
-# Команда запуска синхронизации по умолчанию
+# Default sync start command
 CMD ["npm", "run", "sync:redbubble"]
 ```
 
-### 3.2 Запуск через Docker Compose с cron-планировщиком
+The base image tag (`v1.52.0`) matches the `playwright` version pinned in `package.json` (`^1.52.0`) — keep them in sync when upgrading.
 
-Пример `docker-compose.yml`:
+### 3.2 Running via Docker Compose with a cron scheduler
+
+Example `docker-compose.yml`:
 ```yaml
 version: '3.8'
 
@@ -130,42 +144,53 @@ services:
     restart: "no"
 ```
 
-Для запуска раз в сутки добавьте запись в системный crontab сервера (`crontab -e`):
+To run once per day, add an entry to the server's system crontab (`crontab -e`):
 ```bash
 0 3 * * * cd /opt/design-studio && docker compose run --rm redbubble-sync
 ```
 
 ---
 
-## 4. Диагностика и устранение неполадок (Troubleshooting)
+## 4. Troubleshooting
 
-### 4.1 Ошибка: `Redbubble blocked automated access with Cloudflare challenge`
-- **Причина**: Системы защиты Cloudflare зафиксировали подозрительную активность с вашего IP или дефолтные заголовки бота.
-- **Решение**:
-  1. Запустите скрипт синхронизации локально с открытым окном браузера:
+### 4.1 Error: `Redbubble blocked automated access with Cloudflare challenge`
+
+- **Cause**: Cloudflare protection flagged suspicious activity from your IP or default bot headers. The full messages differ per mode:
+  - Cheerio: *"Redbubble blocked automated access with Cloudflare challenge. Set REDBUBBLE_COOKIE and REDBUBBLE_USER_AGENT from a real browser session."*
+  - Playwright: *"Redbubble blocked browser automation with Cloudflare challenge. Run once with SYNC_PLAYWRIGHT_HEADLESS=false and complete challenge, then reuse SYNC_PLAYWRIGHT_STORAGE_STATE_PATH."*
+- **Solution**:
+  1. Run the sync script locally with a visible browser window:
      ```bash
      SYNC_PLAYWRIGHT_HEADLESS=false SYNC_PLAYWRIGHT_STORAGE_STATE_PATH=.cache/session.json npm run sync:redbubble
      ```
-  2. При появлении окна Cloudflare («Just a moment» / «Verify you are human») пройдите проверку вручную.
-  3. После успешного прохода файл сессии `.cache/session.json` сохранит валидные cookies `cf_clearance`.
-  4. Скопируйте этот файл на рабочий сервер или используйте значения из него в переменной `REDBUBBLE_COOKIE`.
+  2. When the Cloudflare window appears ("Just a moment" / "Verify you are human"), complete the check manually.
+  3. After a successful pass, the session file `.cache/session.json` stores the valid `cf_clearance` cookies.
+  4. Copy this file to the production server, or use its values in the `REDBUBBLE_COOKIE` variable.
 
-### 4.2 Ошибка: `Missing Supabase environment variables` или `new row violates row-level security policy`
-- **Причина**:
-  - Не задан `SUPABASE_SERVICE_ROLE_KEY`.
-  - Либо скрипт использует только `NEXT_PUBLIC_SUPABASE_ANON_KEY`, а для таблицы `designs` в Supabase включен RLS без разрешающей политики на `INSERT/UPDATE`.
-- **Решение**: Укажите сервисный ключ `SUPABASE_SERVICE_ROLE_KEY` в `.env`. Сервисный ключ обладает правами суперпользователя и игнорирует RLS.
+### 4.2 Error: `Missing Supabase environment variables` or `new row violates row-level security policy`
 
-### 4.3 Ошибка: `Too many connections` в MySQL
-- **Причина**: При частом перезапуске бессерверных функций Next.js создается множество независимых пулов соединений `mysql.createPool`.
-- **Решение**:
-  - Настройте лимиты пула в `utils/database.ts`:
+- **Cause**:
+  - `SUPABASE_SERVICE_ROLE_KEY` is not set, so the client falls back to `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+  - The init schema (`init/postgres_tables.sql`) enables RLS on `studio` and `designs` with public read-only policies, so INSERT/UPDATE with the anon key violates the policy.
+- **Solution**: set `SUPABASE_SERVICE_ROLE_KEY` in `.env`. The service key carries elevated privileges and bypasses RLS (never expose it to the client).
+
+### 4.3 Error: `Too many connections` in MySQL
+
+- **Cause**: frequent serverless function restarts create many independent `mysql.createPool` instances.
+- **Solution**:
+  - The pool in `utils/database.ts` is already capped (`waitForConnections: true`, `connectionLimit: 10`, `queueLimit: 0`, `dateStrings: true`, and TLS with `rejectUnauthorized: true` in production); the pool is cached on `globalThis` and can be torn down with `closeDatabaseConnections()`:
     ```typescript
-    pool = mysql.createPool({
-      host: MYSQL_HOST,
-      connectionLimit: 10,
-      queueLimit: 0,
-      waitForConnections: true,
+    globalForMySQL.mysqlPool = mysql.createPool({
+        host: MYSQL_HOST,
+        port: MYSQL_PORT ? Number(MYSQL_PORT) : 3306,
+        user: MYSQL_USER,
+        password: MYSQL_PASSWORD,
+        database: MYSQL_DATABASE,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        dateStrings: true,
+        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: true } : undefined,
     });
     ```
-  - При высокой нагрузке используйте прокси пулов, например **ProxySQL** или **AWS RDS Proxy**.
+  - Under heavy load, use a connection-pooling proxy such as **ProxySQL** or **AWS RDS Proxy**.

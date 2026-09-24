@@ -78,7 +78,7 @@ The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate
 
 The system is a **default theme, not a brand**. Design Studio is a white-label product (see [PRODUCT.md](PRODUCT.md)): every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the `:root` CSS custom properties in `app/globals.css`, consumed through the Tailwind theme mapping in `tailwind.config.ts`; per-deployment theming rides on `config/config.json` (or the `studio` table) and the allow-listed `themeLink` stylesheet hook. Anything visual that cannot be changed from that layer is a defect.
 
-The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` now carries the rendered Warp Grey), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in two sanctioned places: the token definition file itself and the semantic green/red form-status pair. Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
+The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` now carries the rendered Warp Grey), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
 
 **Key Characteristics:**
 
@@ -94,7 +94,7 @@ The token layer is complete: every var the Tailwind mapping consumes is defined 
 A muted, textile-adjacent palette: cool greys and sages in the field, one deep saturated teal doing all the interactive work.
 
 ### Primary
-- **Indigo Thread** (#124E66): the single interactive color. Links, primary buttons, focus rings, carousel active dots, pagination controls. Its rarity is what makes it read as clickable.
+- **Indigo Thread** (#124E66): the single interactive color. Links, primary buttons, focus rings, carousel active dots, pagination controls. Its rarity is what makes it read as clickable. (Palette role "primary" is not the `--primary` Tailwind token: in the token layer Indigo Thread maps to `--accent`, while `--primary` carries Loom Ink.)
 
 ### Secondary
 - **Thread Shadow** (#2E3944): the quieter second dark — footer band and the hover state of primary buttons. Steps between Loom Ink and Indigo Thread without competing with either.
@@ -108,7 +108,7 @@ A muted, textile-adjacent palette: cool greys and sages in the field, one deep s
 Sanctioned exceptions: Tailwind `green-100/green-800` and `red-100/red-800` for contact-form success/error messaging (semantic status colors only, reserved by rule).
 
 ### Named Rules
-**The No-Hardcode Rule.** Colors enter components only through the token layer (`:root` custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly two places: the token definition file and the semantic green/red form-status pair. Nothing else may carry a literal color.
+**The No-Hardcode Rule.** Colors enter components only through the token layer (`:root` custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly three places: the token definition file, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Nothing else may carry a literal color.
 
 **The One Thread Rule.** Indigo Thread is the only hue that means "interactive." Links, buttons, focus rings, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything is teal, nothing is clickable.
 
@@ -198,7 +198,7 @@ Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist 
 - **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:
-- **Don't** write a literal hex, rgb, or palette-utility color into a component — the token definition file and the form-status pair are the only sanctioned exceptions.
+- **Don't** write a literal hex, rgb, or palette-utility color into a component — the token definition file, the form-status pair, and the `themeColor` meta value are the only sanctioned exceptions.
 - **Don't** introduce hues outside the token set; green/red pairs are reserved for form success/error semantics only.
 - **Don't** animate hover with elevation, scale, or transform — color shifts and underlines only.
 - **Don't** letter-space or uppercase labels; the family runs at natural spacing in sentence case.
