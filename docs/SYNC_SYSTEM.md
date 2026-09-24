@@ -98,7 +98,7 @@ Uses a full headless Chromium browser to render Redbubble's client-side JavaScri
 Requires no browser or Chromium binaries, which makes it compatible with serverless environments (Vercel Serverless Functions).
 
 - **Step 1: Scan shop listing pages**:
-  Requests the listing HTML `buildShopPageUrl(shopUrl, page)` and takes product links from `parseShopNextData(html, pageUrl).designs[].externalLink`; if `__NEXT_DATA__` is missing, falls back to scanning `<a>` tags for links containing `/i/` or `/shop/ap/` (the pre-`__NEXT_DATA__` behavior).
+  Requests the listing HTML `buildShopPageUrl(shopUrl, page)` and takes product links from `parseShopNextData(html, pageUrl).designs[].externalLink`; if `__NEXT_DATA__` is missing, falls back to scanning `<a>` tags for links containing `/i/` or `/shop/ap/` (the pre-`__NEXT_DATA__` behavior). `buildShopPageUrl` always pins `sortOrder=recent` because the shop's default `top selling` sort overlaps between pages and silently drops designs from the crawl.
 - **Step 2: Parse product pages**:
   An HTTP GET request is issued for every discovered link, with concurrency capped by `SYNC_CONCURRENCY` (default 1).
 - **Step 3: Extract JSON-LD microdata**:
@@ -116,7 +116,7 @@ Requires no browser or Chromium binaries, which makes it compatible with serverl
 
 After the listing pages are scraped (in either mode), the artist's collections — read from `artistInfo.collections` on shop page 1 — are crawled to build design↔collection membership:
 
-- For each collection, `?collections=<externalId>&page=N` is requested (via the same fetch path as the active mode: the Playwright session's `fetchHtml`, or the plain Cheerio `fetch`), paced by the same `RequestPacer`, for `N` from 1 up to `min(totalPages, maxPages)`.
+- For each collection, `?collections=<externalId>&page=N` is requested (via the same fetch path as the active mode: the Playwright session's `fetchHtml`, or the plain Cheerio `fetch`), paced by the same `RequestPacer`, for `N` from 1 up to `min(totalPages, maxPages)`; these pages also pin `sortOrder=recent` for the same paging-overlap reason as the main listing.
 - Each filtered page is parsed with `parseShopNextData`; every design it contains is added to a **set** (not a list) of that collection's member ids — a design that shows up on more than one page of the same collection (paging overlap) is still only a member once. The final per-design `collections: string[]` is built from that set, in `artistInfo.collections` order — so a design that belongs to several collections gets `collections: ["Cats", "Dogs"]` in that order, and `collection` (the legacy single-value field) is set to the first title.
 - `collectionsComplete` is `true` only if **every** collection was fully crawled: a fetch failure (network error, Cloudflare, missing `__NEXT_DATA__`) marks it `false` and is recorded in `errors`; a collection whose `totalPages` exceeds `maxPages` (so only a prefix of its pages was fetched) also marks it `false` and adds a `Collection "<title>" truncated at maxPages=N of totalPages=M` warning — a partial membership must never be written as if it were complete. Either way the run skips writing collections/links entirely instead of writing from incomplete data (see §6.2).
 - Request cost example: an artist with 3 shop listing pages and 13 collections (each a single page) adds 13 requests to the 3 listing-page requests — no extra product-page requests, since collection pages reuse the same `__NEXT_DATA__` parsing as the shop listing.

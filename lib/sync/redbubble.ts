@@ -218,6 +218,7 @@ export function normalizeShopUrl(input: string): string {
 function buildShopPageUrl(base: string, page: number): string {
   const url = new URL(base);
   url.searchParams.set("page", String(page));
+  url.searchParams.set("sortOrder", "recent");
   return url.toString();
 }
 
@@ -225,6 +226,7 @@ function buildCollectionPageUrl(base: string, collectionExternalId: number, page
   const url = new URL(base);
   url.searchParams.set("collections", String(collectionExternalId));
   url.searchParams.set("page", String(page));
+  url.searchParams.set("sortOrder", "recent");
   return url.toString();
 }
 
