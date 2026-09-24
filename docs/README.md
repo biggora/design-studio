@@ -13,6 +13,7 @@ Welcome to the technical documentation for **Design Studio** — a self-hostable
 | [**Sync Subsystem**](./SYNC_SYSTEM.md) | The automated Redbubble parsing pipeline | Two-mode parsing (Playwright Chromium vs Cheerio JSON-LD), Cloudflare handling, the `RequestPacer` algorithm with jitter, API protection via `SYNC_SECRET`, upsert logic. |
 | [**Frontend and UI Components**](./FRONTEND_AND_UI.md) | User interface, theming, and styling | Route map, UI components (`DesignCard`, `CatalogSearchBar`, `CookieBanner`), the design-token layer in `app/globals.css`, `components/ui` primitives, SEO optimization, dynamic `sitemap.ts` and `robots.ts`. |
 | [**Deployment and Configuration**](./DEPLOYMENT_AND_CONFIGURATION.md) | Setup and operations guide | `.env` variable reference, Vercel deployment with cron jobs, running the Playwright sync runner in Docker, troubleshooting captcha and database connectivity. |
+| [**Public Prints API**](./PUBLIC_API.md) | Public, unauthenticated read-only API | `/api/v1/prints`, `/api/v1/prints/random`, `/api/v1/prints/{id}`, `/api/v1/collections` endpoints, CORS setup via `PRINTS_API_ALLOWED_ORIGINS`, `PublicPrint` shape, curl/JS/React usage examples. |
 | [**Release Plan**](./RELEASE_PLAN.md) | Release readiness and rollout | v0.1.0 release scope, verification checklist, known limitations. Historical record. |
 | [**Progress Ledger**](./progress.md) | Working ledger of the documentation-update run | Task table, decisions log, review findings (RV-DOCS), session state. |
 

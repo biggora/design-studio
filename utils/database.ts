@@ -411,6 +411,139 @@ async function fetchLegacyCollections(provider: string): Promise<string[]> {
     return rows.map(row => row.collection as string);
 }
 
+function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
+    return {
+        id: item.id as string,
+        externalId: item.externalId as number,
+        title: item.title as string,
+        externalLink: item.externalLink as string,
+        externalImageUrl: item.externalImageUrl as string,
+        category: item.category as string,
+        collection: item.collection as string,
+        imageName: item.imageName as string,
+        description: item.description as string,
+        keywords: item.keywords as string,
+        backgroundColors: item.backgroundColors as string,
+        backgroundColor: item.backgroundColor as string,
+        createdAt: item.createdAt as string,
+        updatedAt: item.updatedAt as string,
+        dimensions: item.dimensions as string | undefined,
+        material: item.material as string | undefined,
+        price: item.price as number | undefined,
+        inStock: item.inStock as boolean | undefined,
+        shared: item.shared as boolean | undefined,
+        props: item.props as object | undefined,
+    };
+}
+
+export async function fetchRandomDesigns(limit: number, collection?: string): Promise<Design[]> {
+    const safeLimit = Math.max(1, Math.min(12, Number.isInteger(limit) ? limit : 12));
+
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+
+        const runLegacyIdQuery = async () => {
+            let query = supabaseClient.from("designs").select("id");
+            if (collection) {
+                query = query.eq("collection", collection);
+            }
+            return query;
+        };
+
+        const runJoinIdQuery = async (collectionTitle: string) => {
+            const query = supabaseClient
+                .from("designs")
+                .select("id, design_collections!inner(collections!inner(title))")
+                .eq("design_collections.collections.title", collectionTitle);
+            return query;
+        };
+
+        let {data: idRows, error: idError} = collection
+            ? await runJoinIdQuery(collection)
+            : await runLegacyIdQuery();
+
+        // Fall back to the legacy single-collection filter if the join errors
+        // (tables not migrated yet) or matches nothing.
+        if (collection && (idError || !idRows?.length)) {
+            ({data: idRows, error: idError} = await runLegacyIdQuery());
+        }
+
+        if (idError) {
+            console.error("Error fetching random design ids:", idError);
+            return [];
+        }
+
+        const ids = (idRows || []).map(row => row.id as string);
+
+        // Fisher-Yates shuffle
+        for (let i = ids.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [ids[i], ids[j]] = [ids[j], ids[i]];
+        }
+
+        const pickedIds = ids.slice(0, safeLimit);
+        if (!pickedIds.length) {
+            return [];
+        }
+
+        const {data, error} = await supabaseClient.from("designs").select("*").in("id", pickedIds);
+
+        if (error) {
+            console.error("Error fetching random designs:", error);
+            return [];
+        }
+
+        const designsById = new Map((data || []).map(item => [item.id as string, mapSupabaseRowToDesign(item)]));
+        return pickedIds.map(id => designsById.get(id)).filter((d): d is Design => Boolean(d));
+    }
+
+    try {
+        const pool = getMySQLPool();
+
+        const buildBase = (withCollectionJoin: boolean) => {
+            let base = "FROM designs WHERE 1";
+            const params: (string | number)[] = [];
+            if (collection) {
+                base += withCollectionJoin
+                    ? " AND (collection = ? OR EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId WHERE dc.designId = designs.id AND c.title = ?))"
+                    : " AND collection = ?";
+                params.push(collection);
+                if (withCollectionJoin) {
+                    params.push(collection);
+                }
+            }
+            return {base, params};
+        };
+
+        const runMySQLQuery = async (withCollectionJoin: boolean) => {
+            const {base, params} = buildBase(withCollectionJoin);
+            const [queryRows] = await pool.query<mysql.RowDataPacket[]>(
+                `SELECT * ${base} ORDER BY RAND() LIMIT ?`,
+                [...params, safeLimit],
+            );
+            return queryRows;
+        };
+
+        let rows: mysql.RowDataPacket[];
+        if (collection) {
+            try {
+                rows = await runMySQLQuery(true);
+            } catch (err) {
+                console.error("Error fetching random designs with collection join, falling back:", err);
+                rows = await runMySQLQuery(false);
+            }
+        } else {
+            rows = await runMySQLQuery(false);
+        }
+
+        return rows.map(mapRowToDesign);
+    } catch (err) {
+        console.error("Error fetching random designs:", err);
+        return [];
+    }
+}
+
 export async function fetchCollections(): Promise<string[]> {
     const provider = getProvider();
     if (provider === "supabase") {

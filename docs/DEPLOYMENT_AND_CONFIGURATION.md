@@ -37,7 +37,13 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 | `REDBUBBLE_USER_AGENT` | No | — | Custom real-browser User-Agent sent with sync requests. |
 | `REDBUBBLE_COOKIE` | No | — | Cookie string from a real browser session (to bypass Cloudflare in Cheerio mode). |
 
-### 1.4 Site config cache & Supabase webhook
+### 1.4 Public prints API variables
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `PRINTS_API_ALLOWED_ORIGINS` | No | `*` (any origin) | Comma-separated list of exact origins (scheme+host+port) allowed to call `/api/v1/*` from a browser via CORS, or `*` for any origin. Set a list to restrict access. See [docs/PUBLIC_API.md](./PUBLIC_API.md) for details. Requires a redeploy/restart to take effect. |
+
+### 1.5 Site config cache & Supabase webhook
 
 `getSiteConfig()` (`utils/database.ts`) is cached across requests with the Next.js Data Cache under the tag `site-config` and a 5-minute (`revalidate: 300`) safety TTL, on top of the existing per-render React `cache()` dedupe. Edits to the `studio` table are picked up within 5 minutes automatically, or immediately by calling `POST /api/revalidate/config` (authorized the same way as the sync endpoint, via `SYNC_SECRET`).
 
