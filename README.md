@@ -107,6 +107,7 @@ The full technical documentation set lives in [docs/](docs/):
 - [docs/SYNC_SYSTEM.md](docs/SYNC_SYSTEM.md) — the Redbubble sync pipeline
 - [docs/FRONTEND_AND_UI.md](docs/FRONTEND_AND_UI.md) — frontend, UI components, and the design-token system
 - [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) — deployment and configuration guide
+- [docs/PUBLIC_API.md](docs/PUBLIC_API.md) — public, unauthenticated read-only prints API
 - [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — release plan
 
 Root-level references: [PRODUCT.md](PRODUCT.md) (product truth) and [DESIGN.md](DESIGN.md) (design system of record — token names, the No-Hardcode Rule, component contracts).
