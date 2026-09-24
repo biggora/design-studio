@@ -1,11 +1,11 @@
 import "dotenv/config";
-import { closeDatabaseConnections, getSiteConfig } from "../utils/database";
+import { closeDatabaseConnections, loadSiteConfig } from "../utils/database";
 import { syncRedbubbleToSupabase } from "../lib/sync/redbubble";
 
 async function run() {
   const dryRun = process.argv.includes("--dry-run");
 
-  const config = await getSiteConfig();
+  const config = await loadSiteConfig();
   const shopUrl =
     config.representation?.redbubbleShopUrl ||
     config.representation?.redbuble ||

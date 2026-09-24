@@ -24,7 +24,7 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 ### 1.3 Synchronization subsystem variables
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `SYNC_SECRET` | Yes (for API) | — | Secret token authorizing calls to `/api/sync/redbubble` (sent via the `Authorization: Bearer` or `x-sync-secret` header). |
+| `SYNC_SECRET` | Yes (for API) | — | Secret token authorizing calls to `/api/sync/redbubble` and `/api/revalidate/config` (sent via the `Authorization: Bearer` or `x-sync-secret` header). |
 | `REDBUBBLE_SHOP_URL` | Yes | — | Shop URL (e.g. `https://www.redbubble.com/people/yourname/shop`); used only if the `studio` table does not define `representation.redbubbleShopUrl`. |
 | `SYNC_MAX_PAGES` | No | `5` | Maximum number of catalog pages to scan. |
 | `SYNC_PAGE_DELAY_MS` | No | `3000` | Pause (ms) between shop listing pages. |
@@ -36,6 +36,23 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 | `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` | No | unset (`.env.example`: `.cache/redbubble-storage-state.json`) | Path to the persisted session file (cookies, localStorage). When unset, no storage state is saved or loaded. |
 | `REDBUBBLE_USER_AGENT` | No | — | Custom real-browser User-Agent sent with sync requests. |
 | `REDBUBBLE_COOKIE` | No | — | Cookie string from a real browser session (to bypass Cloudflare in Cheerio mode). |
+
+### 1.4 Site config cache & Supabase webhook
+
+`getSiteConfig()` (`utils/database.ts`) is cached across requests with the Next.js Data Cache under the tag `site-config` and a 5-minute (`revalidate: 300`) safety TTL, on top of the existing per-render React `cache()` dedupe. Edits to the `studio` table are picked up within 5 minutes automatically, or immediately by calling `POST /api/revalidate/config` (authorized the same way as the sync endpoint, via `SYNC_SECRET`).
+
+To invalidate on every edit, configure a Supabase Database Webhook:
+
+1. Supabase Dashboard → **Database** → **Webhooks** → **Create a new hook**.
+2. Table: `public.studio`. Events: `INSERT`, `UPDATE`, `DELETE`.
+3. Type: **HTTP Request**, Method: `POST`, URL: `https://<your-domain>/api/revalidate/config`.
+4. Headers: `Authorization: Bearer <SYNC_SECRET>`.
+
+Manual invalidation:
+
+```bash
+curl -fsS -X POST "https://your-domain.com/api/revalidate/config" -H "Authorization: Bearer YOUR_LONG_RANDOM_SYNC_SECRET"
+```
 
 ---
 

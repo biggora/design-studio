@@ -1,33 +1,9 @@
 import { NextResponse } from "next/server";
-import crypto from "node:crypto";
 import { getSiteConfig } from "@/utils/database";
 import { syncRedbubbleToSupabase } from "@/lib/sync/redbubble";
+import { authorizeSyncRequest } from "@/lib/sync-auth";
 
 let isSyncInProgress = false;
-
-function constantTimeCompare(a: string, b: string): boolean {
-  const bufA = Buffer.from(a);
-  const bufB = Buffer.from(b);
-  if (bufA.length !== bufB.length) return false;
-  return crypto.timingSafeEqual(bufA, bufB);
-}
-
-function getSecretFromRequest(request: Request): string | null {
-  const authHeader = request.headers.get("authorization");
-  if (authHeader) {
-    const match = authHeader.match(/^Bearer\s+(.+)$/i);
-    if (match?.[1]) {
-      return match[1].trim();
-    }
-  }
-
-  const syncSecretHeader = request.headers.get("x-sync-secret");
-  if (syncSecretHeader) {
-    return syncSecretHeader.trim();
-  }
-
-  return null;
-}
 
 export async function POST(request: Request) {
   if (isSyncInProgress) {
@@ -37,18 +13,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const expected = process.env.SYNC_SECRET;
-  if (!expected || expected.trim().length === 0) {
-    return NextResponse.json(
-      { error: "SYNC_SECRET is not configured" },
-      { status: 500 },
-    );
-  }
-
-  const provided = getSecretFromRequest(request);
-  if (!provided || !constantTimeCompare(provided, expected)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const denied = authorizeSyncRequest(request);
+  if (denied) return denied;
 
   const databaseProvider = (process.env.DATABASE_PROVIDER || "").toLowerCase();
   if (databaseProvider === "mysql") {

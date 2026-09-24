@@ -1,4 +1,5 @@
 import {cache} from "react";
+import {unstable_cache} from "next/cache";
 import {createClient} from "@supabase/supabase-js";
 import mysql from "mysql2/promise";
 import {SiteConfig} from "@/lib/store";
@@ -106,7 +107,7 @@ function handleSiteConfigFailure(err: unknown): SiteConfig {
     throw new Error("Failed to load site config", {cause: err});
 }
 
-async function loadSiteConfig(): Promise<SiteConfig> {
+export async function loadSiteConfig(): Promise<SiteConfig> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
@@ -130,8 +131,14 @@ async function loadSiteConfig(): Promise<SiteConfig> {
     }
 }
 
-// Dedupes the studio query within a single server render
-export const getSiteConfig = cache(loadSiteConfig);
+export const SITE_CONFIG_TAG = "site-config";
+
+// Per-render dedupe (React cache) around a cross-request cache (unstable_cache),
+// invalidated by /api/revalidate/config; the 5-min revalidate is a safety TTL.
+export const getSiteConfig = cache(unstable_cache(loadSiteConfig, ["site-config"], {
+    tags: [SITE_CONFIG_TAG],
+    revalidate: 300,
+}));
 
 export async function fetchDesigns(
     page: number,

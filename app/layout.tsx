@@ -10,6 +10,10 @@ import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import ContextWrapper from "@/app/wrapper";
 
+// Safety-net TTL for the studio config cache; edits also trigger
+// /api/revalidate/config for near-immediate invalidation.
+export const revalidate = 300;
+
 const inter = Inter({ subsets: ["latin"] });
 
 export async function generateMetadata(): Promise<Metadata> {
