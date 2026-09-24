@@ -99,3 +99,22 @@ export function parseIntParam(value: string | null, def: number, min: number, ma
   if (!Number.isInteger(parsed)) return def;
   return Math.max(min, Math.min(max, parsed));
 }
+
+const KEYWORD_PATTERN = /^[\p{L}\p{N} _-]{1,50}$/u;
+
+export function parseKeywordsParam(value: string | null): string[] {
+  if (!value) return [];
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const raw of value.split(",")) {
+    const keyword = raw.trim().toLowerCase();
+    if (!keyword || !KEYWORD_PATTERN.test(keyword) || seen.has(keyword)) continue;
+    seen.add(keyword);
+    result.push(keyword);
+    if (result.length >= 10) break;
+  }
+
+  return result;
+}

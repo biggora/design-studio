@@ -145,6 +145,7 @@ export async function fetchDesigns(
     searchQuery: string,
     collection: string,
     itemsPerPage = 12,
+    keywords: string[] = [],
 ): Promise<{ designs: Design[]; total: number }> {
     const safePage = Math.max(1, Number.isInteger(page) ? page : 1);
     const safeLimit = Math.max(1, Math.min(100, Number.isInteger(itemsPerPage) ? itemsPerPage : 12));
@@ -164,6 +165,9 @@ export async function fetchDesigns(
             if (collection) {
                 query = query.eq("collection", collection);
             }
+            if (keywords.length) {
+                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
+            }
             query = query.order("createdAt", { ascending: false });
             return query.range(start, end);
         };
@@ -176,6 +180,9 @@ export async function fetchDesigns(
                 query = query.ilike("title", `%${searchQuery}%`);
             }
             query = query.eq("design_collections.collections.title", collection);
+            if (keywords.length) {
+                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
+            }
             query = query.order("createdAt", { ascending: false });
             return query.range(start, end);
         };
@@ -238,6 +245,10 @@ export async function fetchDesigns(
             if (withCollectionJoin) {
                 params.push(collection);
             }
+        }
+        if (keywords.length) {
+            base += ` AND (${keywords.map(() => "LOWER(keywords) LIKE ?").join(" OR ")})`;
+            keywords.forEach(k => params.push(`%${k}%`));
         }
 
         return {base, params};
@@ -436,7 +447,11 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
     };
 }
 
-export async function fetchRandomDesigns(limit: number, collection?: string): Promise<Design[]> {
+export async function fetchRandomDesigns(
+    limit: number,
+    collection?: string,
+    keywords: string[] = [],
+): Promise<Design[]> {
     const safeLimit = Math.max(1, Math.min(12, Number.isInteger(limit) ? limit : 12));
 
     const provider = getProvider();
@@ -448,14 +463,20 @@ export async function fetchRandomDesigns(limit: number, collection?: string): Pr
             if (collection) {
                 query = query.eq("collection", collection);
             }
+            if (keywords.length) {
+                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
+            }
             return query;
         };
 
         const runJoinIdQuery = async (collectionTitle: string) => {
-            const query = supabaseClient
+            let query = supabaseClient
                 .from("designs")
                 .select("id, design_collections!inner(collections!inner(title))")
                 .eq("design_collections.collections.title", collectionTitle);
+            if (keywords.length) {
+                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
+            }
             return query;
         };
 
@@ -512,6 +533,10 @@ export async function fetchRandomDesigns(limit: number, collection?: string): Pr
                 if (withCollectionJoin) {
                     params.push(collection);
                 }
+            }
+            if (keywords.length) {
+                base += ` AND (${keywords.map(() => "LOWER(keywords) LIKE ?").join(" OR ")})`;
+                keywords.forEach(k => params.push(`%${k}%`));
             }
             return {base, params};
         };

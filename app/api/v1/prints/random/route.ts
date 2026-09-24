@@ -1,14 +1,21 @@
 import { fetchRandomDesigns } from "@/utils/database";
-import { jsonResponse, optionsResponse, parseIntParam, toPublicPrint } from "@/lib/public-api";
+import {
+  jsonResponse,
+  optionsResponse,
+  parseIntParam,
+  parseKeywordsParam,
+  toPublicPrint,
+} from "@/lib/public-api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
 
   const limit = parseIntParam(searchParams.get("limit"), 3, 1, 12);
   const collection = (searchParams.get("collection") || "").trim().slice(0, 100);
+  const keywords = parseKeywordsParam(searchParams.get("keywords"));
 
   try {
-    const designs = await fetchRandomDesigns(limit, collection || undefined);
+    const designs = await fetchRandomDesigns(limit, collection || undefined, keywords);
     return jsonResponse(
       request,
       { items: designs.map(toPublicPrint) },

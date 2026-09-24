@@ -6,6 +6,7 @@ import {
   jsonResponse,
   optionsResponse,
   parseIntParam,
+  parseKeywordsParam,
 } from "@/lib/public-api";
 import { Design } from "@/types/design";
 
@@ -189,5 +190,28 @@ describe("parseIntParam", () => {
 
   it("clamps values above the maximum", () => {
     expect(parseIntParam("999", 12, 1, 50)).toBe(50);
+  });
+});
+
+describe("parseKeywordsParam", () => {
+  it("returns [] for null", () => {
+    expect(parseKeywordsParam(null)).toEqual([]);
+  });
+
+  it("returns [] for an empty string", () => {
+    expect(parseKeywordsParam("")).toEqual([]);
+  });
+
+  it("splits, trims, lowercases, and dedupes", () => {
+    expect(parseKeywordsParam(" Cat, space ,cat,a%b,")).toEqual(["cat", "space"]);
+  });
+
+  it("drops entries with unsafe/filter-syntax characters", () => {
+    expect(parseKeywordsParam("a%b,x,y),cat")).toEqual(["x", "cat"]);
+  });
+
+  it("caps at 10 items", () => {
+    const input = Array.from({ length: 15 }, (_, i) => `kw${i}`).join(",");
+    expect(parseKeywordsParam(input)).toHaveLength(10);
   });
 });
