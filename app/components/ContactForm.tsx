@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ContactForm() {
   const [formData, setFormData] = useState({
@@ -47,54 +50,47 @@ export default function ContactForm() {
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="name" className="block mb-1 text-[#212A31]">
+          <label htmlFor="name" className="block mb-1 text-foreground">
             Name
           </label>
-          <input
+          <Input
             type="text"
             id="name"
             name="name"
             value={formData.name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-[#748D92] rounded-md focus:outline-none focus:ring-2 focus:ring-[#124E66]"
           />
         </div>
         <div>
-          <label htmlFor="email" className="block mb-1 text-[#212A31]">
+          <label htmlFor="email" className="block mb-1 text-foreground">
             Email
           </label>
-          <input
+          <Input
             type="email"
             id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-[#748D92] rounded-md focus:outline-none focus:ring-2 focus:ring-[#124E66]"
           />
         </div>
         <div>
-          <label htmlFor="message" className="block mb-1 text-[#212A31]">
+          <label htmlFor="message" className="block mb-1 text-foreground">
             Message
           </label>
-          <textarea
+          <Textarea
             id="message"
             name="message"
             value={formData.message}
             onChange={handleChange}
             required
             rows={4}
-            className="w-full px-3 py-2 border border-[#748D92] rounded-md focus:outline-none focus:ring-2 focus:ring-[#124E66]"
-          ></textarea>
+          />
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-[#124E66] text-[#D3D9D4] px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
+        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Sending..." : "Send Message"}
-        </button>
+        </Button>
       </form>
     </div>
   );

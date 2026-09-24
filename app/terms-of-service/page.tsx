@@ -24,10 +24,10 @@ export default async function TermsOfService() {
   return (
     <>
       <div className="container mx-auto px-6 py-12">
-        <h1 className="text-4xl font-bold mb-8 text-[#212A31]">
+        <h1 className="text-4xl font-bold mb-8 text-foreground">
           Terms of Service
         </h1>
-        <div className="prose prose-lg max-w-none text-[#212A31]">
+        <div className="prose prose-lg max-w-none text-foreground">
           <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
           <h2 className="text-2xl font-semibold mt-8 mb-4">

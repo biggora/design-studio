@@ -78,7 +78,7 @@ The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate
 
 The system is a **default theme, not a brand**. Design Studio is a white-label product (see [PRODUCT.md](PRODUCT.md)): every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the `:root` CSS custom properties in `app/globals.css`, consumed through the Tailwind theme mapping in `tailwind.config.ts`; per-deployment theming rides on `config/config.json` (or the `studio` table) and the allow-listed `themeLink` stylesheet hook. Anything visual that cannot be changed from that layer is a defect.
 
-Known debt, not precedent: current components carry ~130 literal hex values, and the Tailwind config references vars that were never defined (`--card`, `--popover`, `--border`, `--input`, `--ring`, `--radius`); the `--muted` var (`hsl(190 12% 43%)` = `#60767B`) is darker than the `#748D92` actually rendered. The values documented here are the rendered truth; new work closes the gap by moving toward the token layer, never by adding more literals.
+The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` now carries the rendered Warp Grey), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in two sanctioned places: the token definition file itself and the semantic green/red form-status pair. Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
 
 **Key Characteristics:**
 
@@ -105,10 +105,10 @@ A muted, textile-adjacent palette: cool greys and sages in the field, one deep s
 - **Linen Mist** (#D3D9D4): the page background and the light text on dark bands. A sage-tinted off-white that keeps the field from feeling sterile.
 - **Card White** (#FFFFFF): cards, inputs, and selects — pure white surfaces lifted off the Linen Mist field.
 
-Off-palette exceptions that exist in code: Tailwind `green-100/green-800` and `red-100/red-800` for contact-form success/error messaging (semantic status colors only), and `gray-700`/`gray-100` legacy body text and image placeholder on the About and detail pages — migration debt, not system.
+Sanctioned exceptions: Tailwind `green-100/green-800` and `red-100/red-800` for contact-form success/error messaging (semantic status colors only, reserved by rule).
 
 ### Named Rules
-**The No-Hardcode Rule.** Colors enter components only through the token layer (`:root` custom properties consumed via the Tailwind theme mapping, or future equivalents). Literal hex values are legal in exactly one place: the token definition file. The ~130 literals in today's components are debt to migrate, never precedent to copy.
+**The No-Hardcode Rule.** Colors enter components only through the token layer (`:root` custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly two places: the token definition file and the semantic green/red form-status pair. Nothing else may carry a literal color.
 
 **The One Thread Rule.** Indigo Thread is the only hue that means "interactive." Links, buttons, focus rings, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything is teal, nothing is clickable.
 
@@ -191,14 +191,14 @@ Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping — and define the still-missing mapped vars (`--card`, `--popover`, `--border`, `--input`, `--ring`, `--radius`) when you touch that layer.
+- **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) or the primitives in `components/ui/`.
 - **Do** keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
 - **Do** give every interactive element a visible 2px Indigo Thread focus ring (`focus-visible`).
 - **Do** crop catalog media to 3:2 with `object-cover` and lazy-load below the fold.
 - **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:
-- **Don't** copy the literal hex values scattered through existing components into new code — that is documented migration debt, not the system.
+- **Don't** write a literal hex, rgb, or palette-utility color into a component — the token definition file and the form-status pair are the only sanctioned exceptions.
 - **Don't** introduce hues outside the token set; green/red pairs are reserved for form success/error semantics only.
 - **Don't** animate hover with elevation, scale, or transform — color shifts and underlines only.
 - **Don't** letter-space or uppercase labels; the family runs at natural spacing in sentence case.

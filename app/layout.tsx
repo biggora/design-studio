@@ -40,7 +40,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-[#D3D9D4]`}>
+      <body className={`${inter.className} bg-background`}>
         {newConfig?.verification?.pinterest ? (
           <meta
             name="p:domain_verify"

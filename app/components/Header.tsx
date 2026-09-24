@@ -14,34 +14,34 @@ export default function Header() {
   };
 
   return (
-    <header className="bg-[#212A31] bg-opacity-80 text-[#D3D9D4] shadow-md fixed w-full z-10">
+    <header className="bg-primary/80 text-primary-foreground shadow-md fixed w-full z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-2xl font-bold text-[#D3D9D4]">
+          <Link href="/" className="text-2xl font-bold text-primary-foreground">
             {config.name}
           </Link>
           <nav className="hidden md:flex space-x-6">
             <Link
               href="/"
-              className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="text-primary-foreground hover:text-muted-foreground transition-colors"
             >
               Home
             </Link>
             <Link
               href="/designs"
-              className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="text-primary-foreground hover:text-muted-foreground transition-colors"
             >
               Our Designs
             </Link>
             <Link
               href="/about"
-              className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="text-primary-foreground hover:text-muted-foreground transition-colors"
             >
               About Us
             </Link>
             <Link
               href="/contact"
-              className="text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="text-primary-foreground hover:text-muted-foreground transition-colors"
             >
               Contact
             </Link>
@@ -51,7 +51,7 @@ export default function Header() {
               onClick={toggleMenu}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMenuOpen}
-              className="text-[#D3D9D4] hover:text-[#748D92] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#124E66]"
+              className="text-primary-foreground hover:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -60,32 +60,32 @@ export default function Header() {
       </div>
       {/* Mobile menu */}
       {isMenuOpen && (
-        <nav className="md:hidden bg-[#212A31] bg-opacity-95">
+        <nav className="md:hidden bg-primary/95">
           <div className="container mx-auto px-4 py-4 space-y-4">
             <Link
               href="/"
-              className="block text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
               onClick={toggleMenu}
             >
               Home
             </Link>
             <Link
               href="/designs"
-              className="block text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
               onClick={toggleMenu}
             >
               Our Designs
             </Link>
             <Link
               href="/about"
-              className="block text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
               onClick={toggleMenu}
             >
               About Us
             </Link>
             <Link
               href="/contact"
-              className="block text-[#D3D9D4] hover:text-[#748D92] transition-colors"
+              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
               onClick={toggleMenu}
             >
               Contact

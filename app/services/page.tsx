@@ -41,17 +41,17 @@ export default function Services() {
   return (
     <>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-bold mb-8">Our Services</h1>
+        <h1 className="text-4xl font-bold mb-8 text-foreground">Our Services</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {services.map((service, index) => (
-            <div key={index} className="bg-white shadow-md rounded-lg p-6">
+            <div key={index} className="bg-card shadow-md rounded-lg p-6">
               <h2 className="text-2xl font-semibold mb-4">{service.title}</h2>
-              <p className="text-gray-600 mb-4">{service.description}</p>
+              <p className="text-muted-foreground mb-4">{service.description}</p>
               <ul className="space-y-2">
                 {service.features.map((feature, featureIndex) => (
                   <li key={featureIndex} className="flex items-center">
-                    <CheckCircle className="text-green-500 mr-2" size={20} />
+                    <CheckCircle className="text-accent mr-2" size={20} />
                     <span>{feature}</span>
                   </li>
                 ))}

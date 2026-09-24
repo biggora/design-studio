@@ -4,6 +4,7 @@ import { getSiteConfig, fetchDesigns, fetchCollections } from "@/utils/database"
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
+import { buttonVariants } from "@/components/ui/button";
 import { SiteConfig } from "@/lib/store";
 
 const ITEMS_PER_PAGE = 12;
@@ -57,7 +58,7 @@ export default async function DesignFolio(
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-4xl font-bold mb-8 text-[#212A31]">Our Designs</h1>
+      <h1 className="text-4xl font-bold mb-8 text-foreground">Our Designs</h1>
 
       <CatalogSearchBar
         searchQuery={searchQuery}
@@ -82,18 +83,18 @@ export default async function DesignFolio(
           {currentPage > 1 && (
             <Link
               href={createPageUrl(currentPage - 1)}
-              className="bg-[#124E66] text-white px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
+              className={buttonVariants({ size: "sm" })}
             >
               Previous
             </Link>
           )}
-          <span className="text-[#212A31]">
+          <span className="text-foreground">
             Page {currentPage} of {totalPages}
           </span>
           {currentPage < totalPages && (
             <Link
               href={createPageUrl(currentPage + 1)}
-              className="bg-[#124E66] text-white px-4 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
+              className={buttonVariants({ size: "sm" })}
             >
               Next
             </Link>

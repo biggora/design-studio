@@ -3,6 +3,8 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 
 type CatalogSearchBarProps = {
   searchQuery: string;
@@ -64,29 +66,29 @@ export function CatalogSearchBar({
     <div className="flex flex-col md:flex-row gap-4 mb-8">
       <form onSubmit={handleSearchSubmit} className="flex-grow">
         <div className="relative">
-          <input
+          <Input
             type="text"
             name="search"
             placeholder="Search designs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 pr-10 rounded-md border border-[#748D92] focus:outline-none focus:ring-2 focus:ring-[#124E66]"
+            className="pr-10"
             aria-label="Search designs"
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-[#748D92] hover:text-[#124E66]"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-accent"
             aria-label="Submit search"
           >
             <Search size={20} />
           </button>
         </div>
       </form>
-      <select
+      <Select
         name="collection"
         value={collection}
         onChange={handleCollectionChange}
-        className="px-4 py-2 rounded-md border border-[#748D92] focus:outline-none focus:ring-2 focus:ring-[#124E66] bg-white"
+        className="w-full md:w-auto"
       >
         <option value="">All Collections</option>
         {collections.map((c) => (
@@ -94,7 +96,7 @@ export function CatalogSearchBar({
             {c}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }

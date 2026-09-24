@@ -130,7 +130,7 @@
   ],
   "narrative": {
     "northStar": "The Misty Loom — a calm, atmospheric default skin stretched over a fully configurable chassis.",
-    "overview": "The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the :root CSS custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nKnown debt, not precedent: current components carry ~130 literal hex values, and the Tailwind config references vars that were never defined (--card, --popover, --border, --input, --ring, --radius); the --muted var is darker than the #748D92 actually rendered. The values documented here are the rendered truth; new work closes the gap by moving toward the token layer, never by adding more literals.",
+    "overview": "The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the :root CSS custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nThe token layer is complete: every var the Tailwind mapping consumes is defined in :root, the old --muted drift is closed (--muted-foreground carries the rendered Warp Grey), and components consume token classes (bg-primary, text-accent, border-input, ring-ring) — literal colors survive only in the token definition file itself and the semantic green/red form-status pair. Reusable primitives live in components/ui/ (Button, Input, Textarea, Select, Card) on the shadcn convention components.json declares.",
     "keyCharacteristics": [
       "Misty, low-chroma palette with a single saturated teal reserved for interaction",
       "Dark bands (header, footer) frame a light field; white cards carry content",
@@ -140,20 +140,20 @@
       "Fully token-driven and theme-swappable; zero hardcoded brand assumptions"
     ],
     "rules": [
-      { "name": "The No-Hardcode Rule", "body": "Colors enter components only through the token layer (:root custom properties consumed via the Tailwind theme mapping). Literal hex values are legal in exactly one place: the token definition file. The ~130 literals in today's components are debt to migrate, never precedent to copy.", "section": "colors" },
+      { "name": "The No-Hardcode Rule", "body": "Colors enter components only through the token layer (:root custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly two places: the token definition file and the semantic green/red form-status pair. Nothing else may carry a literal color.", "section": "colors" },
       { "name": "The One Thread Rule", "body": "Indigo Thread is the only hue that means interactive. Links, buttons, focus rings, and active states all draw from it; it should stay under ~10% of any screen's pixels.", "section": "colors" },
       { "name": "The Single Family Rule", "body": "One family at a time across all roles. Weight and size do the differentiating; no secondary or accent face unless a deployment's theme config introduces one.", "section": "typography" },
       { "name": "The Color-Only Hover Rule", "body": "Hover and focus change color, underline, or opacity — never shadow, scale, or transform. All interactive transitions are transition-colors at ~150ms with default easing.", "section": "elevation" }
     ],
     "dos": [
-      "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping — and define the still-missing mapped vars (--card, --popover, --border, --input, --ring, --radius) when you touch that layer.",
+      "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping (bg-primary, text-accent, border-input, ring-ring) or the primitives in components/ui/.",
       "Do keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
       "Do give every interactive element a visible 2px Indigo Thread focus ring (focus-visible).",
       "Do crop catalog media to 3:2 with object-cover and lazy-load below the fold.",
       "Do treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values."
     ],
     "donts": [
-      "Don't copy the literal hex values scattered through existing components into new code — that is documented migration debt, not the system.",
+      "Don't write a literal hex, rgb, or palette-utility color into a component — the token definition file and the form-status pair are the only sanctioned exceptions.",
       "Don't introduce hues outside the token set; green/red pairs are reserved for form success/error semantics only.",
       "Don't animate hover with elevation, scale, or transform — color shifts and underlines only.",
       "Don't letter-space or uppercase labels; the family runs at natural spacing in sentence case.",

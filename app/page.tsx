@@ -68,9 +68,9 @@ export default async function Home() {
       <Carousel carouselItems={carouselItems} />
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <section className="text-center mb-12 bg-[#212A31] text-[#D3D9D4] py-16 rounded-lg">
+        <section className="text-center mb-12 bg-primary text-primary-foreground py-16 rounded-lg">
           <h1 className="text-4xl font-bold mb-4">Welcome to {config.name}</h1>
-          <p className="text-xl text-[#748D92]">
+          <p className="text-xl text-muted-foreground">
             Weaving innovation into every design
           </p>
         </section>

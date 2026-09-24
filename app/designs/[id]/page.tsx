@@ -18,6 +18,7 @@ import { SiteConfig } from "@/lib/store";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import ShopLinks from "@/app/components/ShopLinks";
 import ShareLinks from "@/app/components/ShareLinks";
+import { buttonVariants } from "@/components/ui/button";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -81,11 +82,11 @@ export default async function DesignDetails(
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/designs"
-          className="text-[#124E66] hover:underline mb-4 inline-block"
+          className="text-accent hover:underline mb-4 inline-block"
         >
           &larr; Back to Designs
         </Link>
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
+        <div className="bg-card shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="relative md:pb-0 md:h-full">
               <Image
@@ -97,10 +98,10 @@ export default async function DesignDetails(
               />
             </div>
             <div className="p-6">
-              <h1 className="text-3xl font-bold mb-4 text-[#212A31]">
+              <h1 className="text-3xl font-bold mb-4 text-foreground">
                 {design.title}
               </h1>
-              <p className="text-[#748D92] min-h-[200px] mb-6">
+              <p className="text-muted-foreground min-h-[200px] mb-6">
                 {design.description}
               </p>
               {/*<div className="grid grid-cols-2 gap-4 mb-6">*/}
@@ -132,13 +133,13 @@ export default async function DesignDetails(
               {/*  </div>*/}
               {/*</div>*/}
               <div className={`grid grid-cols-1 md:grid-cols-2`}>
-                <p className="text-[#748D92] mb-4">
+                <p className="text-muted-foreground mb-4">
                   Collection:&nbsp;
                   <Link href={collectionUrl}>
                     {design.collection}
                   </Link>
                 </p>
-                <p className="text-[#748D92] mb-4 lg:text-right">
+                <p className="text-muted-foreground mb-4 lg:text-right">
                   Created on: {formatDate(design.createdAt)}
                 </p>
               </div>
@@ -146,7 +147,7 @@ export default async function DesignDetails(
                 href={sanitizeUrl(design.externalLink)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full block text-center bg-[#124E66] text-white px-6 py-2 rounded-md hover:bg-[#2E3944] transition-colors"
+                className={buttonVariants({ className: "w-full" })}
               >
                 Shop products with this design
               </a>
