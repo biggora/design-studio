@@ -8,6 +8,7 @@ import {Design} from "@/types/design";
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
 let supabase: ReturnType<typeof createClient> | null = null;
+let lastGoodSiteConfig: SiteConfig | null = null;
 
 export function getSupabase(): ReturnType<typeof createClient> {
     if (!supabase) {
@@ -95,17 +96,37 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
     };
 }
 
+function handleSiteConfigFailure(err: unknown): SiteConfig {
+    console.error("Error fetching site config:", err);
+    // last-known-good config keeps the real brand live during transient DB outages
+    if (lastGoodSiteConfig) {
+        return lastGoodSiteConfig;
+    }
+    throw new Error("Failed to load site config", {cause: err});
+}
+
 export async function getSiteConfig(): Promise<SiteConfig> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
-        const {data} = await supabaseClient.from("studio").select("*").returns<ConfigProp[]>();
-        return mapDataToConfig(data || []);
+        const {data, error} = await supabaseClient.from("studio").select("*").returns<ConfigProp[]>();
+        if (error) {
+            return handleSiteConfigFailure(error);
+        }
+        const config = mapDataToConfig(data || []);
+        lastGoodSiteConfig = config;
+        return config;
     }
 
-    const pool = getMySQLPool();
-    const [rows] = await pool.query<mysql.RowDataPacket[] & ConfigProp[]>("SELECT * FROM studio");
-    return mapDataToConfig(rows);
+    try {
+        const pool = getMySQLPool();
+        const [rows] = await pool.query<mysql.RowDataPacket[] & ConfigProp[]>("SELECT * FROM studio");
+        const config = mapDataToConfig(rows);
+        lastGoodSiteConfig = config;
+        return config;
+    } catch (err) {
+        return handleSiteConfigFailure(err);
+    }
 }
 
 export async function fetchDesigns(
@@ -208,10 +229,13 @@ export async function getDesignById(
             .eq("id", id)
             .single();
 
-        if (error || !designData) {
+        if (error) {
+            // PGRST116: .single() matched no rows — a genuine "not found"
+            if (error.code === "PGRST116") return null;
             console.error("Error fetching design:", error);
-            return null;
+            throw new Error("Failed to fetch design", {cause: error});
         }
+        if (!designData) return null;
 
         // Convert to Design
         const design: Design = {
