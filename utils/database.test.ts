@@ -1,5 +1,7 @@
 import {describe, it, expect, beforeEach, vi} from "vitest";
 
+vi.mock("next/cache", () => ({unstable_cache: (fn: unknown) => fn}));
+
 let studioResponse: { data: unknown; error: unknown } = {data: [], error: null};
 let designResponse: { data: unknown; error: unknown } = {data: null, error: null};
 let relatedResponse: { data: unknown; error: unknown } = {data: [], error: null};
