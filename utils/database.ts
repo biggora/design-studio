@@ -157,7 +157,7 @@ export async function fetchDesigns(
         const start = offset;
         const end = offset + safeLimit - 1;
 
-        const runLegacyQuery = async () => {
+        const runLegacyQuery = async (from = start, to = end) => {
             let query = supabaseClient.from("designs").select("*", {count: "exact"});
             if (searchQuery) {
                 query = query.ilike("title", `%${searchQuery}%`);
@@ -168,11 +168,11 @@ export async function fetchDesigns(
             if (keywords.length) {
                 query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
             }
-            query = query.order("createdAt", { ascending: false });
-            return query.range(start, end);
+            query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
+            return query.range(from, to);
         };
 
-        const runJoinQuery = async () => {
+        const runJoinQuery = async (from = start, to = end) => {
             let query = supabaseClient
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))", {count: "exact"});
@@ -183,16 +183,29 @@ export async function fetchDesigns(
             if (keywords.length) {
                 query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
             }
-            query = query.order("createdAt", { ascending: false });
-            return query.range(start, end);
+            query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
+            return query.range(from, to);
         };
 
-        let {data, error, count} = collection ? await runJoinQuery() : await runLegacyQuery();
+        const runInitial = collection ? runJoinQuery : runLegacyQuery;
+        let {data, error, count} = await runInitial();
+
+        // Out-of-range page: re-run the same query kind with range(0, 0) to get
+        // the real count, without treating it as a join-vs-legacy fallback signal.
+        if (error?.code === "PGRST103") {
+            ({count} = await runInitial(0, 0));
+            return {designs: [], total: count || 0};
+        }
 
         // Fall back to the legacy single-collection filter if the join errors
         // (tables not migrated yet) or matches nothing.
         if (collection && (error || !count)) {
             ({data, error, count} = await runLegacyQuery());
+
+            if (error?.code === "PGRST103") {
+                ({count} = await runLegacyQuery(0, 0));
+                return {designs: [], total: count || 0};
+            }
         }
 
         if (error) {
@@ -257,7 +270,7 @@ export async function fetchDesigns(
     const runMySQLQuery = async (withCollectionJoin: boolean) => {
         const {base, params} = buildBase(withCollectionJoin);
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
-            `SELECT * ${base} ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+            `SELECT * ${base} ORDER BY createdAt DESC, id DESC LIMIT ? OFFSET ?`,
             [...params, safeLimit, offset],
         );
         const [countRows] = await pool.query<mysql.RowDataPacket[]>(

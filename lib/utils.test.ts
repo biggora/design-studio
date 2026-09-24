@@ -6,6 +6,7 @@ import {
   calculateReadingTime,
   getRedBubbleDesignPageLink,
   sanitizeUrl,
+  parsePageParam,
 } from '@/lib/utils';
 
 // formatDate
@@ -115,5 +116,41 @@ describe('sanitizeUrl', () => {
     expect(sanitizeUrl('not-a-valid-url')).toBe('#');
     expect(sanitizeUrl('data:text/html,<script>alert(1)</script>')).toBe('#');
     expect(sanitizeUrl('vbscript:msgbox(1)')).toBe('#');
+  });
+});
+
+// parsePageParam
+
+describe('parsePageParam', () => {
+  it('returns 1 when undefined', () => {
+    expect(parsePageParam(undefined)).toBe(1);
+  });
+
+  it('returns 1 for empty string', () => {
+    expect(parsePageParam('')).toBe(1);
+  });
+
+  it('parses a valid digit string', () => {
+    expect(parsePageParam('3')).toBe(3);
+  });
+
+  it('returns 1 for "0"', () => {
+    expect(parsePageParam('0')).toBe(1);
+  });
+
+  it('returns 1 for negative numbers', () => {
+    expect(parsePageParam('-2')).toBe(1);
+  });
+
+  it('returns 1 for decimal values', () => {
+    expect(parsePageParam('1.5')).toBe(1);
+  });
+
+  it('returns 1 for non-numeric strings', () => {
+    expect(parsePageParam('abc')).toBe(1);
+  });
+
+  it('parses zero-padded digit strings', () => {
+    expect(parsePageParam('007')).toBe(7);
   });
 });

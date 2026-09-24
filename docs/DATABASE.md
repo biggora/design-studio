@@ -364,11 +364,11 @@ Performs pagination and filtering of the catalog.
   Promise<{ designs: Design[]; total: number }>
   ```
 - **Query logic**:
-  - Supabase query builder: `.from("designs").select("*", { count: "exact" })`, optionally `.ilike("title", `%${searchQuery}%`)` and `.eq("collection", collection)`, then a deterministic `.order("createdAt", { ascending: false })` and `.range(start, end)`. On error it logs and returns `{ designs: [], total: 0 }`.
+  - Supabase query builder: `.from("designs").select("*", { count: "exact" })`, optionally `.ilike("title", `%${searchQuery}%`)` and `.eq("collection", collection)`, then a deterministic `.order("createdAt", { ascending: false }).order("id", { ascending: false })` and `.range(start, end)`. On error it logs and returns `{ designs: [], total: 0 }`.
   - MySQL uses a parameterized query with a parallel count:
     ```sql
     SELECT * FROM designs WHERE 1 [AND title LIKE ?] [AND collection = ?]
-    ORDER BY createdAt DESC LIMIT ? OFFSET ?
+    ORDER BY createdAt DESC, id DESC LIMIT ? OFFSET ?
     SELECT COUNT(*) as total FROM designs WHERE 1 [AND title LIKE ?] [AND collection = ?]
     ```
 

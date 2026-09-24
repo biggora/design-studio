@@ -1,11 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getSiteConfig, fetchDesigns, fetchCollections } from "@/utils/database";
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
 import { buttonVariants } from "@/components/ui/button";
 import { SiteConfig } from "@/lib/store";
+import { parsePageParam } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -16,7 +18,7 @@ export async function generateMetadata(
   }
 ): Promise<Metadata> {
   const searchParams = await props.searchParams;
-  const currentPage = Number(searchParams.page) || 1;
+  const currentPage = parsePageParam(searchParams.page);
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";
 
@@ -66,7 +68,7 @@ export default async function DesignFolio(
   }
 ) {
   const searchParams = await props.searchParams;
-  const currentPage = Number(searchParams.page) || 1;
+  const currentPage = parsePageParam(searchParams.page);
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";
 
@@ -81,11 +83,18 @@ export default async function DesignFolio(
 
   const createPageUrl = (targetPage: number) => {
     const params = new URLSearchParams();
-    params.set("page", targetPage.toString());
+    if (targetPage > 1) params.set("page", targetPage.toString());
     if (searchQuery) params.set("search", searchQuery);
     if (selectedCollection) params.set("collection", selectedCollection);
-    return `/designs?${params.toString()}`;
+    const query = params.toString();
+    return query ? `/designs?${query}` : "/designs";
   };
+
+  const targetPage = totalPages > 0 ? Math.min(currentPage, totalPages) : 1;
+  const canonicalPageParam = targetPage === 1 ? undefined : String(targetPage);
+  if (searchParams.page !== undefined && searchParams.page !== canonicalPageParam) {
+    redirect(createPageUrl(targetPage));
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">

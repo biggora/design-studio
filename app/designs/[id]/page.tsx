@@ -79,8 +79,8 @@ export default async function DesignDetails(
 
   const collectionParams = new URLSearchParams();
   if (design.collection) collectionParams.set("collection", design.collection);
-  collectionParams.set("page", "1");
-  const collectionUrl = `/designs?${collectionParams.toString()}`;
+  const collectionQuery = collectionParams.toString();
+  const collectionUrl = collectionQuery ? `/designs?${collectionQuery}` : "/designs";
 
   const shareUrl = `https://${config.domain}/designs/${params.id}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;

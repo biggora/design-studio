@@ -34,7 +34,7 @@ export function DesignCard({ design }: DesignCardProps) {
         <p className="text-muted-foreground mb-4">{design.description}</p>
         <p className="text-muted-foreground mb-2">
           Collection:&nbsp;
-          <Link href={`/designs?collection=${design.collection}&page=1`}>
+          <Link href={`/designs?collection=${encodeURIComponent(design.collection)}`}>
             {design.collection}
           </Link>
         </p>
