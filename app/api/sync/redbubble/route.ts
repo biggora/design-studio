@@ -78,12 +78,16 @@ export async function POST(request: Request) {
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      "";
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseKey) {
+      return NextResponse.json(
+        { error: "SUPABASE_SERVICE_ROLE_KEY is not configured" },
+        { status: 500 },
+      );
+    }
+
+    if (!supabaseUrl) {
       return NextResponse.json(
         { error: "Missing Supabase environment variables" },
         { status: 500 },

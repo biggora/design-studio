@@ -13,7 +13,8 @@
     "format": "eslint \"app/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\" \"utils/**/*.{ts,tsx}\" --fix",
     "test": "vitest run",
     "test:watch": "vitest",
-    "sync:redbubble": "tsx scripts/sync-redbubble.ts"
+    "sync:redbubble": "tsx scripts/sync-redbubble.ts",
+    "sync:redbubble:dry": "tsx scripts/sync-redbubble.ts --dry-run"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",
