@@ -39,6 +39,7 @@ Paginated, searchable list of prints.
 | `limit` | integer | `12` | Clamped to `1`–`50`; same fallback rule as `page`. |
 | `q` | string | `""` | Trimmed, then truncated to 100 characters. Matched case-insensitively against `title` (SQL `ILIKE`/`LIKE` substring match). |
 | `collection` | string | `""` | Trimmed, then truncated to 100 characters. Exact match against a collection title. |
+| `keywords` | string | `""` | Comma-separated list. Each entry is trimmed, lowercased, and must match `[\p{L}\p{N} _-]{1,50}` (letters, numbers, spaces, `_`/`-`, 1-50 chars) or it is silently dropped; duplicates are removed and at most 10 entries are kept. A print matches if it contains **any** of the given keywords as a case-insensitive substring of its `keywords` tag list (OR semantics). Combinable with `q`/`collection` (AND between `q`, `collection`, and `keywords`). |
 
 Response body:
 
@@ -63,6 +64,7 @@ Random sample of prints, for rotating referral widgets.
 |---|---|---|---|
 | `limit` | integer | `3` | Clamped to `1`–`12`; missing/non-numeric/non-integer falls back to the default. |
 | `collection` | string | `""` | Trimmed, then truncated to 100 characters. Exact match against a collection title. When empty, no collection filter is applied (all designs are eligible). |
+| `keywords` | string | `""` | Same parsing and OR-semantics as in §3.1's `keywords` param. Combinable with `collection`. |
 
 Response body:
 
@@ -162,6 +164,12 @@ Replace `https://your-store.example` with your deployment's own host.
 
 ```bash
 curl "https://your-store.example/api/v1/prints/random?limit=3"
+```
+
+Filter by keywords (OR semantics) combined with a collection (AND between the two filters):
+
+```bash
+curl "https://your-store.example/api/v1/prints?keywords=cat,space&collection=Animals"
 ```
 
 ### 6.2 Vanilla JS (fetch + DOM rendering, XSS-safe)

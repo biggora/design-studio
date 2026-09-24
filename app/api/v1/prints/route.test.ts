@@ -47,7 +47,7 @@ describe("GET /api/v1/prints", () => {
     const response = await GET(request);
     const body = await response.json();
 
-    expect(fetchDesignsMock).toHaveBeenCalledWith(2, "cat", "cats", 50);
+    expect(fetchDesignsMock).toHaveBeenCalledWith(2, "cat", "cats", 50, []);
     expect(body).toEqual({
       items: [
         expect.objectContaining({ id: "d1", title: "Cat" }),
@@ -57,6 +57,14 @@ describe("GET /api/v1/prints", () => {
       total: 1,
     });
     expect(body.items[0]).not.toHaveProperty("imageName");
+  });
+
+  it("passes parsed keywords to fetchDesigns", async () => {
+    fetchDesignsMock.mockResolvedValue({ designs: [], total: 0 });
+    const { GET } = await import("@/app/api/v1/prints/route");
+    const request = new Request("http://localhost/api/v1/prints?keywords=Cat, space ,cat,a%25b");
+    await GET(request);
+    expect(fetchDesignsMock).toHaveBeenCalledWith(1, "", "", 12, ["cat", "space"]);
   });
 
   it("returns 500 without leaking error details when fetchDesigns throws", async () => {
@@ -90,7 +98,7 @@ describe("GET /api/v1/prints/random", () => {
     const request = new Request("http://localhost/api/v1/prints/random");
     const response = await GET(request);
 
-    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(3, undefined);
+    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(3, undefined, []);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     expect(await response.json()).toEqual({
       items: [expect.objectContaining({ id: "d1" })],
@@ -102,7 +110,7 @@ describe("GET /api/v1/prints/random", () => {
     const { GET } = await import("@/app/api/v1/prints/random/route");
     const request = new Request("http://localhost/api/v1/prints/random?limit=50");
     await GET(request);
-    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(12, undefined);
+    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(12, undefined, []);
   });
 
   it("passes the collection filter through when provided", async () => {
@@ -110,7 +118,17 @@ describe("GET /api/v1/prints/random", () => {
     const { GET } = await import("@/app/api/v1/prints/random/route");
     const request = new Request("http://localhost/api/v1/prints/random?collection=cats");
     await GET(request);
-    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(3, "cats");
+    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(3, "cats", []);
+  });
+
+  it("passes keywords through to fetchRandomDesigns", async () => {
+    fetchRandomDesignsMock.mockResolvedValue([]);
+    const { GET } = await import("@/app/api/v1/prints/random/route");
+    const request = new Request(
+      "http://localhost/api/v1/prints/random?keywords=cat,space&collection=Animals",
+    );
+    await GET(request);
+    expect(fetchRandomDesignsMock).toHaveBeenCalledWith(3, "Animals", ["cat", "space"]);
   });
 });
 

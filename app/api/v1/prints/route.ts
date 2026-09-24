@@ -1,5 +1,11 @@
 import { fetchDesigns } from "@/utils/database";
-import { jsonResponse, optionsResponse, parseIntParam, toPublicPrint } from "@/lib/public-api";
+import {
+  jsonResponse,
+  optionsResponse,
+  parseIntParam,
+  parseKeywordsParam,
+  toPublicPrint,
+} from "@/lib/public-api";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,9 +14,10 @@ export async function GET(request: Request) {
   const limit = parseIntParam(searchParams.get("limit"), 12, 1, 50);
   const q = (searchParams.get("q") || "").trim().slice(0, 100);
   const collection = (searchParams.get("collection") || "").trim().slice(0, 100);
+  const keywords = parseKeywordsParam(searchParams.get("keywords"));
 
   try {
-    const { designs, total } = await fetchDesigns(page, q, collection, limit);
+    const { designs, total } = await fetchDesigns(page, q, collection, limit, keywords);
     return jsonResponse(request, {
       items: designs.map(toPublicPrint),
       page,
