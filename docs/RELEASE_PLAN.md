@@ -80,17 +80,10 @@ and a complete set of technical documentation.
 
 ### Step 3: Deploying the application
 - Connect the repository to Vercel.
-- Add a `vercel.json` with the cron configuration for daily catalog updates at 03:00 UTC:
-  ```json
-  {
-    "crons": [
-      {
-        "path": "/api/sync/redbubble?secret=YOUR_SYNC_SECRET",
-        "schedule": "0 3 * * *"
-      }
-    ]
-  }
-  ```
+- The catalog sync is **not** scheduled on Vercel — Cloudflare blocks both Cheerio and headless
+  Playwright there. Instead, run `npm run sync:redbubble` with `SYNC_PLAYWRIGHT_HEADLESS=false` on
+  a machine/VM with a display, scheduled via the OS scheduler (Windows Task Scheduler / cron); see
+  `docs/DEPLOYMENT_AND_CONFIGURATION.md`.
 
 ### Step 4: Post-release validation (smoke testing)
 - [ ] Check the home page `/` (hero, carousel, featured designs).
@@ -103,7 +96,8 @@ and a complete set of technical documentation.
 
 ## 5. Rollback Strategy
 - Frontend failures: instant rollback to the previous deployment in the Vercel dashboard.
-- Synchronization failures: disable the cron job, temporarily switch to `SYNC_USE_PLAYWRIGHT=false`
-  (Cheerio mode), or manually refresh the `storageState` session.
+- Synchronization failures: pause the scheduled task, or manually refresh the `storageState`
+  session (Cloudflare blocks both Cheerio and headless Playwright, so `SYNC_USE_PLAYWRIGHT=false`
+  is not a working fallback).
 - Database: the schema contains no destructive migrations; rolling data back is enough to clear
   the `designs` table.

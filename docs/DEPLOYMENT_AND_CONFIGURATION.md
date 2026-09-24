@@ -71,42 +71,43 @@ Vercel is the recommended platform for hosting the web application thanks to nat
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `SYNC_SECRET`
    - `REDBUBBLE_SHOP_URL`
-   - `SYNC_USE_PLAYWRIGHT=false` *(critical for Vercel Serverless Functions)*
+
+   Note: the Redbubble catalog sync does not run on Vercel at all (see §2.2) — these variables
+   only cover the storefront itself.
 4. Click **Deploy**.
 
 ### 2.2 Scheduling automatic synchronization
 
-The repository does **not** include a `vercel.json` — adding one at the project root is part of deployment. A cron entry looks like this:
+The Redbubble catalog sync **cannot run on Vercel**: Cloudflare blocks both plain-fetch (Cheerio)
+requests and headless Playwright from Vercel's Serverless Functions, so do not add a `vercel.json`
+cron for `/api/sync/redbubble` — it would never complete a sync even once the route accepted GET
+requests. The route stays POST-only, authenticated via the `Authorization: Bearer` or
+`x-sync-secret` header (the `?secret=...` query parameter is not accepted); it remains available
+as an optional manual trigger from a machine where the sync actually works.
 
-```json
-{
-  "crons": [
-    {
-      "path": "/api/sync/redbubble",
-      "schedule": "0 4 * * *"
-    }
-  ]
-}
+The only mode that gets past Cloudflare is Playwright with a **visible** browser window
+(`SYNC_PLAYWRIGHT_HEADLESS=false`) on a machine with a display, with the session persisted via
+`SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` so subsequent runs reuse the `cf_clearance` cookie. Run
+`npm run sync:redbubble` (optionally with `--dry-run` first) on a schedule via the OS scheduler on
+that machine.
+
+**Windows Task Scheduler:**
+```bat
+schtasks /Create /SC DAILY /ST 04:00 /TN "Redbubble sync" /TR "cmd /c cd /d <project> && npm run sync:redbubble >> .cache\sync.log 2>&1"
 ```
 
-*The `0 4 * * *` schedule means daily at 04:00 UTC.*
-
-> **IMPORTANT — check these caveats against the current code before using Vercel Cron**:
-> 1. Vercel Cron jobs issue **GET** requests, while the sync route currently exports a **POST-only** handler; a cron call would be answered with `405 Method Not Allowed`. Using Vercel Cron therefore requires extending `app/api/sync/redbubble/route.ts` with an authenticated `GET` handler.
-> 2. The route authenticates via request **headers** only (`Authorization: Bearer ...` or `x-sync-secret`, compared in constant time); the `?secret=...` query parameter is **not** accepted. Secrets cannot be injected from environment variables into `vercel.json`, so any header value would have to be hardcoded in a committed file — avoid this.
->
-> The scheduling method that works with the code as-is is an external scheduler that sends a POST with the secret header — e.g. a system crontab on any host, cron-job.org, GitHub Actions, or n8n:
-> ```bash
-> 0 4 * * * curl -fsS -X POST "https://your-domain.com/api/sync/redbubble" -H "x-sync-secret: YOUR_LONG_RANDOM_SYNC_SECRET" >/dev/null
-> ```
-
-> **ALSO IMPORTANT**: in the Vercel Serverless Functions environment the Chromium binary bundle exceeds the standard serverless function size limit, so on Vercel the `/api/sync/redbubble` endpoint must run in Cheerio mode (`SYNC_USE_PLAYWRIGHT=false`). For Playwright-based sync, use the dedicated runner described in section 3.
+**Linux crontab** (needs a display; `xvfb-run` provides a virtual one, or use `DISPLAY=:0` placed right before `npm` if a desktop session exists):
+```bash
+0 4 * * * cd /opt/design-studio && xvfb-run -a npm run sync:redbubble >> .cache/sync.log 2>&1
+```
 
 ---
 
 ## 3. Deploying a Permanent Playwright Sync Runner (Docker / VM)
 
-If Redbubble blocks direct Cheerio HTTP requests, move the sync process to a dedicated container or virtual machine (DigitalOcean, Hetzner, AWS EC2) running a full headless Chromium browser.
+Since Cloudflare blocks both Cheerio and headless Playwright, run the sync process on a dedicated
+container or virtual machine (DigitalOcean, Hetzner, AWS EC2) with a full **headed** Chromium
+browser (use `xvfb` to provide a virtual display on a headless server).
 
 ### 3.1 Dockerfile for a standalone synchronizer
 
@@ -154,7 +155,7 @@ services:
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
       - REDBUBBLE_SHOP_URL=${REDBUBBLE_SHOP_URL}
       - SYNC_USE_PLAYWRIGHT=true
-      - SYNC_PLAYWRIGHT_HEADLESS=true
+      - SYNC_PLAYWRIGHT_HEADLESS=false
       - SYNC_PLAYWRIGHT_STORAGE_STATE_PATH=/app/.cache/session.json
     volumes:
       - ./sync-cache:/app/.cache
