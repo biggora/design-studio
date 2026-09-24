@@ -16,6 +16,7 @@ npm test                 # vitest run (node env, "@" alias → repo root)
 npx vitest run lib/utils.test.ts          # single file
 npx vitest run -t "formatDate"            # single test by name
 npm run sync:redbubble   # run the Redbubble → DB sync via tsx (reads .env)
+npm run sync:redbubble:dry  # preview the sync (no writes) via --dry-run, prints the insert/update plan
 npx playwright install chromium           # needed once for Playwright sync mode
 ```
 

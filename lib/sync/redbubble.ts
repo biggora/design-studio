@@ -17,6 +17,7 @@ export type RedbubbleSyncOptions = {
   usePlaywright?: boolean;
   playwrightHeadless?: boolean;
   playwrightStorageStatePath?: string;
+  dryRun?: boolean;
 };
 
 type DesignRecord = {
@@ -45,7 +46,58 @@ export type SyncResult = {
   skipped: number;
   errors: number;
   errorMessages: string[];
+  dryRun: boolean;
+  warnings: string[];
+  plan?: { insert: object[]; update: object[] };
 };
+
+const EXISTING_ROW_COLUMNS =
+  "id, externalId, title, description, keywords, category, collection, backgroundColor, backgroundColors, shared, props, imageName, externalImageUrl, externalLink, createdAt";
+
+type ExistingRow = {
+  id: string;
+  externalId: number;
+  title: string;
+  description: string;
+  keywords: string;
+  category: string;
+  collection: string;
+  backgroundColor: string;
+  backgroundColors: string;
+  shared: boolean;
+  props: object;
+  imageName: string;
+  externalImageUrl: string;
+  externalLink: string;
+  createdAt: string;
+};
+
+const DEFAULT_VALUES: Record<string, string> = {
+  category: "no_category",
+  collection: "no_collection",
+};
+
+function isEmptyOrDefault(field: string, value: unknown): boolean {
+  if (value === null || value === undefined || value === "") return true;
+  const defaultValue = DEFAULT_VALUES[field];
+  return defaultValue !== undefined && value === defaultValue;
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) {
+    out.push(arr.slice(i, i + size));
+  }
+  return out;
+}
+
+// PostgREST quoted-value list for `.filter(col, "in", list)`. Values containing
+// `,`, `(`, `)`, or whitespace must be double-quoted; embedded `"` and `\` must be escaped.
+// (`.in()` quotes but does not escape, which breaks on titles containing a `"`.)
+function toPostgrestInList(values: string[]): string {
+  const quoted = values.map((v) => `"${v.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`);
+  return `(${quoted.join(",")})`;
+}
 
 const defaultHeaders = {
   "user-agent":
@@ -579,6 +631,7 @@ export async function fetchRedbubbleDesigns(options: RedbubbleSyncOptions): Prom
 
 export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Promise<SyncResult> {
   const { productLinks, designs, errors } = await fetchRedbubbleDesigns(options);
+  const dryRun = options.dryRun ?? false;
 
   const supabase = createClient(options.supabaseUrl, options.supabaseKey);
   const rows = designs.map((design) => ({
@@ -586,11 +639,12 @@ export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Pr
     updatedAt: new Date().toISOString(),
   }));
 
-  const inserted = 0;
+  let inserted = 0;
   let updated = 0;
-  const skipped = 0;
+  let skipped = 0;
   let errorsCount = errors.length;
   const errorMessages = [...errors];
+  const warnings: string[] = [];
 
   if (!rows.length) {
     return {
@@ -601,6 +655,8 @@ export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Pr
       skipped: productLinks.length,
       errors: errorsCount,
       errorMessages,
+      dryRun,
+      warnings,
     };
   }
 
@@ -608,27 +664,148 @@ export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Pr
   for (const r of rows) {
     uniqueMap.set(r.externalId, r);
   }
-  const dedupedRows = Array.from(uniqueMap.values());
+  const dedupedByExternalId = Array.from(uniqueMap.values());
 
-  const { data, error } = await supabase
-    .from("designs")
-    .upsert(dedupedRows, { onConflict: "externalId", ignoreDuplicates: false })
-    .select("id, externalId");
-
-  if (error) {
-    errorsCount += dedupedRows.length;
-    errorMessages.push(error.message);
-  } else {
-    updated += data?.length || 0;
+  const titleOwner = new Map<string, number>();
+  const batchRows: (typeof rows)[0][] = [];
+  for (const r of dedupedByExternalId) {
+    const owner = titleOwner.get(r.title);
+    if (owner !== undefined && owner !== r.externalId) {
+      skipped++;
+      warnings.push(
+        `Skipped externalId ${r.externalId}: title "${r.title}" duplicates externalId ${owner} in this batch`,
+      );
+      continue;
+    }
+    titleOwner.set(r.title, r.externalId);
+    batchRows.push(r);
   }
 
-  return {
+  const baseResult = (): Omit<SyncResult, "inserted" | "updated" | "skipped" | "errors"> => ({
     fetchedProductLinks: productLinks.length,
     parsedProducts: designs.length,
-    inserted,
-    updated,
-    skipped,
-    errors: errorsCount,
     errorMessages,
-  };
+    dryRun,
+    warnings,
+  });
+
+  if (!batchRows.length) {
+    return { ...baseResult(), inserted, updated, skipped, errors: errorsCount };
+  }
+
+  // Rows whose id-lookup or title-lookup chunk fails must never be written — we can't
+  // know whether they already exist or collide with another title in the DB.
+  const failedExternalIds = new Set<number>();
+
+  const existingById = new Map<number, ExistingRow>();
+  for (const rowChunk of chunk(batchRows, 100)) {
+    const idChunk = rowChunk.map((r) => r.externalId);
+    const { data, error } = await supabase
+      .from("designs")
+      .select(EXISTING_ROW_COLUMNS)
+      .in("externalId", idChunk);
+    if (error) {
+      errorMessages.push(error.message);
+      idChunk.forEach((id) => failedExternalIds.add(id));
+      continue;
+    }
+    for (const row of (data as ExistingRow[] | null) || []) {
+      existingById.set(row.externalId, row);
+    }
+  }
+
+  // Smaller chunk size than the numeric-id lookup: quoted string values inflate the
+  // PostgREST filter query string and risk hitting a 414/431 URL-length limit.
+  const titleOwnerInDb = new Map<string, number>();
+  for (const rowChunk of chunk(batchRows, 25)) {
+    const titleChunk = rowChunk.map((r) => r.title);
+    const { data, error } = await supabase
+      .from("designs")
+      .select("externalId, title")
+      .filter("title", "in", toPostgrestInList(titleChunk));
+    if (error) {
+      errorMessages.push(error.message);
+      rowChunk.forEach((r) => failedExternalIds.add(r.externalId));
+      continue;
+    }
+    for (const row of (data as { externalId: number; title: string }[] | null) || []) {
+      titleOwnerInDb.set(row.title, row.externalId);
+    }
+  }
+
+  errorsCount += failedExternalIds.size;
+
+  const insertRows: object[] = [];
+  const updateRows: object[] = [];
+
+  for (const r of batchRows) {
+    if (failedExternalIds.has(r.externalId)) {
+      continue;
+    }
+
+    const dbOwner = titleOwnerInDb.get(r.title);
+    if (dbOwner !== undefined && dbOwner !== r.externalId) {
+      skipped++;
+      warnings.push(
+        `Skipped externalId ${r.externalId}: title "${r.title}" already used by externalId ${dbOwner} in the database`,
+      );
+      continue;
+    }
+
+    const existing = existingById.get(r.externalId);
+    if (existing) {
+      const updateRow: Record<string, unknown> = {
+        ...existing,
+        title: r.title,
+        externalLink: r.externalLink,
+        externalImageUrl: r.externalImageUrl,
+        imageName: r.imageName,
+        updatedAt: r.updatedAt,
+      };
+      for (const field of ["description", "keywords", "category", "collection"] as const) {
+        if (isEmptyOrDefault(field, existing[field]) && !isEmptyOrDefault(field, r[field])) {
+          updateRow[field] = r[field];
+        }
+      }
+      updateRows.push(updateRow);
+    } else {
+      insertRows.push(r);
+    }
+  }
+
+  if (dryRun) {
+    return {
+      ...baseResult(),
+      inserted: insertRows.length,
+      updated: updateRows.length,
+      skipped,
+      errors: errorsCount,
+      plan: { insert: insertRows, update: updateRows },
+    };
+  }
+
+  for (const insertChunk of chunk(insertRows, 100)) {
+    const { data, error } = await supabase.from("designs").insert(insertChunk).select("id");
+    if (error) {
+      errorsCount += insertChunk.length;
+      errorMessages.push(error.message);
+    } else {
+      inserted += data?.length || 0;
+    }
+  }
+
+  for (const updateChunk of chunk(updateRows, 100)) {
+    const { data, error } = await supabase
+      .from("designs")
+      .upsert(updateChunk, { onConflict: "externalId" })
+      .select("id");
+    if (error) {
+      errorsCount += updateChunk.length;
+      errorMessages.push(error.message);
+    } else {
+      updated += data?.length || 0;
+    }
+  }
+
+  return { ...baseResult(), inserted, updated, skipped, errors: errorsCount };
 }

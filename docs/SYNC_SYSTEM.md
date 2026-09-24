@@ -236,15 +236,17 @@ curl -X POST https://your-domain.com/api/sync/redbubble \
 {
   "fetchedProductLinks": 48,
   "parsedProducts": 48,
-  "inserted": 0,
-  "updated": 48,
+  "inserted": 6,
+  "updated": 42,
   "skipped": 0,
   "errors": 0,
-  "errorMessages": []
+  "errorMessages": [],
+  "dryRun": false,
+  "warnings": []
 }
 ```
 
-Note on counters: because the pipeline writes with a single upsert call, `inserted` always reports `0` and all upserted rows are counted in `updated`; `skipped` reports `0` on the upsert path, or the fetched product-link count when no rows parse (e.g., a fully Cloudflare-blocked run reports every link as skipped).
+Note on counters: `inserted` and `updated` reflect the actual rows written by the insert/update passes described in §6.1. `skipped` counts rows dropped due to a title collision (either within the scraped batch or against a different `externalId` already in the DB) plus, when no rows parse at all (e.g. a fully Cloudflare-blocked run), the fetched product-link count. `warnings` lists the human-readable reason for each skip. Pass `dryRun: true` to preview `inserted`/`updated`/`plan` without writing.
 
 #### Shop URL resolution order
 
@@ -268,24 +270,30 @@ Convenient for local development, initial catalog population, and dedicated cont
 npm run sync:redbubble
 ```
 
-The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `getSiteConfig()`, runs the same `syncRedbubbleToSupabase()` core, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure.
+The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `getSiteConfig()`, runs the same `syncRedbubbleToSupabase()` core, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure, including when the result reports `errors > 0`.
+
+Because RLS only grants anon `SELECT`, real writes require `SUPABASE_SERVICE_ROLE_KEY` — the script throws if it is missing. Pass `--dry-run` (or `npm run sync:redbubble:dry`) to preview the insert/update plan without writing; in dry-run mode the anon key is accepted since no write occurs.
 
 ---
 
 ## 6. Upsert Logic and an Important Architectural Caveat
 
-### 6.1 Upsert logic in Supabase
+### 6.1 Insert/update logic in Supabase
 
-Synchronization writes records keyed by the unique `externalId`. The batch is first deduplicated by `externalId` in memory, then upserted in one call:
+The `designs` table has two unique constraints — `externalId` and `title` (see `init/postgres_tables.sql`) — so a naive single-batch upsert can fail the whole run on one title collision, and a blind full-row upsert would clobber curated fields. The pipeline instead:
 
-```typescript
-const { data, error } = await supabase
-  .from("designs")
-  .upsert(dedupedRows, { onConflict: "externalId", ignoreDuplicates: false })
-  .select("id, externalId");
-```
+1. Deduplicates the scraped batch by `externalId`, then by `title` — if two different `externalId`s scraped in the same run share a title, only the first is kept; the rest are skipped with a warning.
+2. Reads existing rows from Supabase in chunks, so partial failures don't abort the whole batch:
+   - by `externalId`, chunks of 100 (`.select(...).in("externalId", ids)`);
+   - by `title`, chunks of 25, via `.filter("title", "in", "(\"a\",\"b\")")` with each value double-quoted and internal `"`/`\` escaped (`.in()` quotes but does not escape embedded quotes, which breaks on titles like `24", 36" Print`).
 
-If a design with the given `externalId` already exists, its `title`, `description`, `keywords`, `externalLink`, `externalImageUrl`, `category`, `collection`, `imageName`, `backgroundColor`/`backgroundColors`, `shared`, `props`, and `updatedAt` columns are refreshed, while the primary key `id` (UUID) and creation date `createdAt` stay untouched. On an upsert error, all rows of the batch are added to the `errors` counter and the Supabase error message is appended to `errorMessages`.
+   If a chunk's read fails, that chunk's rows are added to `errors`, excluded from any write, and the next chunk is still processed.
+3. Classifies each remaining row:
+   - **skip** — its title is already used by a different `externalId` in the database;
+   - **update** — an existing row for its `externalId` exists: `title`, `externalLink`, `externalImageUrl`, `imageName`, and `updatedAt` are always refreshed; `description`, `keywords`, `category`, `collection` are filled from the scraped value only if the existing value is empty or the schema default (`""`, `"no_category"`, `"no_collection"`); `id`, `createdAt`, `backgroundColor`, `backgroundColors`, `shared`, and `props` are never touched;
+   - **insert** — no existing row for its `externalId`, written as-is.
+4. In `dryRun` mode, no writes happen — the response includes `plan: { insert, update }` with the rows that would be written.
+5. Otherwise, inserts and updates are written in separate chunked calls of 100 (`.insert(chunk).select("id")` and `.upsert(chunk, { onConflict: "externalId" }).select("id")`); a failed chunk adds its rows to `errors` and the Supabase error message to `errorMessages`, and the next chunk is still processed.
 
 ### 6.2 Architectural caveat: target database of the sync
 

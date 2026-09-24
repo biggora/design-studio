@@ -3,6 +3,8 @@ import { closeDatabaseConnections, getSiteConfig } from "../utils/database";
 import { syncRedbubbleToSupabase } from "../lib/sync/redbubble";
 
 async function run() {
+  const dryRun = process.argv.includes("--dry-run");
+
   const config = await getSiteConfig();
   const shopUrl =
     config.representation?.redbubbleShopUrl ||
@@ -15,10 +17,15 @@ async function run() {
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const supabaseKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    "";
+  let supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!supabaseKey) {
+    if (!dryRun) {
+      throw new Error(
+        "SUPABASE_SERVICE_ROLE_KEY is required for writes (RLS allows anon read-only). Use --dry-run to preview.",
+      );
+    }
+    supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  }
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error("Missing Supabase environment variables");
@@ -68,9 +75,11 @@ async function run() {
     usePlaywright,
     playwrightHeadless,
     playwrightStorageStatePath,
+    dryRun,
   });
 
   console.log(JSON.stringify(result, null, 2));
+  if (result.errors > 0) process.exitCode = 1;
 }
 
 async function main() {
