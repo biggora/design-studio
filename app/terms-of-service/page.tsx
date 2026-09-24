@@ -10,9 +10,14 @@ export async function generateMetadata(): Promise<Metadata> {
     title,
     description,
     keywords: "terms of service, user agreement, legal, conditions of use",
+    alternates: { canonical: "/terms-of-service" },
     openGraph: {
       url: `https://${config.domain}/terms-of-service`,
       type: "website",
+      title,
+      description,
+    },
+    twitter: {
       title,
       description,
     },

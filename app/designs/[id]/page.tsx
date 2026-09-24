@@ -18,6 +18,7 @@ import { SiteConfig } from "@/lib/store";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import ShopLinks from "@/app/components/ShopLinks";
 import ShareLinks from "@/app/components/ShareLinks";
+import { JsonLd } from "@/app/components/JsonLd";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -33,6 +34,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   if (!data || !data.design) {
     return {
       title: "Design Not Found",
+      robots: { index: false },
     };
   }
 
@@ -43,9 +45,15 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title,
     description,
     keywords: `${design.keywords}, art, t-shirt design, ${config.name} design`,
+    alternates: { canonical: `/designs/${id}` },
     openGraph: {
       url: `https://${config.domain}/designs/${id}`,
       type: "website",
+      title,
+      description,
+      images: [design.externalImageUrl],
+    },
+    twitter: {
       title,
       description,
       images: [design.externalImageUrl],
@@ -76,8 +84,49 @@ export default async function DesignDetails(
   const shareUrl = `https://${config.domain}/designs/${params.id}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
+  const breadcrumbJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: `https://${config.domain}/`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Designs",
+        item: `https://${config.domain}/designs`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: design.title,
+        item: shareUrl,
+      },
+    ],
+  };
+
+  const creativeWorkJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    name: design.title,
+    description: design.description,
+    image: design.externalImageUrl,
+    url: shareUrl,
+    ...(design.createdAt ? { dateCreated: design.createdAt } : {}),
+    keywords: design.keywords,
+    creator: {
+      "@type": "Organization",
+      name: config.name,
+    },
+  };
+
   return (
     <>
+      <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd]} />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <Link
           href="/designs"

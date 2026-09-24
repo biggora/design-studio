@@ -9,20 +9,51 @@ import { SiteConfig } from "@/lib/store";
 const ITEMS_PER_PAGE = 12;
 
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(
+  props: {
+    searchParams: Promise<{ page?: string; search?: string; collection?: string }>;
+  }
+): Promise<Metadata> {
+  const searchParams = await props.searchParams;
+  const currentPage = Number(searchParams.page) || 1;
+  const searchQuery = searchParams.search || "";
+  const selectedCollection = searchParams.collection || "";
+
   const config: SiteConfig = await getSiteConfig();
-  const { designs, total } = await fetchDesigns(1, "", "", ITEMS_PER_PAGE);
+  const { designs, total } = await fetchDesigns(
+    currentPage,
+    searchQuery,
+    selectedCollection,
+    ITEMS_PER_PAGE,
+  );
   const collections = await fetchCollections();
 
+  const titleBase = `Our Designs - ${config.name}`;
+  const title = currentPage > 1 ? `${titleBase} - Page ${currentPage}` : titleBase;
+  const description = `Explore our unique collection of ${total} print designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`;
+
+  const canonicalParams = new URLSearchParams();
+  if (selectedCollection) canonicalParams.set("collection", selectedCollection);
+  if (currentPage > 1) canonicalParams.set("page", currentPage.toString());
+  const canonicalQuery = canonicalParams.toString();
+  const canonical = canonicalQuery ? `/designs?${canonicalQuery}` : "/designs";
+
   return {
-    title: `Our Designs - ${config.name}`,
-    description: `Explore our unique collection of ${total} print designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
-    keywords: `print designs, textile art, innovative designs, ${config.name} collection, ${collections.join(", ")}`,
+    title,
+    description,
+    keywords: `print-on-demand designs, apparel designs, innovative designs, ${config.name} collection, ${collections.join(", ")}`,
+    alternates: { canonical },
+    ...(searchQuery ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
-      url: `https://${config.domain}/designs`,
+      url: `https://${config.domain}${canonical}`,
       type: "website",
-      title: `Our Designs - ${config.name}`,
-      description: `Explore our unique collection of ${total} designs across ${collections.length} collections. Each piece is a testament to innovative design and artistic excellence.`,
+      title,
+      description,
+      images: designs.slice(0, 4).map((design) => design.externalImageUrl),
+    },
+    twitter: {
+      title,
+      description,
       images: designs.slice(0, 4).map((design) => design.externalImageUrl),
     },
   };

@@ -5,18 +5,22 @@ import SocialLinks from "../components/SocialLinks";
 import ShopLinks from "@/app/components/ShopLinks";
 import { getSiteConfig } from "@/utils/database";
 
-//       images: ["/static/images/contact-banner.jpg"], // Assuming you have a contact page banner image
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
   const title = `Contact Us - ${config.name}`;
-  const description = `Get in touch with ${config.name}. We're here to answer your questions and discuss your thread-based design needs.`;
+  const description = `Get in touch with ${config.name}. We're here to answer your questions and discuss your custom design requests.`;
   return {
     title,
     description,
-    keywords: "contact, get in touch, thread art, design inquiry",
+    keywords: "contact, get in touch, custom design requests, print-on-demand",
+    alternates: { canonical: "/contact" },
     openGraph: {
       url: `https://${config.domain}/contact`,
       type: "website",
+      title,
+      description,
+    },
+    twitter: {
       title,
       description,
     },

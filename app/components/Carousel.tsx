@@ -40,9 +40,9 @@ export function Carousel({
               style={{ objectFit: "cover" }}
             />
             <div className="absolute inset-0 bg-[#212A31] bg-opacity-60 flex flex-col justify-center items-center text-center p-4">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-[#D3D9D4]">
+              <p className="text-3xl md:text-5xl font-bold mb-4 text-[#D3D9D4]">
                 {item.title}
-              </h2>
+              </p>
               <p className="text-xl md:text-2xl text-[#748D92]">
                 {item.description}
               </p>

@@ -11,8 +11,8 @@ import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 const carouselItems = [
   {
     image: getImageUrl("slide_1.png"),
-    title: "Innovative Thread Designs",
-    description: "Pushing the boundaries of textile art and design",
+    title: "Original Designs for Everyday Wear",
+    description: "Original artwork for t-shirts, hoodies and more",
   },
   {
     image: getImageUrl("slide_2.png"),
@@ -45,17 +45,25 @@ async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
+  const title = `${config.name} - ${config.intro}`;
+  const images = [config.siteLogo, config.siteBanner].filter(Boolean);
 
   return {
-    title: `${config.name} - ${config.intro}`,
+    title,
     description: config.description,
     keywords: config.keywords,
+    alternates: { canonical: "/" },
     openGraph: {
       url: `https://${config.domain}`,
       type: "website",
-      title: `${config.name} - ${config.intro}`,
+      title,
       description: config.description,
-      images: [config.siteLogo, config.siteBanner],
+      images,
+    },
+    twitter: {
+      title,
+      description: config.description,
+      images,
     },
   };
 }
@@ -69,7 +77,9 @@ export default async function Home() {
 
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <section className="text-center mb-12 bg-[#212A31] text-[#D3D9D4] py-16 rounded-lg">
-          <h1 className="text-4xl font-bold mb-4">Welcome to {config.name}</h1>
+          <h1 className="text-4xl font-bold mb-4">
+            {config.name}: {config.intro}
+          </h1>
           <p className="text-xl text-[#748D92]">
             Weaving innovation into every design
           </p>
