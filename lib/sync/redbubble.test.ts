@@ -5,6 +5,7 @@ import {
   RequestPacer,
   syncRedbubbleToSupabase,
   parseShopNextData,
+  buildArtworkImageUrl,
 } from "@/lib/sync/redbubble";
 
 // ---------------------------------------------------------------------------
@@ -95,6 +96,26 @@ describe("extractExternalIdFromUrl", () => {
 });
 
 // ---------------------------------------------------------------------------
+// buildArtworkImageUrl
+// ---------------------------------------------------------------------------
+
+describe("buildArtworkImageUrl", () => {
+  it("rewrites a preview URL to the flat, full-artwork variant on the same host/image id", () => {
+    expect(
+      buildArtworkImageUrl(
+        "https://ih1.redbubble.net/image.5909636501.6884/ssrco,lightweight_hoodie,mens,101010:01c5ca27c6,front_alt,square_product,600x600.jpg",
+      ),
+    ).toBe("https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg");
+  });
+
+  it("returns the input unchanged when it isn't a recognizable Redbubble image URL", () => {
+    expect(buildArtworkImageUrl("https://example.com/not-an-image")).toBe(
+      "https://example.com/not-an-image",
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
 // RequestPacer
 // ---------------------------------------------------------------------------
 
@@ -128,6 +149,7 @@ type Call =
   | { type: "select-in"; table: string; col: string; vals: unknown[] }
   | { type: "select-filter"; table: string; col: string; op: string; value: string }
   | { type: "insert"; table: string; rows: Row[] }
+  | { type: "update"; table: string; changes: Row; filters: { col: string; val: unknown }[] }
   | { type: "upsert"; table: string; rows: Row[]; opts: Record<string, unknown> }
   | { type: "delete"; table: string; filters: DeleteFilter[] };
 
@@ -135,6 +157,7 @@ let calls: Call[] = [];
 let selectByIdResponses: MockResponse[] = [];
 let selectByTitleResponses: MockResponse[] = [];
 let insertResponses: MockResponse[] = [];
+let updateResponses: { error: { message: string } | null }[] = [];
 let upsertResponses: MockResponse[] = [];
 let collectionsUpsertResponses: MockResponse[] = [];
 let designIdLookupResponses: MockResponse[] = [];
@@ -195,6 +218,13 @@ vi.mock("@supabase/supabase-js", () => ({
           return nextOr(insertResponses, rows);
         },
       }),
+      update: (changes: Row) => ({
+        eq: (col: string, val: unknown) => {
+          calls.push({ type: "update", table, changes, filters: [{ col, val }] });
+          const queued = updateResponses.shift();
+          return Promise.resolve(queued || { error: null });
+        },
+      }),
       upsert: (rows: Row[], opts: Record<string, unknown>) => ({
         select: () => {
           calls.push({ type: "upsert", table, rows, opts });
@@ -243,31 +273,9 @@ vi.mock("playwright", () => ({
   },
 }));
 
-function productHtml(opts: {
-  name: string;
-  description: string;
-  image: string;
-  url: string;
-  keywords?: string;
-}): string {
-  return `<!doctype html><html><head>
-    <script type="application/ld+json">${JSON.stringify({
-      "@type": "Product",
-      name: opts.name,
-      description: opts.description,
-      image: opts.image,
-      url: opts.url,
-    })}</script>
-    <meta name="keywords" content="${opts.keywords || ""}">
-  </head><body><h1>${opts.name}</h1></body></html>`;
+function shopApHtml(description: string): string {
+  return `<!doctype html><html><head><meta name="description" content="${description.replace(/"/g, "&quot;")}"></head><body></body></html>`;
 }
-
-function shopPageHtml(links: string[]): string {
-  const anchors = links.map((l) => `<a href="${l}">link</a>`).join("\n");
-  return `<!doctype html><html><body>${anchors}</body></html>`;
-}
-
-const CLOUDFLARE_HTML = `<!doctype html><html><body>Just a moment...</body></html>`;
 
 function baseOptions(overrides?: Partial<Parameters<typeof syncRedbubbleToSupabase>[0]>) {
   return {
@@ -288,6 +296,10 @@ const SHOP_URL = "https://www.redbubble.com/people/someartist/shop";
 
 function insertCalls(): Extract<Call, { type: "insert" }>[] {
   return calls.filter((c): c is Extract<Call, { type: "insert" }> => c.type === "insert");
+}
+
+function updateCalls(): Extract<Call, { type: "update" }>[] {
+  return calls.filter((c): c is Extract<Call, { type: "update" }> => c.type === "update");
 }
 
 function upsertCalls(): Extract<Call, { type: "upsert" }>[] {
@@ -342,17 +354,19 @@ function rbCollection(id: number, title: string) {
   return { id, title, description: null, coverImageUrl: null };
 }
 
-function mockShopAndProducts(productUrls: string[], productHtmls: Record<string, string>) {
+function mockShop(shopPageHtml: string, shopApByWorkId: Record<number, string>) {
   return vi.fn(async (url: string) => {
     const u = url.toString();
     if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
-      return new Response(shopPageHtml(productUrls), { status: 200 });
+      return new Response(shopPageHtml, { status: 200 });
     }
     if (u.startsWith(SHOP_URL) && u.includes("page=2")) {
-      return new Response(shopPageHtml([]), { status: 200 });
+      return new Response(nextDataHtml({ results: [] }), { status: 200 });
     }
-    if (productHtmls[u]) {
-      return new Response(productHtmls[u], { status: 200 });
+    for (const [workId, html] of Object.entries(shopApByWorkId)) {
+      if (u === `https://www.redbubble.com/shop/ap/${workId}`) {
+        return new Response(html, { status: 200 });
+      }
     }
     throw new Error(`unexpected fetch: ${u}`);
   });
@@ -362,19 +376,6 @@ function existingRow(overrides: Partial<Row> = {}) {
   return {
     id: "existing-uuid-1",
     externalId: 11111111,
-    title: "Old Title",
-    description: "Hand-written",
-    keywords: "existing keywords",
-    category: "existing category",
-    collection: "Cats",
-    backgroundColor: "#000000",
-    backgroundColors: "custom",
-    shared: false,
-    props: { custom: true },
-    imageName: "old.jpg",
-    externalImageUrl: "https://ih1.redbubble.net/old.jpg",
-    externalLink: "https://www.redbubble.com/i/t-shirt/Old-Title/11111111.FB110",
-    createdAt: "2020-01-01T00:00:00.000Z",
     ...overrides,
   };
 }
@@ -385,6 +386,7 @@ describe("syncRedbubbleToSupabase", () => {
     selectByIdResponses = [];
     selectByTitleResponses = [];
     insertResponses = [];
+    updateResponses = [];
     upsertResponses = [];
     collectionsUpsertResponses = [];
     designIdLookupResponses = [];
@@ -397,15 +399,22 @@ describe("syncRedbubbleToSupabase", () => {
     vi.restoreAllMocks();
   });
 
-  it("inserts brand new rows and does not call upsert", async () => {
+  it("inserts a brand new design in the same format as existing production rows", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.111.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          tags: ["fix", "repair"],
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/image.5909636501.6884/st,small,507x507-pad,600x600,f8f8f8.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {
+      11111111: shopApHtml("A hand-drawn design.\n\nPrinted on demand."),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -416,22 +425,92 @@ describe("syncRedbubbleToSupabase", () => {
     expect(inserts).toHaveLength(1);
     expect(upserts).toHaveLength(0);
     expect(inserts[0].rows).toHaveLength(1);
-    expect(inserts[0].rows[0].externalId).toBe(11111111);
+    const row = inserts[0].rows[0] as Row;
+
+    expect(row.externalId).toBe(11111111);
+    expect(row.title).toBe("Design A");
+    expect(row.externalLink).toBe("https://www.redbubble.com/shop/ap/11111111");
+    expect(row.externalImageUrl).toBe("https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg");
+    expect(row.imageName).toBeNull();
+    expect(row.category).toBe("no_category");
+    expect(row.collection).toBe("no_collection");
+    expect(row.keywords).toBe("fix, repair");
+    expect(row.backgroundColor).toBe("#FFFFFF");
+    expect(row.backgroundColors).toBe("");
+    expect(row.shared).toBe(false);
+    expect(row.props).toBeNull();
+    expect(row.description).toBe("A hand-drawn design.\n\nPrinted on demand.");
+    expect(typeof row.updatedAt).toBe("string");
+
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(0);
     expect(result.dryRun).toBe(false);
   });
 
+  it("fetches the description from /shop/ap/<workId> only for designs that don't exist yet", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/22222222.ST123";
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" }),
+        rbResultEntry({ workId: 22222222, title: "Design B", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.222.2/b.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {
+      22222222: shopApHtml("Description for B"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    // Design A already exists in the DB — its description must never be fetched.
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111 })], error: null }];
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const fetchedUrls = fetchMock.mock.calls.map(([url]) => url.toString());
+    expect(fetchedUrls).not.toContain("https://www.redbubble.com/shop/ap/11111111");
+    expect(fetchedUrls).toContain("https://www.redbubble.com/shop/ap/22222222");
+
+    const inserts = insertCalls();
+    expect(inserts[0].rows[0].description).toBe("Description for B");
+  });
+
+  it("description fetch failure: the new row is still inserted with an empty description and the error is recorded", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) return new Response(shopPage, { status: 200 });
+      if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      if (u === "https://www.redbubble.com/shop/ap/11111111") {
+        throw new Error("network error");
+      }
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const inserts = insertCalls();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].rows[0].description).toBe("");
+    expect(result.inserted).toBe(1);
+    expect(result.errorMessages.some((m) => m.includes("Failed to fetch description for 11111111"))).toBe(true);
+    expect(result.errors).toBeGreaterThan(0);
+  });
+
   it("requests shop listing pages with a stable sortOrder=recent", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.111.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, { 11111111: shopApHtml("Desc A") });
     vi.stubGlobal("fetch", fetchMock);
 
     await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -445,16 +524,64 @@ describe("syncRedbubbleToSupabase", () => {
     }
   });
 
-  it("updates an existing row via upsert, keeping curated fields and refreshing link/image/title", async () => {
+  it("updates an existing row by sending only externalId, collection, and updatedAt", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.111.jpg",
-        url: productA,
-        keywords: "",
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+    });
+    const fetchMock = mockShop(shopPage, {});
+    vi.stubGlobal("fetch", fetchMock);
+
+    selectByIdResponses = [{ data: [existingRow()], error: null }];
+
+    // No collections crawl page beyond the shop listing itself in this test — the shop page
+    // declares a collection but the collection-filtered page fetch will fail (unmocked),
+    // marking collectionsComplete=false, so use a simpler shop page with no collections
+    // to exercise the "collectionsComplete=true, collection stays no_collection" path.
+    const shopPageNoCollections = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const simpleFetchMock = mockShop(shopPageNoCollections, {});
+    vi.stubGlobal("fetch", simpleFetchMock);
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    const inserts = insertCalls();
+    expect(inserts).toHaveLength(0);
+    expect(updates).toHaveLength(1);
+    expect(updates[0].table).toBe("designs");
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(updates[0].changes.collection).toBe("no_collection");
+    expect(typeof updates[0].changes.updatedAt).toBe("string");
+    expect(updates[0].filters).toEqual([{ col: "externalId", val: 11111111 }]);
+
+    // No description fetch for an existing row.
+    const fetchedUrls = simpleFetchMock.mock.calls.map(([url]) => url.toString());
+    expect(fetchedUrls).not.toContain("https://www.redbubble.com/shop/ap/11111111");
+
+    expect(result.inserted).toBe(0);
+    expect(result.updated).toBe(1);
+  });
+
+  it("collectionsComplete=false: does not update existing rows at all", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        throw new Error("network error fetching Cats collection");
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) return new Response(shopPage, { status: 200 });
+      if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      throw new Error(`unexpected fetch: ${u}`);
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -462,73 +589,24 @@ describe("syncRedbubbleToSupabase", () => {
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
-    const upserts = upsertCalls();
-    const inserts = insertCalls();
-    expect(inserts).toHaveLength(0);
-    expect(upserts).toHaveLength(1);
-    const row = upserts[0].rows[0] as Row;
-
-    // Curated fields preserved.
-    expect(row.description).toBe("Hand-written");
-    expect(row.collection).toBe("Cats");
-    expect(row.category).toBe("existing category");
-    expect(row.keywords).toBe("existing keywords");
-    expect(row.backgroundColor).toBe("#000000");
-    expect(row.backgroundColors).toBe("custom");
-    expect(row.shared).toBe(false);
-    expect(row.props).toEqual({ custom: true });
-    expect(row.id).toBe("existing-uuid-1");
-    expect(row.createdAt).toBe("2020-01-01T00:00:00.000Z");
-
-    // Refreshed fields.
-    expect(row.title).toBe("Design A");
-    expect(row.externalImageUrl).toBe("https://ih1.redbubble.net/image.111.jpg");
-    expect(row.imageName).toBe("image.111.jpg");
-    expect(typeof row.updatedAt).toBe("string");
-
+    expect(updateCalls()).toHaveLength(0);
+    expect(insertCalls()).toHaveLength(0);
+    expect(result.updated).toBe(0);
     expect(result.inserted).toBe(0);
-    expect(result.updated).toBe(1);
-  });
-
-  it("fills an empty curated field with the scraped value when the existing value is empty", async () => {
-    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Fresh description",
-        image: "https://ih1.redbubble.net/image.111.jpg",
-        url: productA,
-      }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
-
-    selectByIdResponses = [{ data: [existingRow({ description: "" })], error: null }];
-
-    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
-
-    const upserts = upsertCalls();
-    expect(upserts).toHaveLength(1);
-    expect(upserts[0].rows[0].description).toBe("Fresh description");
-    expect(result.updated).toBe(1);
+    expect(result.warnings.some((w) => /left unchanged/.test(w))).toBe(true);
   });
 
   it("skips the second row of an in-batch title collision and records a warning", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Same-Title-by-someartist/33333333.FB110";
     const productB = "https://www.redbubble.com/i/sticker/Same-Title-by-someartist/44444444.ST123";
-    const fetchMock = mockShopAndProducts([productA, productB], {
-      [productA]: productHtml({
-        name: "Same Title",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.333.jpg",
-        url: productA,
-      }),
-      [productB]: productHtml({
-        name: "Same Title",
-        description: "Desc B",
-        image: "https://ih1.redbubble.net/image.444.jpg",
-        url: productB,
-      }),
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 33333333, title: "Same Title", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.333.1/a.jpg" }),
+        rbResultEntry({ workId: 44444444, title: "Same Title", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.444.1/b.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, { 33333333: shopApHtml("Desc A") });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -547,14 +625,11 @@ describe("syncRedbubbleToSupabase", () => {
 
   it("skips a row whose title is already owned by a different externalId in the database", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/55555555.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.555.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, {});
     vi.stubGlobal("fetch", fetchMock);
 
     selectByTitleResponses = [
@@ -564,65 +639,56 @@ describe("syncRedbubbleToSupabase", () => {
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
     expect(insertCalls()).toHaveLength(0);
-    expect(upsertCalls()).toHaveLength(0);
+    expect(updateCalls()).toHaveLength(0);
     expect(result.skipped).toBe(1);
     expect(
       result.warnings.some((w) => w.includes("55555555") && w.includes("99999999")),
     ).toBe(true);
   });
 
-  it("dryRun: true makes no write calls and returns the would-be plan", async () => {
+  it("dryRun: true makes no write calls and returns the would-be plan with {externalId, collection} for updates", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
     const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/22222222.ST123";
-    const fetchMock = mockShopAndProducts([productA, productB], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.111.jpg",
-        url: productA,
-      }),
-      [productB]: productHtml({
-        name: "Design B",
-        description: "Desc B",
-        image: "https://ih1.redbubble.net/image.222.jpg",
-        url: productB,
-      }),
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" }),
+        rbResultEntry({ workId: 22222222, title: "Design B", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.222.1/b.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, { 11111111: shopApHtml("Desc A") });
     vi.stubGlobal("fetch", fetchMock);
 
-    selectByIdResponses = [
-      { data: [existingRow({ externalId: 22222222, title: "Old B" })], error: null },
-    ];
+    selectByIdResponses = [{ data: [existingRow({ externalId: 22222222 })], error: null }];
 
     const result = await syncRedbubbleToSupabase(
       baseOptions({ shopUrl: SHOP_URL, dryRun: true }),
     );
 
     expect(insertCalls()).toHaveLength(0);
+    expect(updateCalls()).toHaveLength(0);
     expect(upsertCalls()).toHaveLength(0);
     expect(result.dryRun).toBe(true);
     expect(result.plan?.insert).toHaveLength(1);
-    expect(result.plan?.update).toHaveLength(1);
+    expect(result.plan?.update).toEqual([{ externalId: 22222222, collection: "no_collection" }]);
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(1);
   });
 
   it("continues with the next insert chunk when one chunk of >100 new rows fails", async () => {
     const count = 101;
-    const productUrls: string[] = [];
-    const productHtmls: Record<string, string> = {};
+    const results: unknown[] = [];
+    const shopApByWorkId: Record<number, string> = {};
     for (let i = 0; i < count; i += 1) {
       const id = 90000000 + i;
       const url = `https://www.redbubble.com/i/t-shirt/Title-${i}-by-someartist/${id}.FB110`;
-      productUrls.push(url);
-      productHtmls[url] = productHtml({
-        name: `Title ${i}`,
-        description: `Desc ${i}`,
-        image: `https://ih1.redbubble.net/image.${id}.jpg`,
-        url,
-      });
+      results.push(
+        rbResultEntry({ workId: id, title: `Title ${i}`, productPageUrl: url, imageUrl: `https://ih1.redbubble.net/image.${id}.1/a.jpg` }),
+      );
+      shopApByWorkId[id] = shopApHtml(`Desc ${i}`);
     }
-    const fetchMock = mockShopAndProducts(productUrls, productHtmls);
+    const shopPage = nextDataHtml({ results, pagination: { totalPages: 1 } });
+    const fetchMock = mockShop(shopPage, shopApByWorkId);
     vi.stubGlobal("fetch", fetchMock);
 
     insertResponses = [{ data: null, error: { message: "insert failed" } }];
@@ -640,16 +706,13 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.inserted).toBe(1);
   });
 
-  it("reports the SELECT error and makes no insert/upsert calls", async () => {
+  it("reports the SELECT error and makes no insert/update calls", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/55555555.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.555.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, {});
     vi.stubGlobal("fetch", fetchMock);
 
     selectByIdResponses = [{ data: null, error: { message: "select failed" } }];
@@ -657,23 +720,19 @@ describe("syncRedbubbleToSupabase", () => {
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
     expect(insertCalls()).toHaveLength(0);
-    expect(upsertCalls()).toHaveLength(0);
+    expect(updateCalls()).toHaveLength(0);
     expect(result.errors).toBe(1);
     expect(result.errorMessages).toContain("select failed");
   });
 
   it("escapes quotes/commas in a title for the PostgREST `in` filter and still syncs the row", async () => {
-    const productA =
-      "https://www.redbubble.com/i/t-shirt/Weird-Title-by-someartist/12121212.FB110";
+    const productA = "https://www.redbubble.com/i/t-shirt/Weird-Title-by-someartist/12121212.FB110";
     const weirdTitle = `24", 36" Print, Set of 2`;
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: weirdTitle,
-        description: "Desc",
-        image: "https://ih1.redbubble.net/image.121.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 12121212, title: weirdTitle, productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.121.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, { 12121212: shopApHtml("Desc") });
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -693,20 +752,18 @@ describe("syncRedbubbleToSupabase", () => {
 
   it("makes a title-lookup chunk failure non-fatal: only that chunk's rows are dropped, others still written", async () => {
     const count = 30; // > 25 (title chunk size) so it spans two title-lookup chunks
-    const productUrls: string[] = [];
-    const productHtmls: Record<string, string> = {};
+    const results: unknown[] = [];
+    const shopApByWorkId: Record<number, string> = {};
     for (let i = 0; i < count; i += 1) {
       const id = 80000000 + i;
       const url = `https://www.redbubble.com/i/t-shirt/Title-${i}-by-someartist/${id}.FB110`;
-      productUrls.push(url);
-      productHtmls[url] = productHtml({
-        name: `Title ${i}`,
-        description: `Desc ${i}`,
-        image: `https://ih1.redbubble.net/image.${id}.jpg`,
-        url,
-      });
+      results.push(
+        rbResultEntry({ workId: id, title: `Title ${i}`, productPageUrl: url, imageUrl: `https://ih1.redbubble.net/image.${id}.1/a.jpg` }),
+      );
+      shopApByWorkId[id] = shopApHtml(`Desc ${i}`);
     }
-    const fetchMock = mockShopAndProducts(productUrls, productHtmls);
+    const shopPage = nextDataHtml({ results, pagination: { totalPages: 1 } });
+    const fetchMock = mockShop(shopPage, shopApByWorkId);
     vi.stubGlobal("fetch", fetchMock);
 
     selectByTitleResponses = [{ data: null, error: { message: "title lookup failed" } }];
@@ -726,20 +783,18 @@ describe("syncRedbubbleToSupabase", () => {
 
   it("makes an id-lookup chunk failure non-fatal: only that chunk's rows are dropped, others still written", async () => {
     const count = 105; // > 100 (id chunk size) so it spans two id-lookup chunks
-    const productUrls: string[] = [];
-    const productHtmls: Record<string, string> = {};
+    const results: unknown[] = [];
+    const shopApByWorkId: Record<number, string> = {};
     for (let i = 0; i < count; i += 1) {
       const id = 70000000 + i;
       const url = `https://www.redbubble.com/i/t-shirt/Title-${i}-by-someartist/${id}.FB110`;
-      productUrls.push(url);
-      productHtmls[url] = productHtml({
-        name: `Title ${i}`,
-        description: `Desc ${i}`,
-        image: `https://ih1.redbubble.net/image.${id}.jpg`,
-        url,
-      });
+      results.push(
+        rbResultEntry({ workId: id, title: `Title ${i}`, productPageUrl: url, imageUrl: `https://ih1.redbubble.net/image.${id}.1/a.jpg` }),
+      );
+      shopApByWorkId[id] = shopApHtml(`Desc ${i}`);
     }
-    const fetchMock = mockShopAndProducts(productUrls, productHtmls);
+    const shopPage = nextDataHtml({ results, pagination: { totalPages: 1 } });
+    const fetchMock = mockShop(shopPage, shopApByWorkId);
     vi.stubGlobal("fetch", fetchMock);
 
     selectByIdResponses = [{ data: null, error: { message: "id lookup failed" } }];
@@ -761,26 +816,15 @@ describe("syncRedbubbleToSupabase", () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/61111111.FB110";
     const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/62222222.ST123";
     const productC = "https://www.redbubble.com/i/mug/Design-C-by-someartist/63333333.MG100";
-    const fetchMock = mockShopAndProducts([productA, productB, productC], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.611.jpg",
-        url: productA,
-      }),
-      [productB]: productHtml({
-        name: "Design B",
-        description: "Desc B",
-        image: "https://ih1.redbubble.net/image.622.jpg",
-        url: productB,
-      }),
-      [productC]: productHtml({
-        name: "Design C",
-        description: "Desc C",
-        image: "https://ih1.redbubble.net/image.633.jpg",
-        url: productC,
-      }),
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 61111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.611.1/a.jpg" }),
+        rbResultEntry({ workId: 62222222, title: "Design B", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.622.1/b.jpg" }),
+        rbResultEntry({ workId: 63333333, title: "Design C", productPageUrl: productC, imageUrl: "https://ih1.redbubble.net/image.633.1/c.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, {});
     vi.stubGlobal("fetch", fetchMock);
 
     selectByIdResponses = [{ data: null, error: { message: "id lookup failed" } }];
@@ -789,7 +833,7 @@ describe("syncRedbubbleToSupabase", () => {
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
     expect(insertCalls()).toHaveLength(0);
-    expect(upsertCalls()).toHaveLength(0);
+    expect(updateCalls()).toHaveLength(0);
     // 3 rows failed both lookups: must be counted once each, not once per failing lookup.
     expect(result.errors).toBe(3);
     expect(result.errorMessages).toContain("id lookup failed");
@@ -800,14 +844,11 @@ describe("syncRedbubbleToSupabase", () => {
 
   it("collects the error and does not throw when the insert fails (e.g. RLS violation)", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/55555555.FB110";
-    const fetchMock = mockShopAndProducts([productA], {
-      [productA]: productHtml({
-        name: "Design A",
-        description: "Desc A",
-        image: "https://ih1.redbubble.net/image.555.jpg",
-        url: productA,
-      }),
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, { 55555555: shopApHtml("Desc A") });
     vi.stubGlobal("fetch", fetchMock);
 
     insertResponses = [
@@ -822,36 +863,31 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.inserted).toBe(0);
   });
 
-  it("collects an error for a Cloudflare-challenged product page but still syncs the rest", async () => {
-    const productGood = "https://www.redbubble.com/i/t-shirt/Design-Good-by-someartist/66666666.FB110";
-    const productBlocked = "https://www.redbubble.com/i/sticker/Design-Blocked-by-someartist/77777777.ST123";
-
-    const fetchMock = mockShopAndProducts([productGood, productBlocked], {
-      [productGood]: productHtml({
-        name: "Design Good",
-        description: "Desc",
-        image: "https://ih1.redbubble.net/image.666.jpg",
-        url: productGood,
-      }),
-      [productBlocked]: CLOUDFLARE_HTML,
+  it("collects the error and does not throw when the update fails", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/55555555.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
+      pagination: { totalPages: 1 },
     });
+    const fetchMock = mockShop(shopPage, {});
     vi.stubGlobal("fetch", fetchMock);
+
+    selectByIdResponses = [{ data: [existingRow({ externalId: 55555555 })], error: null }];
+    updateResponses = [{ error: { message: "update failed" } }];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
-    const inserts = insertCalls();
-    expect(inserts).toHaveLength(1);
-    expect(inserts[0].rows).toHaveLength(1);
-    expect(inserts[0].rows[0].externalId).toBe(66666666);
-    expect(result.errorMessages.some((m) => /Cloudflare/i.test(m))).toBe(true);
-    expect(result.inserted).toBe(1);
+    expect(updateCalls()).toHaveLength(1);
+    expect(result.errors).toBe(1);
+    expect(result.errorMessages).toContain("update failed");
+    expect(result.updated).toBe(0);
   });
 
-  it("does not call insert/upsert and reports all links as skipped when the shop page has 0 links", async () => {
+  it("does not call insert/update and reports nothing when the shop page has 0 designs", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       const u = url.toString();
       if (u.startsWith(SHOP_URL)) {
-        return new Response(shopPageHtml([]), { status: 200 });
+        return new Response(nextDataHtml({ results: [] }), { status: 200 });
       }
       throw new Error(`unexpected fetch: ${u}`);
     });
@@ -864,7 +900,6 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.skipped).toBe(0);
     expect(result.inserted).toBe(0);
     expect(result.updated).toBe(0);
-    expect(result.warnings).toEqual([]);
   });
 });
 
@@ -873,7 +908,7 @@ describe("syncRedbubbleToSupabase", () => {
 // ---------------------------------------------------------------------------
 
 describe("parseShopNextData", () => {
-  it("maps results[].inventoryItem into DesignRecord fields", () => {
+  it("maps results[].inventoryItem into DesignRecord fields matching the existing-row format", () => {
     const html = nextDataHtml({
       results: [
         rbResultEntry({
@@ -890,7 +925,7 @@ describe("parseShopNextData", () => {
       filteredCollection: null,
     });
 
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/ThreadQuirk/shop");
+    const result = parseShopNextData(html);
 
     expect(result.totalPages).toBe(3);
     expect(result.filteredCollection).toBeNull();
@@ -899,11 +934,15 @@ describe("parseShopNextData", () => {
       externalId: 173146884,
       title: "Handyman Repairman Problem Solver",
       keywords: "fix, repair",
-      externalLink:
-        "https://www.redbubble.com/i/hoodie/Handyman-Repairman-Problem-Solver-by-ThreadQuirk/173146884/lgcw",
-      externalImageUrl: "https://ih1.redbubble.net/image.5909636486.6884/a.jpg",
-      category: "hoodie",
+      externalLink: "https://www.redbubble.com/shop/ap/173146884",
+      externalImageUrl: "https://ih1.redbubble.net/image.5909636486.6884/flat,500x,075,f.u2.jpg",
+      category: "no_category",
       collection: "no_collection",
+      imageName: null,
+      backgroundColor: "#FFFFFF",
+      backgroundColors: "",
+      shared: false,
+      props: null,
     });
   });
 
@@ -915,8 +954,8 @@ describe("parseShopNextData", () => {
             productPageUrl: "https://www.redbubble.com/i/mug/Foo/11111111",
             previewSet: {
               previews: [
-                { previewTypeId: "alternate_product_close", url: "https://ih1.redbubble.net/alt.jpg" },
-                { previewTypeId: "product_close", url: "https://ih1.redbubble.net/main.jpg" },
+                { previewTypeId: "alternate_product_close", url: "https://ih1.redbubble.net/image.99.1/alt.jpg" },
+                { previewTypeId: "product_close", url: "https://ih1.redbubble.net/image.88.1/main.jpg" },
               ],
             },
             work: { id: "11111111", title: "Foo", tags: [] },
@@ -925,8 +964,10 @@ describe("parseShopNextData", () => {
       ],
     });
 
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
-    expect(result.designs[0].externalImageUrl).toBe("https://ih1.redbubble.net/main.jpg");
+    const result = parseShopNextData(html);
+    expect(result.designs[0].externalImageUrl).toBe(
+      "https://ih1.redbubble.net/image.88.1/flat,500x,075,f.u2.jpg",
+    );
   });
 
   it("dedupes by externalId, keeping the first occurrence", () => {
@@ -936,29 +977,29 @@ describe("parseShopNextData", () => {
           workId: 22222222,
           title: "First",
           productPageUrl: "https://www.redbubble.com/i/t-shirt/First/22222222",
-          imageUrl: "https://ih1.redbubble.net/first.jpg",
+          imageUrl: "https://ih1.redbubble.net/image.1.1/first.jpg",
         }),
         rbResultEntry({
           workId: 22222222,
           title: "First (sticker)",
           productPageUrl: "https://www.redbubble.com/i/sticker/First/22222222",
-          imageUrl: "https://ih1.redbubble.net/first-sticker.jpg",
+          imageUrl: "https://ih1.redbubble.net/image.2.1/first-sticker.jpg",
         }),
       ],
     });
 
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    const result = parseShopNextData(html);
     expect(result.designs).toHaveLength(1);
     expect(result.designs[0].title).toBe("First");
   });
 
-  it("skips entries missing id/title/link/image", () => {
+  it("skips entries missing id/title/product page/preview image", () => {
     const html = nextDataHtml({
       results: [
         { inventoryItem: { productPageUrl: "", previewSet: { previews: [] }, work: { id: "1", title: "" } } },
       ],
     });
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    const result = parseShopNextData(html);
     expect(result.designs).toHaveLength(0);
   });
 
@@ -968,7 +1009,7 @@ describe("parseShopNextData", () => {
       artistInfo: { collections: [rbCollection(4167183, "States of the USA"), rbCollection(4167186, "Abstract Pattern")] },
       filteredCollection: { id: 4167183, title: "States of the USA", description: null, coverImageUrl: null },
     });
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop?collections=4167183");
+    const result = parseShopNextData(html);
     expect(result.collections).toEqual([
       { externalId: 4167183, title: "States of the USA", description: null, coverImageUrl: null },
       { externalId: 4167186, title: "Abstract Pattern", description: null, coverImageUrl: null },
@@ -983,12 +1024,12 @@ describe("parseShopNextData", () => {
 
   it("treats a null pagination object as a single page", () => {
     const html = nextDataHtml({ results: [], pagination: null });
-    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    const result = parseShopNextData(html);
     expect(result.totalPages).toBe(1);
   });
 
   it("throws a clear error when __NEXT_DATA__ is missing", () => {
-    expect(() => parseShopNextData("<html><body>no next data here</body></html>", "https://x")).toThrow(
+    expect(() => parseShopNextData("<html><body>no next data here</body></html>")).toThrow(
       /Redbubble page has no __NEXT_DATA__/,
     );
   });
@@ -996,7 +1037,7 @@ describe("parseShopNextData", () => {
   it("throws a clear error when __NEXT_DATA__ contains invalid JSON", () => {
     const html =
       '<html><head><script id="__NEXT_DATA__" type="application/json">{not json}</script></head></html>';
-    expect(() => parseShopNextData(html, "https://x")).toThrow(/Redbubble page has no __NEXT_DATA__/);
+    expect(() => parseShopNextData(html)).toThrow(/Redbubble page has no __NEXT_DATA__/);
   });
 });
 
@@ -1010,6 +1051,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     selectByIdResponses = [];
     selectByTitleResponses = [];
     insertResponses = [];
+    updateResponses = [];
     upsertResponses = [];
     collectionsUpsertResponses = [];
     designIdLookupResponses = [];
@@ -1028,18 +1070,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
   function mockShopWithCollections() {
     const shopPage = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
-        rbResultEntry({
-          workId: 22222222,
-          title: "Design B",
-          productPageUrl: productB,
-          imageUrl: "https://ih1.redbubble.net/b.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
+        rbResultEntry({ workId: 22222222, title: "Design B", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.2.1/b.jpg" }),
       ],
       pagination: { totalPages: 1 },
       artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
@@ -1048,12 +1080,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
 
     const catsPage = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
       ],
       pagination: null,
       artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
@@ -1062,18 +1089,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
 
     const dogsPage = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
-        rbResultEntry({
-          workId: 22222222,
-          title: "Design B",
-          productPageUrl: productB,
-          imageUrl: "https://ih1.redbubble.net/b.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
+        rbResultEntry({ workId: 22222222, title: "Design B", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.2.1/b.jpg" }),
       ],
       pagination: null,
       artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
@@ -1091,27 +1108,11 @@ describe("syncRedbubbleToSupabase — collections", () => {
       if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
         return new Response(shopPage, { status: 200 });
       }
-      if (u === productA) {
-        return new Response(
-          productHtml({
-            name: "Design A",
-            description: "Desc A",
-            image: "https://ih1.redbubble.net/a.jpg",
-            url: productA,
-          }),
-          { status: 200 },
-        );
+      if (u === "https://www.redbubble.com/shop/ap/11111111") {
+        return new Response(shopApHtml("Desc A"), { status: 200 });
       }
-      if (u === productB) {
-        return new Response(
-          productHtml({
-            name: "Design B",
-            description: "Desc B",
-            image: "https://ih1.redbubble.net/b.jpg",
-            url: productB,
-          }),
-          { status: 200 },
-        );
+      if (u === "https://www.redbubble.com/shop/ap/22222222") {
+        return new Response(shopApHtml("Desc B"), { status: 200 });
       }
       throw new Error(`unexpected fetch: ${u}`);
     });
@@ -1191,12 +1192,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
   it("dedupes membership when a design appears on more than one page of the same collection", async () => {
     const catsPageOne = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
       ],
       pagination: { totalPages: 2 },
       artistInfo: { collections: [rbCollection(100, "Cats")] },
@@ -1205,12 +1201,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     const catsPageTwo = nextDataHtml({
       results: [
         // Same design repeated on page 2 (paging overlap) — must not double the link.
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
       ],
       pagination: { totalPages: 2 },
       artistInfo: { collections: [rbCollection(100, "Cats")] },
@@ -1218,12 +1209,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     });
     const shopPage = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
       ],
       pagination: { totalPages: 1 },
       artistInfo: { collections: [rbCollection(100, "Cats")] },
@@ -1241,16 +1227,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
       if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
         return new Response(shopPage, { status: 200 });
       }
-      if (u === productA) {
-        return new Response(
-          productHtml({
-            name: "Design A",
-            description: "Desc A",
-            image: "https://ih1.redbubble.net/a.jpg",
-            url: productA,
-          }),
-          { status: 200 },
-        );
+      if (u === "https://www.redbubble.com/shop/ap/11111111") {
+        return new Response(shopApHtml("Desc A"), { status: 200 });
       }
       throw new Error(`unexpected fetch: ${u}`);
     });
@@ -1266,19 +1244,13 @@ describe("syncRedbubbleToSupabase — collections", () => {
 
   it("overwrites the collection field on an existing row when collectionsComplete", async () => {
     vi.stubGlobal("fetch", mockShopWithCollections());
-    selectByIdResponses = [
-      {
-        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
-        error: null,
-      },
-    ];
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111 })], error: null }];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
-    const designUpserts = forTable(upsertCalls(), "designs");
-    expect(designUpserts).toHaveLength(1);
-    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
-    expect(rowA?.collection).toBe("Cats");
+    const updates = updateCalls();
+    const designUpdate = forTable(updates, "designs").find((u) => u.filters[0].val === 11111111);
+    expect(designUpdate?.changes.collection).toBe("Cats");
     expect(result.updated).toBe(1);
   });
 
@@ -1288,6 +1260,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, dryRun: true }));
 
     expect(insertCalls()).toHaveLength(0);
+    expect(updateCalls()).toHaveLength(0);
     expect(upsertCalls()).toHaveLength(0);
     expect(deleteCalls()).toHaveLength(0);
     expect(result.dryRun).toBe(true);
@@ -1300,7 +1273,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     );
   });
 
-  it("collectionsComplete=false: skips collections/links writes, keeps fill-if-empty rule, and warns", async () => {
+  it("collectionsComplete=false: skips collections/links writes, leaves existing rows unchanged, and warns", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       const u = url.toString();
       if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
@@ -1311,12 +1284,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    selectByIdResponses = [
-      {
-        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
-        error: null,
-      },
-    ];
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111 })], error: null }];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
@@ -1327,22 +1295,15 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(result.collections.links).toBe(0);
     expect(result.warnings.some((w) => /Collections crawl incomplete/.test(w))).toBe(true);
 
-    // Fill-if-empty rule still applies for `collection` on the existing row: since the
-    // existing value isn't empty/default it must be kept as-is.
-    const designUpserts = forTable(upsertCalls(), "designs");
-    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
-    expect(rowA?.collection).toBe("Old Collection");
+    // Existing row (Design A, externalId 11111111) must not be updated at all.
+    expect(updateCalls()).toHaveLength(0);
+    expect(result.updated).toBe(0);
   });
 
-  it("truncated collection (totalPages > maxPages): collectionsComplete=false, no collections/links writes, collection field not overwritten", async () => {
+  it("truncated collection (totalPages > maxPages): collectionsComplete=false, no collections/links writes, existing row not updated", async () => {
     const catsPageTruncated = nextDataHtml({
       results: [
-        rbResultEntry({
-          workId: 11111111,
-          title: "Design A",
-          productPageUrl: productA,
-          imageUrl: "https://ih1.redbubble.net/a.jpg",
-        }),
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.1.1/a.jpg" }),
       ],
       // totalPages=2 but maxPages below is 1, so only page 1 is fetched.
       pagination: { totalPages: 2 },
@@ -1359,12 +1320,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    selectByIdResponses = [
-      {
-        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
-        error: null,
-      },
-    ];
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111 })], error: null }];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, maxPages: 1 }));
 
@@ -1377,9 +1333,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(result.collections.upserted).toBe(0);
     expect(result.collections.links).toBe(0);
 
-    const designUpserts = forTable(upsertCalls(), "designs");
-    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
-    expect(rowA?.collection).toBe("Old Collection");
+    expect(updateCalls()).toHaveLength(0);
+    expect(result.updated).toBe(0);
   });
 
   it("link upsert failure: issues no deletes for that chunk and counts the error", async () => {

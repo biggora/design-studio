@@ -152,7 +152,10 @@ async function run() {
 
   if (target === "json") {
     const scrapeOptions = buildScrapeOptions(shopUrl);
-    const { designs, collections, errors } = await fetchRedbubbleDesigns(scrapeOptions);
+    // No DB access in this target, so designs' descriptions are never fetched (stay "") —
+    // `close()` still needs to run to shut down the Playwright session if one was opened.
+    const { designs, collections, errors, close } = await fetchRedbubbleDesigns(scrapeOptions);
+    await close();
     const payload = buildJsonPayload({
       shopUrl,
       usePlaywright: scrapeOptions.usePlaywright,
