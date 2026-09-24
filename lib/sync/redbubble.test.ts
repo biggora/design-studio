@@ -422,6 +422,29 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.dryRun).toBe(false);
   });
 
+  it("requests shop listing pages with a stable sortOrder=recent", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const fetchMock = mockShopAndProducts([productA], {
+      [productA]: productHtml({
+        name: "Design A",
+        description: "Desc A",
+        image: "https://ih1.redbubble.net/image.111.jpg",
+        url: productA,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const listingUrls = fetchMock.mock.calls
+      .map(([url]) => url.toString())
+      .filter((u) => u.startsWith(SHOP_URL) && u.includes("page="));
+    expect(listingUrls.length).toBeGreaterThan(0);
+    for (const u of listingUrls) {
+      expect(u).toContain("sortOrder=recent");
+    }
+  });
+
   it("updates an existing row via upsert, keeping curated fields and refreshing link/image/title", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
     const fetchMock = mockShopAndProducts([productA], {
@@ -1135,6 +1158,21 @@ describe("syncRedbubbleToSupabase — collections", () => {
     }
     const rowA = designInserts[0].rows.find((r) => r.externalId === 11111111);
     expect(rowA?.collection).toBe("Cats");
+  });
+
+  it("requests collection-filtered pages with a stable sortOrder=recent", async () => {
+    const fetchMock = mockShopWithCollections();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const collectionUrls = fetchMock.mock.calls
+      .map(([url]) => url.toString())
+      .filter((u) => u.startsWith(SHOP_URL) && u.includes("collections="));
+    expect(collectionUrls.length).toBeGreaterThan(0);
+    for (const u of collectionUrls) {
+      expect(u).toContain("sortOrder=recent");
+    }
   });
 
   it("does not issue a stale-link delete for a collection with no non-member designs in the chunk", async () => {
