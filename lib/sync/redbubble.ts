@@ -35,11 +35,11 @@ type DesignRecord = {
   category: string;
   collection: string;
   collections?: string[];
-  imageName: string;
+  imageName: string | null;
   backgroundColor: string;
   backgroundColors: string;
   shared: boolean;
-  props: object;
+  props: object | null;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -71,45 +71,19 @@ export type SyncResult = {
   collections: { found: number; upserted: number; links: number };
   plan?: {
     insert: object[];
-    update: object[];
+    update: { externalId: number; collection: string }[];
     collections?: object[];
     links?: { externalId: number; collections: number[] }[];
   };
 };
 
-const EXISTING_ROW_COLUMNS =
-  "id, externalId, title, description, keywords, category, collection, backgroundColor, backgroundColors, shared, props, imageName, externalImageUrl, externalLink, createdAt";
+// Used only to check whether a design already exists in the database (its full curated
+// content is never read — nothing but `collection`/`updatedAt` may be sent back on update).
+const EXISTENCE_CHECK_COLUMN = "externalId";
 
+// Used once a design is known to exist/have just been written, to resolve its uuid `id`
+// for the design_collections write.
 const DESIGN_ID_LOOKUP_COLUMNS = "id, externalId";
-
-type ExistingRow = {
-  id: string;
-  externalId: number;
-  title: string;
-  description: string;
-  keywords: string;
-  category: string;
-  collection: string;
-  backgroundColor: string;
-  backgroundColors: string;
-  shared: boolean;
-  props: object;
-  imageName: string;
-  externalImageUrl: string;
-  externalLink: string;
-  createdAt: string;
-};
-
-const DEFAULT_VALUES: Record<string, string> = {
-  category: "no_category",
-  collection: "no_collection",
-};
-
-function isEmptyOrDefault(field: string, value: unknown): boolean {
-  if (value === null || value === undefined || value === "") return true;
-  const defaultValue = DEFAULT_VALUES[field];
-  return defaultValue !== undefined && value === defaultValue;
-}
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -241,102 +215,30 @@ export function extractExternalIdFromUrl(url: string): number | null {
   return fallback ? Number(fallback[1]) : null;
 }
 
-function extractCategoryFromUrl(url: string): string {
-  const match = url.match(/\/i\/([^\/]+)\//i);
-  return match?.[1] ? match[1].replace(/[-_]/g, " ") : "no_category";
+// The "all products with this design" page — used by the site's buy button and, here, as
+// the canonical `externalLink` for a design (matches the format of every existing row).
+function buildShopApUrl(workId: number): string {
+  return `https://www.redbubble.com/shop/ap/${workId}`;
 }
 
-function extractCollection($: ReturnType<typeof load>): string {
-  const collectionLink = $("a[href*='/collections/']").first();
-  if (collectionLink.length) {
-    return collectionLink.text().trim() || "no_collection";
-  }
-  const portfolioLink = $("a[href*='/portfolio/']").first();
-  if (portfolioLink.length) {
-    return portfolioLink.text().trim() || "no_collection";
-  }
-  return "no_collection";
-}
-
-function parseJsonLd($: ReturnType<typeof load>): Record<string, unknown> | null {
-  const scripts = $("script[type='application/ld+json']");
-  for (const el of scripts.toArray()) {
-    const raw = $(el).text().trim();
-    if (!raw) continue;
-    try {
-      const data = JSON.parse(raw);
-      if (Array.isArray(data)) {
-        const product = data.find((item) => item && item["@type"] === "Product");
-        if (product) return product as Record<string, unknown>;
-      }
-      if (data && data["@type"] === "Product") return data as Record<string, unknown>;
-    } catch {
-      continue;
-    }
-  }
-  return null;
+// Builds the flat, full-artwork image URL from any preview URL for the same work
+// (`https://<host>/image.<A>.<B>/<variant>...` -> `.../flat,500x,075,f.u2.jpg`), matching
+// the format of every existing row's `externalImageUrl`.
+export function buildArtworkImageUrl(previewUrl: string): string {
+  const match = previewUrl.match(/^(https:\/\/[a-z0-9.-]+\/image\.[^/]+)\//i);
+  if (!match) return previewUrl;
+  return `${match[1]}/flat,500x,075,f.u2.jpg`;
 }
 
 function sanitizeText(value: string | undefined | null): string {
   return (value || "").replace(/\s+/g, " ").trim();
 }
 
-function getImageName(url: string): string {
-  try {
-    const parsed = new URL(url);
-    const pathname = parsed.pathname;
-    const parts = pathname.split("/");
-    return parts[parts.length - 1] || "";
-  } catch {
-    return "";
-  }
-}
-
-function parseProductHtml(html: string, pageUrl: string): DesignRecord | null {
+// Description text may contain `\n\n` paragraph breaks that are meaningful to preserve
+// (matches how existing rows store it) — only trims the ends, doesn't collapse whitespace.
+function extractMetaDescription(html: string): string {
   const $ = load(html);
-  const jsonLd = parseJsonLd($);
-
-  const ogTitle = $("meta[property='og:title']").attr("content");
-  const ogDescription = $("meta[property='og:description']").attr("content");
-  const ogImage = $("meta[property='og:image']").attr("content");
-  const ogUrl = $("meta[property='og:url']").attr("content");
-  const keywords = $("meta[name='keywords']").attr("content");
-
-  const title =
-    sanitizeText((jsonLd?.name as string) || ogTitle || $("h1").first().text());
-  const description = sanitizeText(
-    (jsonLd?.description as string) || ogDescription || "",
-  );
-  const image = sanitizeText(
-    (Array.isArray(jsonLd?.image) ? jsonLd?.image?.[0] : jsonLd?.image) as string,
-  );
-  const imageUrl = image || ogImage || "";
-  const url = sanitizeText((jsonLd?.url as string) || ogUrl || pageUrl);
-
-  const externalId = extractExternalIdFromUrl(url) || extractExternalIdFromUrl(pageUrl);
-  if (!externalId || !title || !imageUrl) return null;
-
-  const collection = extractCollection($);
-  const category = extractCategoryFromUrl(url);
-
-  return {
-    externalId,
-    title,
-    description: description || "",
-    keywords: sanitizeText(keywords || ""),
-    externalLink: url,
-    externalImageUrl: imageUrl,
-    category,
-    collection,
-    imageName: getImageName(imageUrl),
-    backgroundColor: "#FFFFFF",
-    backgroundColors: "",
-    shared: true,
-    props: {
-      source: "redbubble",
-      rawUrl: pageUrl,
-    },
-  };
+  return ($("meta[name='description']").attr("content") || "").trim();
 }
 
 function getRequestHeaders(extra?: Record<string, string>): Record<string, string> {
@@ -419,7 +321,7 @@ function toRedbubbleCollection(raw: RbCollectionRaw | null | undefined): Redbubb
   };
 }
 
-export function parseShopNextData(html: string, pageUrl: string): ParsedShopPage {
+export function parseShopNextData(html: string): ParsedShopPage {
   const $ = load(html);
   const raw = $("script#__NEXT_DATA__").first().text().trim();
   if (!raw) {
@@ -450,12 +352,12 @@ export function parseShopNextData(html: string, pageUrl: string): ParsedShopPage
 
     const externalId = Number(item.work?.id);
     const title = sanitizeText(item.work?.title);
-    const link = item.productPageUrl || "";
+    const hasProductPage = !!item.productPageUrl;
     const previews = item.previewSet?.previews || [];
     const preferred = previews.find((p) => p.previewTypeId === "product_close");
-    const imageUrl = (preferred || previews[0])?.url || "";
+    const previewUrl = (preferred || previews[0])?.url || "";
 
-    if (!Number.isFinite(externalId) || !title || !link || !imageUrl) continue;
+    if (!Number.isFinite(externalId) || !title || !hasProductPage || !previewUrl) continue;
     if (seen.has(externalId)) continue;
     seen.add(externalId);
 
@@ -464,53 +366,19 @@ export function parseShopNextData(html: string, pageUrl: string): ParsedShopPage
       title,
       description: "",
       keywords: (item.work?.tags || []).join(", "),
-      externalLink: link,
-      externalImageUrl: imageUrl,
-      category: extractCategoryFromUrl(link),
+      externalLink: buildShopApUrl(externalId),
+      externalImageUrl: buildArtworkImageUrl(previewUrl),
+      category: "no_category",
       collection: "no_collection",
-      imageName: getImageName(imageUrl),
+      imageName: null,
       backgroundColor: "#FFFFFF",
       backgroundColors: "",
-      shared: true,
-      props: { source: "redbubble", rawUrl: pageUrl },
+      shared: false,
+      props: null,
     });
   }
 
   return { designs, collections, filteredCollection, totalPages };
-}
-
-function extractProductLinksFromHtml(html: string, pageUrl: string): string[] {
-  const $ = load(html);
-  const links = new Set<string>();
-
-  $("a[href]").each((_, el) => {
-    const href = $(el).attr("href");
-    if (!href) return;
-
-    if (href.includes("/i/") || href.includes("/shop/ap/")) {
-      try {
-        const absolute = new URL(href, pageUrl).toString();
-        links.add(absolute);
-      } catch {
-        return;
-      }
-    }
-  });
-
-  return Array.from(links);
-}
-
-async function fetchShopPage(
-  pageUrl: string,
-  requestHeaders?: Record<string, string>,
-): Promise<{ links: string[]; parsed: ParsedShopPage | null }> {
-  const html = await fetchHtml(pageUrl, requestHeaders);
-  try {
-    const parsed = parseShopNextData(html, pageUrl);
-    return { links: parsed.designs.map((d) => d.externalLink), parsed };
-  } catch {
-    return { links: extractProductLinksFromHtml(html, pageUrl), parsed: null };
-  }
 }
 
 async function crawlCollectionMembership(
@@ -536,7 +404,7 @@ async function crawlCollectionMembership(
         const pageUrl = buildCollectionPageUrl(shopUrl, collection.externalId, page);
         await pacer.waitTurn();
         const html = await fetchPage(pageUrl);
-        const parsed = parseShopNextData(html, pageUrl);
+        const parsed = parseShopNextData(html);
         totalPages = parsed.totalPages;
         for (const design of parsed.designs) {
           const set = membershipSets.get(design.externalId);
@@ -643,7 +511,7 @@ async function createPlaywrightSession(options: {
         );
       }
 
-      return parseShopNextData(body, pageUrl);
+      return parseShopNextData(body);
     },
     async close(): Promise<void> {
       try {
@@ -662,31 +530,50 @@ async function createPlaywrightSession(options: {
   };
 }
 
-export async function getProductLinksFromShopPage(
-  pageUrl: string,
-  requestHeaders?: Record<string, string>,
-): Promise<string[]> {
-  const { links } = await fetchShopPage(pageUrl, requestHeaders);
-  return links;
-}
+type BrowserSession = Awaited<ReturnType<typeof createPlaywrightSession>>;
 
-async function runWithConcurrency<T>(
-  items: string[],
+async function runWithConcurrency<T, R>(
+  items: T[],
   limit: number,
-  handler: (item: string) => Promise<T>,
-): Promise<T[]> {
-  const results: T[] = [];
+  handler: (item: T) => Promise<R>,
+): Promise<R[]> {
+  const results: R[] = [];
   const queue = [...items];
   const workers = Array.from({ length: Math.max(1, limit) }, async () => {
     while (queue.length) {
       const item = queue.shift();
-      if (!item) return;
+      if (item === undefined) return;
       const result = await handler(item);
       results.push(result);
     }
   });
   await Promise.all(workers);
   return results;
+}
+
+// Fetches the work description from `/shop/ap/<workId>` (`<meta name="description">`) for a
+// batch of work ids, through whichever fetch path the active mode uses, paced by `pacer`.
+// Only ever called for designs that don't exist in the DB yet (see `writeDesignsToSupabase`).
+async function fetchDescriptions(
+  workIds: number[],
+  browserSession: BrowserSession | null,
+  requestHeaders: Record<string, string> | undefined,
+  pacer: RequestPacer,
+  concurrency: number,
+  onError: (workId: number, error: unknown) => void,
+): Promise<Map<number, string>> {
+  const entries = await runWithConcurrency(workIds, concurrency, async (workId): Promise<[number, string]> => {
+    const url = buildShopApUrl(workId);
+    try {
+      await pacer.waitTurn();
+      const html = browserSession ? await browserSession.fetchHtml(url) : await fetchHtml(url, requestHeaders);
+      return [workId, extractMetaDescription(html)];
+    } catch (error) {
+      onError(workId, error);
+      return [workId, ""];
+    }
+  });
+  return new Map(entries);
 }
 
 export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Promise<{
@@ -696,6 +583,14 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
   collectionsComplete: boolean;
   errors: string[];
   warnings: string[];
+  // Fetches `/shop/ap/<workId>` descriptions for the given work ids (new designs only —
+  // see `writeDesignsToSupabase`). Kept open here so it can reuse the same browser
+  // session/pacer as the listing crawl; callers must call `close()` when done.
+  fetchDescriptions: (
+    workIds: number[],
+    onError: (workId: number, error: unknown) => void,
+  ) => Promise<Map<number, string>>;
+  close: () => Promise<void>;
 }> {
   const shopUrl = normalizeShopUrl(options.shopUrl);
   if (!shopUrl) {
@@ -719,7 +614,6 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
       })
     : null;
 
-  const allProductLinks = new Set<string>();
   const errors: string[] = [];
   const warnings: string[] = [];
   const listingDesigns = new Map<number, DesignRecord>();
@@ -731,48 +625,25 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
       const pageUrl = buildShopPageUrl(shopUrl, page);
       try {
         await pacer.waitTurn();
-        if (browserSession) {
-          const parsed = await browserSession.scrapeListingCards(pageUrl);
-          if (page === 1) {
-            shopCollections = parsed.collections;
-            nextDataAvailable = true;
-          }
-          if (!parsed.designs.length) break;
-          parsed.designs.forEach((row) => listingDesigns.set(row.externalId, row));
-          if (pageDelayMs > 0) await sleep(pageDelayMs);
-          if (page >= parsed.totalPages) break;
-        } else {
-          const { links, parsed } = await fetchShopPage(pageUrl, options.requestHeaders);
-          if (page === 1 && parsed) {
-            shopCollections = parsed.collections;
-            nextDataAvailable = true;
-          }
-          if (!links.length) break;
-          links.forEach((link) => allProductLinks.add(link));
-          if (pageDelayMs > 0) await sleep(pageDelayMs);
-          if (parsed && page >= parsed.totalPages) break;
+        const parsed = browserSession
+          ? await browserSession.scrapeListingCards(pageUrl)
+          : parseShopNextData(await fetchHtml(pageUrl, options.requestHeaders));
+
+        if (page === 1) {
+          shopCollections = parsed.collections;
+          nextDataAvailable = true;
         }
+        if (!parsed.designs.length) break;
+        parsed.designs.forEach((row) => listingDesigns.set(row.externalId, row));
+        if (pageDelayMs > 0) await sleep(pageDelayMs);
+        if (page >= parsed.totalPages) break;
       } catch (error) {
         errors.push(String(error));
         break;
       }
     }
 
-    const productLinks = Array.from(allProductLinks);
-    const designs = browserSession
-      ? Array.from(listingDesigns.values())
-      : await runWithConcurrency(productLinks, concurrency, async (url) => {
-          try {
-            await pacer.waitTurn();
-            const html = await fetchHtml(url, options.requestHeaders);
-            return parseProductHtml(html, url);
-          } catch (error) {
-            errors.push(String(error));
-            return null;
-          }
-        });
-
-    const filtered = designs.filter((design): design is DesignRecord => !!design);
+    const filtered = Array.from(listingDesigns.values());
 
     let membership = new Map<number, number[]>();
     let collectionsComplete = nextDataAvailable;
@@ -804,17 +675,21 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
     }
 
     return {
-      productLinks: browserSession ? filtered.map((d) => d.externalLink) : productLinks,
+      productLinks: filtered.map((d) => d.externalLink),
       designs: filtered,
       collections: shopCollections,
       collectionsComplete,
       errors,
       warnings,
+      fetchDescriptions: (workIds, onError) =>
+        fetchDescriptions(workIds, browserSession, options.requestHeaders, pacer, concurrency, onError),
+      close: async () => {
+        if (browserSession) await browserSession.close();
+      },
     };
-  } finally {
-    if (browserSession) {
-      await browserSession.close();
-    }
+  } catch (error) {
+    if (browserSession) await browserSession.close();
+    throw error;
   }
 }
 
@@ -826,8 +701,16 @@ export async function writeDesignsToSupabase(
   fetchResult: RedbubbleFetchResult,
   options: Pick<RedbubbleSyncOptions, "supabaseUrl" | "supabaseKey" | "dryRun">,
 ): Promise<SyncResult> {
-  const { productLinks, designs, collections, collectionsComplete, errors, warnings: fetchWarnings } =
-    fetchResult;
+  const {
+    productLinks,
+    designs,
+    collections,
+    collectionsComplete,
+    errors,
+    warnings: fetchWarnings,
+    fetchDescriptions: fetchNewDescriptions,
+    close,
+  } = fetchResult;
   const dryRun = options.dryRun ?? false;
 
   const supabase = createClient(options.supabaseUrl, options.supabaseKey);
@@ -836,348 +719,360 @@ export async function writeDesignsToSupabase(
   const rows = designs.map((design) => {
     const rest: DesignRecord = { ...design };
     delete rest.collections;
-    return { ...rest, updatedAt: new Date().toISOString() };
+    return rest;
   });
 
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
+  let unchanged = 0;
   let errorsCount = errors.length;
   const errorMessages = [...errors];
   const warnings: string[] = [...fetchWarnings];
   if (!collectionsComplete && collections.length) {
     warnings.push(
-      "Collections crawl incomplete: skipped collection sync and kept the fill-if-empty rule for the collection field.",
+      "Collections crawl incomplete: skipped collection sync and left existing rows' collection field unchanged.",
     );
   }
 
   const collectionByTitle = new Map(collections.map((c) => [c.title, c]));
 
   const insertRows: (typeof rows)[0][] = [];
-  const updateRows: (typeof rows)[0][] = [];
+  const updateRows: { externalId: number; collection: string }[] = [];
+  const successfulExternalIds: number[] = [];
 
-  if (!rows.length && productLinks.length) {
-    // Nothing parsed but links were found (e.g. every product page was Cloudflare-blocked):
-    // report them as skipped rather than silently dropping them from the summary.
-    skipped = productLinks.length;
-  }
-
-  if (rows.length) {
-    const uniqueMap = new Map<number, (typeof rows)[0]>();
-    for (const r of rows) {
-      uniqueMap.set(r.externalId, r);
-    }
-    const dedupedByExternalId = Array.from(uniqueMap.values());
-
-    const titleOwner = new Map<string, number>();
-    const batchRows: (typeof rows)[0][] = [];
-    for (const r of dedupedByExternalId) {
-      const owner = titleOwner.get(r.title);
-      if (owner !== undefined && owner !== r.externalId) {
-        skipped++;
-        warnings.push(
-          `Skipped externalId ${r.externalId}: title "${r.title}" duplicates externalId ${owner} in this batch`,
-        );
-        continue;
+  try {
+    if (rows.length) {
+      const uniqueMap = new Map<number, (typeof rows)[0]>();
+      for (const r of rows) {
+        uniqueMap.set(r.externalId, r);
       }
-      titleOwner.set(r.title, r.externalId);
-      batchRows.push(r);
-    }
+      const dedupedByExternalId = Array.from(uniqueMap.values());
 
-    if (batchRows.length) {
-      // Rows whose id-lookup or title-lookup chunk fails must never be written — we can't
-      // know whether they already exist or collide with another title in the DB.
-      const failedExternalIds = new Set<number>();
-
-      const existingById = new Map<number, ExistingRow>();
-      for (const rowChunk of chunk(batchRows, 100)) {
-        const idChunk = rowChunk.map((r) => r.externalId);
-        const { data, error } = await supabase
-          .from("designs")
-          .select(EXISTING_ROW_COLUMNS)
-          .in("externalId", idChunk);
-        if (error) {
-          errorMessages.push(error.message);
-          idChunk.forEach((id) => failedExternalIds.add(id));
-          continue;
-        }
-        for (const row of (data as ExistingRow[] | null) || []) {
-          existingById.set(row.externalId, row);
-        }
-      }
-
-      // Smaller chunk size than the numeric-id lookup: quoted string values inflate the
-      // PostgREST filter query string and risk hitting a 414/431 URL-length limit.
-      const titleOwnerInDb = new Map<string, number>();
-      for (const rowChunk of chunk(batchRows, 25)) {
-        const titleChunk = rowChunk.map((r) => r.title);
-        const { data, error } = await supabase
-          .from("designs")
-          .select("externalId, title")
-          .filter("title", "in", toPostgrestInList(titleChunk));
-        if (error) {
-          errorMessages.push(error.message);
-          rowChunk.forEach((r) => failedExternalIds.add(r.externalId));
-          continue;
-        }
-        for (const row of (data as { externalId: number; title: string }[] | null) || []) {
-          titleOwnerInDb.set(row.title, row.externalId);
-        }
-      }
-
-      errorsCount += failedExternalIds.size;
-
-      for (const r of batchRows) {
-        if (failedExternalIds.has(r.externalId)) {
-          continue;
-        }
-
-        const dbOwner = titleOwnerInDb.get(r.title);
-        if (dbOwner !== undefined && dbOwner !== r.externalId) {
+      const titleOwner = new Map<string, number>();
+      const batchRows: (typeof rows)[0][] = [];
+      for (const r of dedupedByExternalId) {
+        const owner = titleOwner.get(r.title);
+        if (owner !== undefined && owner !== r.externalId) {
           skipped++;
           warnings.push(
-            `Skipped externalId ${r.externalId}: title "${r.title}" already used by externalId ${dbOwner} in the database`,
+            `Skipped externalId ${r.externalId}: title "${r.title}" duplicates externalId ${owner} in this batch`,
           );
           continue;
         }
+        titleOwner.set(r.title, r.externalId);
+        batchRows.push(r);
+      }
 
-        const existing = existingById.get(r.externalId);
-        if (existing) {
-          const updateRow: Record<string, unknown> = {
-            ...existing,
-            title: r.title,
-            externalLink: r.externalLink,
-            externalImageUrl: r.externalImageUrl,
-            imageName: r.imageName,
-            updatedAt: r.updatedAt,
-          };
-          for (const field of ["description", "keywords", "category"] as const) {
-            if (isEmptyOrDefault(field, existing[field]) && !isEmptyOrDefault(field, r[field])) {
-              updateRow[field] = r[field];
+      if (batchRows.length) {
+        // Rows whose id-lookup or title-lookup chunk fails must never be written — we can't
+        // know whether they already exist or collide with another title in the DB.
+        const failedExternalIds = new Set<number>();
+
+        const existingExternalIds = new Set<number>();
+        for (const rowChunk of chunk(batchRows, 100)) {
+          const idChunk = rowChunk.map((r) => r.externalId);
+          const { data, error } = await supabase
+            .from("designs")
+            .select(EXISTENCE_CHECK_COLUMN)
+            .in("externalId", idChunk);
+          if (error) {
+            errorMessages.push(error.message);
+            idChunk.forEach((id) => failedExternalIds.add(id));
+            continue;
+          }
+          for (const row of (data as { externalId: number }[] | null) || []) {
+            existingExternalIds.add(row.externalId);
+          }
+        }
+
+        // Smaller chunk size than the numeric-id lookup: quoted string values inflate the
+        // PostgREST filter query string and risk hitting a 414/431 URL-length limit.
+        const titleOwnerInDb = new Map<string, number>();
+        for (const rowChunk of chunk(batchRows, 25)) {
+          const titleChunk = rowChunk.map((r) => r.title);
+          const { data, error } = await supabase
+            .from("designs")
+            .select("externalId, title")
+            .filter("title", "in", toPostgrestInList(titleChunk));
+          if (error) {
+            errorMessages.push(error.message);
+            rowChunk.forEach((r) => failedExternalIds.add(r.externalId));
+            continue;
+          }
+          for (const row of (data as { externalId: number; title: string }[] | null) || []) {
+            titleOwnerInDb.set(row.title, row.externalId);
+          }
+        }
+
+        errorsCount += failedExternalIds.size;
+
+        const newRows: (typeof rows)[0][] = [];
+
+        for (const r of batchRows) {
+          if (failedExternalIds.has(r.externalId)) {
+            continue;
+          }
+
+          const dbOwner = titleOwnerInDb.get(r.title);
+          if (dbOwner !== undefined && dbOwner !== r.externalId) {
+            skipped++;
+            warnings.push(
+              `Skipped externalId ${r.externalId}: title "${r.title}" already used by externalId ${dbOwner} in the database`,
+            );
+            continue;
+          }
+
+          if (existingExternalIds.has(r.externalId)) {
+            // Redbubble is the source of truth for `collection` once the collections crawl
+            // succeeded; otherwise the existing row is left untouched entirely.
+            if (!collectionsComplete) {
+              unchanged++;
+              continue;
             }
+            updateRows.push({ externalId: r.externalId, collection: r.collection });
+          } else {
+            newRows.push(r);
           }
-          // Redbubble is the source of truth for `collection` once the collections crawl
-          // succeeded; otherwise fall back to the old fill-if-empty rule.
-          if (collectionsComplete) {
-            updateRow.collection = r.collection;
-          } else if (isEmptyOrDefault("collection", existing.collection) && !isEmptyOrDefault("collection", r.collection)) {
-            updateRow.collection = r.collection;
-          }
-          updateRows.push(updateRow as (typeof rows)[0]);
-        } else {
-          insertRows.push(r);
+        }
+
+        // Descriptions are only ever fetched for designs that don't exist in the DB yet.
+        let descriptionErrors = 0;
+        const descriptions = newRows.length
+          ? await fetchNewDescriptions(
+              newRows.map((r) => r.externalId),
+              (workId, error) => {
+                descriptionErrors++;
+                errorMessages.push(`Failed to fetch description for ${workId}: ${error}`);
+              },
+            )
+          : new Map<number, string>();
+        errorsCount += descriptionErrors;
+
+        const nowIso = new Date().toISOString();
+        for (const r of newRows) {
+          insertRows.push({ ...r, description: descriptions.get(r.externalId) ?? "", updatedAt: nowIso });
+        }
+
+        if (unchanged > 0) {
+          warnings.push(`${unchanged} existing row(s) left unchanged: collections crawl incomplete`);
         }
       }
     }
-  }
 
-  const baseResult = (): Omit<SyncResult, "inserted" | "updated" | "skipped" | "errors" | "collections"> => ({
-    fetchedProductLinks: productLinks.length,
-    parsedProducts: designs.length,
-    errorMessages,
-    dryRun,
-    warnings,
-  });
+    const baseResult = (): Omit<SyncResult, "inserted" | "updated" | "skipped" | "errors" | "collections"> => ({
+      fetchedProductLinks: productLinks.length,
+      parsedProducts: designs.length,
+      errorMessages,
+      dryRun,
+      warnings,
+    });
 
-  if (dryRun) {
-    const collectionsPlan = collections.map((c) => ({
-      externalId: c.externalId,
-      title: c.title,
-      description: c.description,
-      coverImageUrl: c.coverImageUrl,
-    }));
-    const plannedExternalIds = new Set(
-      [...insertRows, ...updateRows].map((r) => (r as { externalId: number }).externalId),
-    );
-    const linksPlan = designs
-      .filter((d) => plannedExternalIds.has(d.externalId))
-      .map((d) => ({
-        externalId: d.externalId,
-        collections: (d.collections || [])
-          .map((title) => collectionByTitle.get(title)?.externalId)
-          .filter((id): id is number => id !== undefined),
+    if (dryRun) {
+      const collectionsPlan = collections.map((c) => ({
+        externalId: c.externalId,
+        title: c.title,
+        description: c.description,
+        coverImageUrl: c.coverImageUrl,
       }));
+      const plannedExternalIds = new Set([
+        ...insertRows.map((r) => r.externalId),
+        ...updateRows.map((r) => r.externalId),
+      ]);
+      const linksPlan = designs
+        .filter((d) => plannedExternalIds.has(d.externalId))
+        .map((d) => ({
+          externalId: d.externalId,
+          collections: (d.collections || [])
+            .map((title) => collectionByTitle.get(title)?.externalId)
+            .filter((id): id is number => id !== undefined),
+        }));
+
+      return {
+        ...baseResult(),
+        inserted: insertRows.length,
+        updated: updateRows.length,
+        skipped,
+        errors: errorsCount,
+        plan: { insert: insertRows, update: updateRows, collections: collectionsPlan, links: linksPlan },
+        collections: { found: collections.length, upserted: 0, links: 0 },
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    for (const insertChunk of chunk(insertRows, 100)) {
+      const { data, error } = await supabase.from("designs").insert(insertChunk).select("id");
+      if (error) {
+        errorsCount += insertChunk.length;
+        errorMessages.push(error.message);
+      } else {
+        inserted += data?.length || 0;
+        insertChunk.forEach((r) => successfulExternalIds.push(r.externalId));
+      }
+    }
+
+    // Per-row `.update()` (only `collection`/`updatedAt`) rather than a batch upsert: a
+    // batch upsert with only these columns would violate NOT NULL constraints on the other
+    // columns when Postgres builds the (never-taken) insert branch of ON CONFLICT DO UPDATE.
+    for (const r of updateRows) {
+      const { error } = await supabase
+        .from("designs")
+        .update({ collection: r.collection, updatedAt: nowIso })
+        .eq("externalId", r.externalId);
+      if (error) {
+        errorsCount += 1;
+        errorMessages.push(error.message);
+      } else {
+        updated += 1;
+        successfulExternalIds.push(r.externalId);
+      }
+    }
+
+    let collectionsUpserted = 0;
+    let linksWritten = 0;
+
+    if (collectionsComplete && collections.length) {
+      const collectionRows = collections.map((c) => ({
+        externalId: c.externalId,
+        title: c.title,
+        description: c.description,
+        coverImageUrl: c.coverImageUrl,
+        updatedAt: nowIso,
+      }));
+
+      const collectionIdByExternalId = new Map<number, string>();
+      let collectionsUpsertOk = true;
+      for (const rowChunk of chunk(collectionRows, 100)) {
+        const { data, error } = await supabase
+          .from("collections")
+          .upsert(rowChunk, { onConflict: "externalId" })
+          .select("id, externalId");
+        if (error) {
+          collectionsUpsertOk = false;
+          errorsCount += rowChunk.length;
+          errorMessages.push(error.message);
+          continue;
+        }
+        collectionsUpserted += data?.length || 0;
+        for (const row of (data as { id: string; externalId: number }[] | null) || []) {
+          collectionIdByExternalId.set(row.externalId, row.id);
+        }
+      }
+
+      if (!collectionsUpsertOk) {
+        // A failed collections-upsert chunk means `collectionIdByExternalId` (and therefore
+        // `currentCollectionUuids`) is missing some still-valid collections — the "remove
+        // links to collections no longer in this run's fetch" delete would then wrongly
+        // treat those as gone and delete their links. Skip the whole design_collections
+        // phase rather than write/delete from an incomplete collection set.
+        warnings.push("Skipped collection links: collections upsert failed");
+      } else if (successfulExternalIds.length) {
+        const designIdByExternalId = new Map<number, string>();
+        for (const idChunk of chunk(successfulExternalIds, 100)) {
+          const { data, error } = await supabase
+            .from("designs")
+            .select(DESIGN_ID_LOOKUP_COLUMNS)
+            .in("externalId", idChunk);
+          if (error) {
+            errorsCount += idChunk.length;
+            errorMessages.push(error.message);
+            continue;
+          }
+          for (const row of (data as { id: string; externalId: number }[] | null) || []) {
+            designIdByExternalId.set(row.externalId, row.id);
+          }
+        }
+
+        const designByExternalId = new Map(designs.map((d) => [d.externalId, d]));
+        const currentCollectionUuids = Array.from(collectionIdByExternalId.values());
+
+        // Written per chunk of designs, upsert-before-delete: a failed upsert leaves the
+        // chunk's existing links untouched (never delete-first, which would zero out a
+        // design's links if the following insert then failed).
+        for (const idChunk of chunk(Array.from(designIdByExternalId.entries()), 100)) {
+          const chunkDesignIds = idChunk.map(([, designId]) => designId);
+          const memberCollectionIdsByDesignId = new Map<string, Set<string>>();
+          const newLinkRows: { designId: string; collectionId: string }[] = [];
+
+          for (const [externalId, designId] of idChunk) {
+            const design = designByExternalId.get(externalId);
+            const memberIds = new Set<string>();
+            for (const title of design?.collections || []) {
+              const collection = collectionByTitle.get(title);
+              const collectionId = collection ? collectionIdByExternalId.get(collection.externalId) : undefined;
+              if (collectionId) {
+                memberIds.add(collectionId);
+                newLinkRows.push({ designId, collectionId });
+              }
+            }
+            memberCollectionIdsByDesignId.set(designId, memberIds);
+          }
+
+          let upsertOk = true;
+          if (newLinkRows.length) {
+            const { data, error } = await supabase
+              .from("design_collections")
+              .upsert(newLinkRows, { onConflict: "designId,collectionId", ignoreDuplicates: true })
+              .select();
+            if (error) {
+              upsertOk = false;
+              errorsCount += chunkDesignIds.length;
+              errorMessages.push(error.message);
+            } else {
+              linksWritten += data?.length ?? newLinkRows.length;
+            }
+          }
+
+          if (!upsertOk) continue;
+
+          // Remove links for collections the design is no longer a member of, one delete
+          // per known collection scoped to this chunk (skipped when nothing to remove).
+          for (const collection of collections) {
+            const collectionId = collectionIdByExternalId.get(collection.externalId);
+            if (!collectionId) continue;
+            const nonMemberDesignIds = chunkDesignIds.filter(
+              (designId) => !memberCollectionIdsByDesignId.get(designId)?.has(collectionId),
+            );
+            if (!nonMemberDesignIds.length) continue;
+            const { error } = await supabase
+              .from("design_collections")
+              .delete()
+              .eq("collectionId", collectionId)
+              .in("designId", nonMemberDesignIds);
+            if (error) {
+              errorsCount += nonMemberDesignIds.length;
+              errorMessages.push(error.message);
+            }
+          }
+
+          // Remove links to collections that no longer exist at all in this run's fetch.
+          if (currentCollectionUuids.length) {
+            const { error } = await supabase
+              .from("design_collections")
+              .delete()
+              .in("designId", chunkDesignIds)
+              .not("collectionId", "in", toPostgrestInList(currentCollectionUuids));
+            if (error) {
+              errorsCount += chunkDesignIds.length;
+              errorMessages.push(error.message);
+            }
+          }
+        }
+      }
+    }
 
     return {
       ...baseResult(),
-      inserted: insertRows.length,
-      updated: updateRows.length,
+      inserted,
+      updated,
       skipped,
       errors: errorsCount,
-      plan: { insert: insertRows, update: updateRows, collections: collectionsPlan, links: linksPlan },
-      collections: { found: collections.length, upserted: 0, links: 0 },
+      collections: { found: collections.length, upserted: collectionsUpserted, links: linksWritten },
     };
+  } finally {
+    await close();
   }
-
-  const successfulExternalIds: number[] = [];
-
-  for (const insertChunk of chunk(insertRows, 100)) {
-    const { data, error } = await supabase.from("designs").insert(insertChunk).select("id");
-    if (error) {
-      errorsCount += insertChunk.length;
-      errorMessages.push(error.message);
-    } else {
-      inserted += data?.length || 0;
-      insertChunk.forEach((r) => successfulExternalIds.push((r as { externalId: number }).externalId));
-    }
-  }
-
-  for (const updateChunk of chunk(updateRows, 100)) {
-    const { data, error } = await supabase
-      .from("designs")
-      .upsert(updateChunk, { onConflict: "externalId" })
-      .select("id");
-    if (error) {
-      errorsCount += updateChunk.length;
-      errorMessages.push(error.message);
-    } else {
-      updated += data?.length || 0;
-      updateChunk.forEach((r) => successfulExternalIds.push((r as { externalId: number }).externalId));
-    }
-  }
-
-  let collectionsUpserted = 0;
-  let linksWritten = 0;
-
-  if (collectionsComplete && collections.length) {
-    const nowIso = new Date().toISOString();
-    const collectionRows = collections.map((c) => ({
-      externalId: c.externalId,
-      title: c.title,
-      description: c.description,
-      coverImageUrl: c.coverImageUrl,
-      updatedAt: nowIso,
-    }));
-
-    const collectionIdByExternalId = new Map<number, string>();
-    let collectionsUpsertOk = true;
-    for (const rowChunk of chunk(collectionRows, 100)) {
-      const { data, error } = await supabase
-        .from("collections")
-        .upsert(rowChunk, { onConflict: "externalId" })
-        .select("id, externalId");
-      if (error) {
-        collectionsUpsertOk = false;
-        errorsCount += rowChunk.length;
-        errorMessages.push(error.message);
-        continue;
-      }
-      collectionsUpserted += data?.length || 0;
-      for (const row of (data as { id: string; externalId: number }[] | null) || []) {
-        collectionIdByExternalId.set(row.externalId, row.id);
-      }
-    }
-
-    if (!collectionsUpsertOk) {
-      // A failed collections-upsert chunk means `collectionIdByExternalId` (and therefore
-      // `currentCollectionUuids`) is missing some still-valid collections — the "remove
-      // links to collections no longer in this run's fetch" delete would then wrongly
-      // treat those as gone and delete their links. Skip the whole design_collections
-      // phase rather than write/delete from an incomplete collection set.
-      warnings.push("Skipped collection links: collections upsert failed");
-    } else if (successfulExternalIds.length) {
-      const designIdByExternalId = new Map<number, string>();
-      for (const idChunk of chunk(successfulExternalIds, 100)) {
-        const { data, error } = await supabase
-          .from("designs")
-          .select(DESIGN_ID_LOOKUP_COLUMNS)
-          .in("externalId", idChunk);
-        if (error) {
-          errorsCount += idChunk.length;
-          errorMessages.push(error.message);
-          continue;
-        }
-        for (const row of (data as { id: string; externalId: number }[] | null) || []) {
-          designIdByExternalId.set(row.externalId, row.id);
-        }
-      }
-
-      const designByExternalId = new Map(designs.map((d) => [d.externalId, d]));
-      const currentCollectionUuids = Array.from(collectionIdByExternalId.values());
-
-      // Written per chunk of designs, upsert-before-delete: a failed upsert leaves the
-      // chunk's existing links untouched (never delete-first, which would zero out a
-      // design's links if the following insert then failed).
-      for (const idChunk of chunk(Array.from(designIdByExternalId.entries()), 100)) {
-        const chunkDesignIds = idChunk.map(([, designId]) => designId);
-        const memberCollectionIdsByDesignId = new Map<string, Set<string>>();
-        const newLinkRows: { designId: string; collectionId: string }[] = [];
-
-        for (const [externalId, designId] of idChunk) {
-          const design = designByExternalId.get(externalId);
-          const memberIds = new Set<string>();
-          for (const title of design?.collections || []) {
-            const collection = collectionByTitle.get(title);
-            const collectionId = collection ? collectionIdByExternalId.get(collection.externalId) : undefined;
-            if (collectionId) {
-              memberIds.add(collectionId);
-              newLinkRows.push({ designId, collectionId });
-            }
-          }
-          memberCollectionIdsByDesignId.set(designId, memberIds);
-        }
-
-        let upsertOk = true;
-        if (newLinkRows.length) {
-          const { data, error } = await supabase
-            .from("design_collections")
-            .upsert(newLinkRows, { onConflict: "designId,collectionId", ignoreDuplicates: true })
-            .select();
-          if (error) {
-            upsertOk = false;
-            errorsCount += chunkDesignIds.length;
-            errorMessages.push(error.message);
-          } else {
-            linksWritten += data?.length ?? newLinkRows.length;
-          }
-        }
-
-        if (!upsertOk) continue;
-
-        // Remove links for collections the design is no longer a member of, one delete
-        // per known collection scoped to this chunk (skipped when nothing to remove).
-        for (const collection of collections) {
-          const collectionId = collectionIdByExternalId.get(collection.externalId);
-          if (!collectionId) continue;
-          const nonMemberDesignIds = chunkDesignIds.filter(
-            (designId) => !memberCollectionIdsByDesignId.get(designId)?.has(collectionId),
-          );
-          if (!nonMemberDesignIds.length) continue;
-          const { error } = await supabase
-            .from("design_collections")
-            .delete()
-            .eq("collectionId", collectionId)
-            .in("designId", nonMemberDesignIds);
-          if (error) {
-            errorsCount += nonMemberDesignIds.length;
-            errorMessages.push(error.message);
-          }
-        }
-
-        // Remove links to collections that no longer exist at all in this run's fetch.
-        if (currentCollectionUuids.length) {
-          const { error } = await supabase
-            .from("design_collections")
-            .delete()
-            .in("designId", chunkDesignIds)
-            .not("collectionId", "in", toPostgrestInList(currentCollectionUuids));
-          if (error) {
-            errorsCount += chunkDesignIds.length;
-            errorMessages.push(error.message);
-          }
-        }
-      }
-    }
-  }
-
-  return {
-    ...baseResult(),
-    inserted,
-    updated,
-    skipped,
-    errors: errorsCount,
-    collections: { found: collections.length, upserted: collectionsUpserted, links: linksWritten },
-  };
 }
 
 export async function syncRedbubbleToSupabase(options: RedbubbleSyncOptions): Promise<SyncResult> {
