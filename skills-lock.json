@@ -42,6 +42,12 @@
       "sourceType": "github",
       "skillPath": "src/skills/ui-audit/SKILL.md",
       "computedHash": "0287ca49cc7ad44559085f8588f2fedf9c9c5cc66b7959424de21821e6b3ab3b"
+    },
+    "vercel-cli-with-tokens": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/vercel-cli-with-tokens/SKILL.md",
+      "computedHash": "d3ad6e1d6278a4df322ee5bf49211f921f4aaea1148fb127b4e928de04b39fef"
     }
   }
 }
