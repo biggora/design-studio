@@ -20,9 +20,10 @@
   /* Indigo Thread — the single interactive hue */
   --accent: 197 70% 24%;
   --accent-foreground: 132 8% 84%;
-  /* Warp Grey — muted text and borders; --muted is its light surface tint */
+  /* Warp Grey — muted text and borders; --muted is its light surface tint.
+     Deep step (34%) so muted text passes AA on white (6.9:1) and Linen Mist (4.8:1). */
   --muted: 190 12% 90%;
-  --muted-foreground: 190 12% 51%;
+  --muted-foreground: 190 12% 34%;
   /* Linen Mist field */
   --background: 132 8% 84%;
   --foreground: 206 20% 16%;

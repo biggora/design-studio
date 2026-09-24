@@ -1,18 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useContext } from "react";
+import { ConfigContext } from "@/app/wrapper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
+type Status = "idle" | "submitting" | "success" | "not_configured" | "error";
+
 export default function ContactForm() {
+  const config = useContext(ConfigContext);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     message: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
+  const [status, setStatus] = useState<Status>("idle");
+
+  const studioEmail = (config?.email || "").trim();
+  const mailtoHref = studioEmail
+    ? `mailto:${studioEmail}?subject=${encodeURIComponent(
+        `Message from ${formData.name || "the website"}`
+      )}`
+    : "";
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -22,32 +33,58 @@ export default function ContactForm() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setStatus("idle");
+    setStatus("submitting");
     try {
-      // Simulate or execute submission
-      console.log("Form submitted:", formData);
-      setFormData({ name: "", email: "", message: "" });
-      setStatus("success");
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      if (response.ok) {
+        setFormData({ name: "", email: "", message: "" });
+        setStatus("success");
+      } else if (response.status === 501) {
+        setStatus("not_configured");
+      } else {
+        setStatus("error");
+      }
     } catch {
       setStatus("error");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
+  const directEmailLine = mailtoHref ? (
+    <>
+      {" "}
+      <a href={mailtoHref} className="underline text-accent">
+        email us directly
+      </a>
+      .
+    </>
+  ) : (
+    "."
+  );
+
   return (
     <div>
-      {status === "success" && (
-        <div className="mb-4 p-4 text-green-800 bg-green-100 rounded-md">
-          Thank you for reaching out! Your message has been sent successfully.
-        </div>
-      )}
-      {status === "error" && (
-        <div className="mb-4 p-4 text-red-800 bg-red-100 rounded-md">
-          Something went wrong. Please try again.
-        </div>
-      )}
+      <div aria-live="polite">
+        {status === "success" && (
+          <div className="mb-4 p-4 text-green-800 bg-green-100 rounded-md">
+            Message sent. We&apos;ll get back to you soon.
+          </div>
+        )}
+        {status === "not_configured" && (
+          <div className="mb-4 p-4 text-foreground bg-muted rounded-md">
+            Message sending isn&apos;t set up on this site yet. Please
+            {directEmailLine}
+          </div>
+        )}
+        {status === "error" && (
+          <div className="mb-4 p-4 text-red-800 bg-red-100 rounded-md">
+            Message failed to send. Please try again, or{directEmailLine}
+          </div>
+        )}
+      </div>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label htmlFor="name" className="block mb-1 text-foreground">
@@ -88,8 +125,8 @@ export default function ContactForm() {
             rows={4}
           />
         </div>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Sending..." : "Send Message"}
+        <Button type="submit" disabled={status === "submitting"}>
+          {status === "submitting" ? "Sending…" : "Send Message"}
         </Button>
       </form>
     </div>

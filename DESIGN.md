@@ -50,6 +50,11 @@ components:
     padding: "8px 24px"
   button-primary-hover:
     backgroundColor: "{colors.thread-shadow}"
+  button-secondary:
+    backgroundColor: "{colors.card-white}"
+    textColor: "{colors.indigo-thread}"
+    rounded: "{rounded.md}"
+    padding: "8px 16px"
   link-accent:
     textColor: "{colors.indigo-thread}"
   icon-link:
@@ -78,7 +83,7 @@ The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate
 
 The system is a **default theme, not a brand**. Design Studio is a white-label product (see [PRODUCT.md](PRODUCT.md)): every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the `:root` CSS custom properties in `app/globals.css`, consumed through the Tailwind theme mapping in `tailwind.config.ts`; per-deployment theming rides on `config/config.json` (or the `studio` table) and the allow-listed `themeLink` stylesheet hook. Anything visual that cannot be changed from that layer is a defect.
 
-The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` now carries the rendered Warp Grey), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
+The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` is a deep step of the Warp Grey ramp at 34% lightness so muted text passes AA on white (6.8:1) and Linen Mist (4.8:1); muted text on dark bands uses `text-primary-foreground/70…95` instead of the muted token, which would invert the contrast), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
 
 **Key Characteristics:**
 
@@ -131,7 +136,7 @@ Sanctioned exceptions: Tailwind `green-100/green-800` and `red-100/red-800` for 
 
 ## Layout
 
-A fixed dark header (64px tall, full width, z-10) with `pt-16` compensation on the content container; content sits in a centered `container` with responsive gutters (16px → 24px at `sm` → 32px at `lg`). The home hero is full-bleed: a full-viewport carousel (`100vh − 64px`) sliding under the header with a Loom Ink overlay at 60% opacity and centered display type.
+A fixed dark header (64px tall, full width, z-10) with `pt-16` compensation on the content container; content sits in a centered `container` with responsive gutters (16px → 24px at `sm` → 32px at `lg`). The home hero is full-bleed: a 60vh carousel sliding under the header with a Loom Ink overlay at 60% opacity and centered display type. Autoplay respects `prefers-reduced-motion` (off by default for those visitors) and a visible play/pause toggle sits in the hero's bottom-right corner.
 
 Catalog grids flow 1 column → 2 at `sm` (640px) → 3 at `lg` (1024px) with 24px gaps; featured sections use 1 → 3 at `md`. The design-detail page splits into a 2-column card (image | 24px-padded content) at `md`. Vertical rhythm runs on 16/32/48px section spacing; the footer is a 3-column flex-wrap band. Content minimum height keeps the footer down-page (`calc(100vh − 160px)`).
 
@@ -158,7 +163,8 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Shape:** softly rounded (6px)
 - **Primary:** Indigo Thread background, Linen Mist text, 8px/24px padding — used for form submits, pagination, cookie consent
 - **Hover / Focus:** background shifts to Thread Shadow on hover (`transition-colors`); 2px Indigo Thread focus ring; disabled fades to 50% opacity
-- **Secondary / Ghost:** none exist; text links and icon links cover those roles
+- **Secondary / Outline:** quiet labeled action for external commerce links (e.g. "Buy on Redbubble ↗"): Card White surface, 1px Warp Grey border, 6px radius, Indigo Thread label with a 20px marketplace glyph; hover shifts label and border to Indigo Thread emphasis over a light muted fill — color shift only
+- **Trust line:** a one-line muted caption sits under any outbound commerce CTA ("Printed & shipped by our partner — opens in a new tab"); it names the handoff so the exit never surprises
 
 ### Links
 - **Text links:** Indigo Thread, underline on hover ("View Design Details", collection links, back-links)
@@ -183,7 +189,7 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Footer:** Thread Shadow band, three flex-wrap columns (brand, quick links, social icons), Warp Grey links hovering to Linen Mist
 
 ### Hero Carousel (signature)
-Full-viewport slides under the header; each slide is edge-to-edge imagery beneath a 60% Loom Ink scrim carrying centered Display and Body type in Linen Mist / Warp Grey. Pagination dots rest at Warp Grey, active at Indigo Thread; arrows at Indigo Thread. Autoplays every 5 seconds, 500ms per slide.
+Full-bleed 60vh slides under the header; each slide is edge-to-edge imagery beneath a 60% Loom Ink scrim carrying centered Display and Body type in Linen Mist / Linen Mist-95. Pagination dots rest at the muted ramp, active at Indigo Thread; arrows at Indigo Thread. A circular scrim play/pause toggle (44px tap target, bottom-right) controls autoplay; autoplay is disabled by default under `prefers-reduced-motion`. When it runs: 5-second cadence, 500ms slide.
 
 ### Cookie Banner
 Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist with an underlined privacy link, and a standard primary button for consent.

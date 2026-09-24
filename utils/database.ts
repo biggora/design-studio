@@ -68,6 +68,16 @@ function getProvider(): string {
     return provider;
 }
 
+// The sync pipeline stores "no_collection" when a design has no collection;
+// that sentinel is for query bookkeeping and must never reach the UI, which
+// treats an empty collection as "no collection".
+const NO_COLLECTION_SENTINEL = "no_collection";
+
+function normalizeCollection(value: unknown): string {
+    const collection = typeof value === "string" ? value.trim() : "";
+    return collection && collection !== NO_COLLECTION_SENTINEL ? collection : "";
+}
+
 export function mapRowToDesign(row: mysql.RowDataPacket): Design {
     return {
         id: row.id as string,
@@ -76,7 +86,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         externalLink: row.externalLink as string,
         externalImageUrl: row.externalImageUrl as string,
         category: row.category as string,
-        collection: row.collection as string,
+        collection: normalizeCollection(row.collection),
         imageName: row.imageName as string,
         description: row.description as string,
         keywords: row.keywords as string,
@@ -221,7 +231,7 @@ export async function fetchDesigns(
             externalLink: item.externalLink as string,
             externalImageUrl: item.externalImageUrl as string,
             category: item.category as string,
-            collection: item.collection as string,
+            collection: normalizeCollection(item.collection),
             imageName: item.imageName as string,
             description: item.description as string,
             keywords: item.keywords as string,
@@ -327,7 +337,7 @@ export async function getDesignById(
             externalLink: designData.externalLink as string,
             externalImageUrl: designData.externalImageUrl as string,
             category: designData.category as string,
-            collection: designData.collection as string,
+            collection: normalizeCollection(designData.collection),
             imageName: designData.imageName as string,
             description: designData.description as string,
             keywords: designData.keywords as string,
@@ -343,40 +353,11 @@ export async function getDesignById(
             props: designData.props as object | undefined,
         };
 
-        const {data: relatedData, error: relatedError} = await supabaseClient
-            .from("designs")
-            .select("*")
-            .eq("collection", design.collection || "")
-            .neq("id", id)
-            .limit(3);
-
-        if (relatedError) {
-            console.error("Error fetching related designs:", relatedError);
-        }
-
-        // Convert to Design[]
-        const relatedDesigns: Design[] = (relatedData || []).map(item => ({
-            id: item.id as string,
-            externalId: item.externalId as number,
-            title: item.title as string,
-            externalLink: item.externalLink as string,
-            externalImageUrl: item.externalImageUrl as string,
-            category: item.category as string,
-            collection: item.collection as string,
-            imageName: item.imageName as string,
-            description: item.description as string,
-            keywords: item.keywords as string,
-            backgroundColors: item.backgroundColors as string,
-            backgroundColor: item.backgroundColor as string,
-            createdAt: item.createdAt as string,
-            updatedAt: item.updatedAt as string,
-            dimensions: item.dimensions as string | undefined,
-            material: item.material as string | undefined,
-            price: item.price as number | undefined,
-            inStock: item.inStock as boolean | undefined,
-            shared: item.shared as boolean | undefined,
-            props: item.props as object | undefined,
-        }));
+        // "More from this collection" only makes sense when the design has one;
+        // an uncollected design would otherwise match legacy empty rows.
+        const relatedDesigns: Design[] = design.collection
+            ? await fetchRelatedByCollection(supabaseClient, design.collection, id)
+            : [];
 
         return {design, relatedDesigns};
     }
@@ -386,23 +367,52 @@ export async function getDesignById(
         "SELECT * FROM designs WHERE id = ?",
         [id],
     );
-    
+
     if (!rows.length) {
         return null;
     }
-    
+
     // Convert to Design
     const design: Design = mapRowToDesign(rows[0]);
 
-    const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
-        "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 3",
-        [design.collection || "", id],
-    );
-
-    // Convert to Design[]
-    const relatedDesigns: Design[] = relatedRows.map(mapRowToDesign);
+    const relatedDesigns: Design[] = design.collection
+        ? await fetchRelatedByCollectionMySQL(pool, design.collection, id)
+        : [];
 
     return {design, relatedDesigns};
+}
+
+async function fetchRelatedByCollection(
+    supabaseClient: ReturnType<typeof createClient>,
+    collection: string,
+    id: string,
+): Promise<Design[]> {
+    const {data: relatedData, error: relatedError} = await supabaseClient
+        .from("designs")
+        .select("*")
+        .eq("collection", collection)
+        .neq("id", id)
+        .limit(3);
+
+    if (relatedError) {
+        console.error("Error fetching related designs:", relatedError);
+        return [];
+    }
+
+    return (relatedData || []).map(mapSupabaseRowToDesign);
+}
+
+async function fetchRelatedByCollectionMySQL(
+    pool: mysql.Pool,
+    collection: string,
+    id: string,
+): Promise<Design[]> {
+    const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 3",
+        [collection, id],
+    );
+
+    return relatedRows.map(mapRowToDesign);
 }
 
 async function fetchLegacyCollections(provider: string): Promise<string[]> {
@@ -443,7 +453,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         externalLink: item.externalLink as string,
         externalImageUrl: item.externalImageUrl as string,
         category: item.category as string,
-        collection: item.collection as string,
+        collection: normalizeCollection(item.collection),
         imageName: item.imageName as string,
         description: item.description as string,
         keywords: item.keywords as string,

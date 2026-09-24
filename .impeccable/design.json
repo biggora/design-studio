@@ -55,7 +55,7 @@
     "motion": [
       { "name": "color-shift", "value": "color 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default transition for all interactive state changes (links, buttons, icon links)." },
       { "name": "carousel-slide", "value": "500ms ease", "purpose": "Hero carousel slide transition." },
-      { "name": "carousel-autoplay", "value": "5000ms interval", "purpose": "Hero carousel autoplay cadence." }
+      { "name": "carousel-autoplay", "value": "5000ms interval", "purpose": "Hero carousel autoplay cadence; toggleable via a visible play/pause control and disabled by default under prefers-reduced-motion." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
@@ -65,6 +65,14 @@
     ]
   },
   "components": [
+    {
+      "name": "Secondary Outline Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet labeled action for external commerce links (Buy on Redbubble, with marketplace glyph and external arrow); color-shift hover.",
+      "html": "<a class=\"ds-btn-secondary\" href=\"#\">Buy on Redbubble <span aria-hidden=\"true\">&#8599;</span></a>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 8px; background: #FFFFFF; color: #124E66; border: 1px solid #748D92; border-radius: 6px; padding: 8px 16px; font-family: Inter, system-ui, sans-serif; font-size: 16px; text-decoration: none; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-secondary:hover { border-color: #124E66; background: hsl(190 12% 90%); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; }"
+    },
     {
       "name": "Primary Button",
       "kind": "button",
@@ -130,7 +138,7 @@
   ],
   "narrative": {
     "northStar": "The Misty Loom — a calm, atmospheric default skin stretched over a fully configurable chassis.",
-    "overview": "The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the :root CSS custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nThe token layer is complete: every var the Tailwind mapping consumes is defined in :root, the old --muted drift is closed (--muted-foreground carries the rendered Warp Grey), and components consume token classes (bg-primary, text-accent, border-input, ring-ring) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome themeColor meta value in app/layout.tsx (which cannot consume a CSS variable). Reusable primitives live in components/ui/ (Button, Input, Textarea, Select, Card) on the shadcn convention components.json declares.",
+    "overview": "The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the :root CSS custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nThe token layer is complete: every var the Tailwind mapping consumes is defined in :root, the old --muted drift is closed (--muted-foreground is a deep step of the Warp Grey ramp at 34% lightness so muted text passes AA on white and Linen Mist; muted text on dark bands uses text-primary-foreground/70-95 instead of the muted token, which would invert the contrast), and components consume token classes (bg-primary, text-accent, border-input, ring-ring) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome themeColor meta value in app/layout.tsx (which cannot consume a CSS variable). Reusable primitives live in components/ui/ (Button, Input, Textarea, Select, Card) on the shadcn convention components.json declares.",
     "keyCharacteristics": [
       "Misty, low-chroma palette with a single saturated teal reserved for interaction",
       "Dark bands (header, footer) frame a light field; white cards carry content",

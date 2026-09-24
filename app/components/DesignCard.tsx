@@ -15,7 +15,7 @@ export function DesignCard({ design }: DesignCardProps) {
     <Card key={design.id}>
       <Link
         href={`/designs/${design.id}`}
-        className="text-accent hover:underline"
+        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative w-full aspect-[3/2] overflow-hidden bg-muted">
           <Image
@@ -28,19 +28,24 @@ export function DesignCard({ design }: DesignCardProps) {
         </div>
       </Link>
       <CardContent className="p-4 flex flex-col flex-grow">
-        <h2 className="text-xl font-semibold mb-2 text-foreground">
+        <h2 className="text-xl font-semibold mb-2 text-foreground line-clamp-2">
           {design.title}
         </h2>
-        <p className="text-muted-foreground mb-4">{design.description}</p>
-        <p className="text-muted-foreground mb-2">
-          Collection:&nbsp;
-          <Link href={`/designs?collection=${encodeURIComponent(design.collection)}`}>
-            {design.collection}
-          </Link>
-        </p>
+        <p className="text-muted-foreground mb-4 line-clamp-3">{design.description}</p>
+        {design.collection && (
+          <p className="text-muted-foreground mb-2">
+            Collection:&nbsp;
+            <Link
+              href={`/designs?collection=${encodeURIComponent(design.collection)}`}
+              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {design.collection}
+            </Link>
+          </p>
+        )}
         <Link
           href={`/designs/${design.id}`}
-          className="text-accent hover:underline mt-auto"
+          className="text-accent hover:underline mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           View Design Details
         </Link>

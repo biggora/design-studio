@@ -12,6 +12,12 @@ type ShopLinksProps = {
   styleTitle?: string;
 };
 
+const marketplaceLinks = [
+  { key: "redbubble", label: "Buy on Redbubble", href: undefined as string | undefined, Icon: RedBubble },
+  { key: "teePublic", label: "Buy on TeePublic", href: undefined as string | undefined, Icon: TeePublic },
+  { key: "tostaDora", label: "Buy on TostaDora", href: undefined as string | undefined, Icon: TostaDora },
+] as const;
+
 export default function ShopLinks({
   title,
   redBubble,
@@ -19,43 +25,30 @@ export default function ShopLinks({
   tostaDora,
   styleTitle = "text-2xl mb-4",
 }: ShopLinksProps) {
+  const links = { redbubble: redBubble, teePublic, tostaDora };
+  const configured = marketplaceLinks.filter((m) => links[m.key]);
+
+  if (configured.length === 0) return null;
+
   return (
     <>
-      <h2 className={`${styleTitle} font-semibold text-foreground`}>{title}</h2>
-      <div className="flex justify-start space-x-4">
-        {redBubble && (
+      {title.trim() && (
+        <h2 className={`${styleTitle} font-semibold text-foreground`}>{title}</h2>
+      )}
+      <div className="flex flex-wrap justify-start gap-3">
+        {configured.map(({ key, label, Icon }) => (
           <a
-            href={redBubble}
+            key={key}
+            href={links[key]}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
+            className="inline-flex items-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <RedBubble size={24} />
-            <span className="sr-only">RedBubble</span>
+            <Icon size={20} />
+            {label}
+            <span aria-hidden="true">&#8599;</span>
           </a>
-        )}
-        {teePublic && (
-          <a
-            href={teePublic}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <TeePublic size={24} />
-            <span className="sr-only">TeePublic</span>
-          </a>
-        )}
-        {tostaDora && (
-          <a
-            href={tostaDora}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <TostaDora size={24} />
-            <span className="sr-only">TostaDora</span>
-          </a>
-        )}
+        ))}
       </div>
     </>
   );

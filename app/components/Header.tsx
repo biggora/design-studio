@@ -23,25 +23,25 @@ export default function Header() {
           <nav className="hidden md:flex space-x-6">
             <Link
               href="/"
-              className="text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
             >
               Home
             </Link>
             <Link
               href="/designs"
-              className="text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
             >
               Our Designs
             </Link>
             <Link
               href="/about"
-              className="text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
             >
               About Us
             </Link>
             <Link
               href="/contact"
-              className="text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
             >
               Contact
             </Link>
@@ -51,7 +51,7 @@ export default function Header() {
               onClick={toggleMenu}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMenuOpen}
-              className="text-primary-foreground hover:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="text-primary-foreground hover:text-primary-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -64,28 +64,28 @@ export default function Header() {
           <div className="container mx-auto px-4 py-4 space-y-4">
             <Link
               href="/"
-              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
               onClick={toggleMenu}
             >
               Home
             </Link>
             <Link
               href="/designs"
-              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
               onClick={toggleMenu}
             >
               Our Designs
             </Link>
             <Link
               href="/about"
-              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
               onClick={toggleMenu}
             >
               About Us
             </Link>
             <Link
               href="/contact"
-              className="block text-primary-foreground hover:text-muted-foreground transition-colors"
+              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
               onClick={toggleMenu}
             >
               Contact

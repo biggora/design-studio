@@ -47,3 +47,6 @@ next-env.d.ts
 /.impeccable/critique/
 /.impeccable/live/annotations/
 /.impeccable/live/sessions/
+
+# impeccable live-server runtime state
+/.impeccable/live/server.json

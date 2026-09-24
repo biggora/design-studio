@@ -182,12 +182,14 @@ export default async function DesignDetails(
               {/*  </div>*/}
               {/*</div>*/}
               <div className={`grid grid-cols-1 md:grid-cols-2`}>
-                <p className="text-muted-foreground mb-4">
-                  Collection:&nbsp;
-                  <Link href={collectionUrl}>
-                    {design.collection}
-                  </Link>
-                </p>
+                {design.collection && (
+                  <p className="text-muted-foreground mb-4">
+                    Collection:&nbsp;
+                    <Link href={collectionUrl}>
+                      {design.collection}
+                    </Link>
+                  </p>
+                )}
                 <p className="text-muted-foreground mb-4 lg:text-right">
                   Created on: {formatDate(design.createdAt)}
                 </p>
@@ -200,7 +202,10 @@ export default async function DesignDetails(
               >
                 Shop products with this design
               </a>
-              <div className={`grid grid-cols-2 grid-md-cols-2`}>
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Printed &amp; shipped by our partner — opens in a new tab
+              </p>
+              <div className={`grid grid-cols-1 md:grid-cols-2`}>
                 <div className="flex justify-start items-center space-x-4 mt-4">
                   <ShareLinks
                     shareText={shareText}

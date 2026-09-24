@@ -33,7 +33,7 @@ export function CookieBanner() {
           site you agree to our use of cookies.{" "}
           <Link
             href="/privacy-policy"
-            className="underline hover:text-muted-foreground"
+            className="underline hover:text-primary-foreground/70"
           >
             Learn more
           </Link>

@@ -80,7 +80,7 @@ export default async function Home() {
           <h1 className="text-4xl font-bold mb-4">
             {config.name}: {config.intro}
           </h1>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-xl text-primary-foreground/90">
             Weaving innovation into every design
           </p>
         </section>
