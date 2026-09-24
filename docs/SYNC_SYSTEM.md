@@ -8,6 +8,7 @@ It solves the following tasks:
 
 - Collecting the current list of the author's shop products.
 - Extracting high-resolution artwork, titles, descriptions, categories, and tags.
+- Collecting the author's Redbubble **collections** and each design's membership in them — Redbubble is the source of truth here, so the crawl overwrites the local `collections` / `design_collections` tables.
 - Saving and updating (upsert) cards in the database without duplicates.
 - Bypassing anti-bot protection (Cloudflare Bot Management, Turnstile) and avoiding IP blocks.
 
@@ -87,19 +88,8 @@ Uses a full headless Chromium browser to render Redbubble's client-side JavaScri
     Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en"] });
   });
   ```
-- **Scroll emulation (infinite scroll & lazy loading)**:
-  `scrapeListingCards` performs up to 8 consecutive scrolls, checking `scrollHeight`:
-  ```typescript
-  for (let i = 0; i < 8; i += 1) {
-    const previous = await page.evaluate(() => document.body.scrollHeight);
-    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(1200);
-    const current = await page.evaluate(() => document.body.scrollHeight);
-    if (current === previous) break;
-  }
-  ```
-- **Extracting cards directly from the listing**:
-  DOM nodes matching `.xblock` and `[data-testid='search-result-card']` are parsed, which removes the need to send a separate HTTP request to every product page and cuts the number of requests to Redbubble by roughly an order of magnitude. The trade-off: cards scraped from the listing carry only `externalId`, `title`, `externalLink`, and `externalImageUrl`; `description` and `keywords` are stored as empty strings and `collection` is set to `no_collection`. Full metadata is only available in Cheerio mode (3.2). Pagination stops as soon as a page yields no cards.
+- **Extracting cards from `__NEXT_DATA__`**:
+  Redbubble's shop page embeds the full listing as JSON in `<script id="__NEXT_DATA__">` (`props.pageProps.results[].inventoryItem`). `parseShopNextData` (`lib/sync/redbubble.ts`) parses that JSON directly instead of scraping DOM cards, which removes the need to send a separate HTTP request to every product page and cuts the number of requests to Redbubble by roughly an order of magnitude. The trade-off: cards from the listing carry `externalId`, `title`, `keywords` (from `work.tags`), `externalLink`, `externalImageUrl` (the `product_close` preview, falling back to the first preview), and `category` (derived from the product URL); `description` is stored as an empty string since it isn't in the listing payload. Pagination stops once `page >= pagination.totalPages` or a page yields no designs. If `__NEXT_DATA__` is missing (layout change or a challenge page that slipped past the Cloudflare check), `parseShopNextData` throws and the run records the error.
 - **Session persistence (`storageState`)**:
   When `SYNC_PLAYWRIGHT_STORAGE_STATE_PATH` is set (`.env.example` ships `.cache/redbubble-storage-state.json`), cookies and localStorage are written to a JSON file on disk when the session closes, and the file is loaded again on the next run — so the browser starts with the security checks already passed. The `.cache` directory is created automatically if missing.
 
@@ -108,7 +98,7 @@ Uses a full headless Chromium browser to render Redbubble's client-side JavaScri
 Requires no browser or Chromium binaries, which makes it compatible with serverless environments (Vercel Serverless Functions).
 
 - **Step 1: Scan shop listing pages**:
-  Requests the listing HTML `buildShopPageUrl(shopUrl, page)` and uses Cheerio to collect links containing `/i/` or `/shop/ap/`.
+  Requests the listing HTML `buildShopPageUrl(shopUrl, page)` and takes product links from `parseShopNextData(html, pageUrl).designs[].externalLink`; if `__NEXT_DATA__` is missing, falls back to scanning `<a>` tags for links containing `/i/` or `/shop/ap/` (the pre-`__NEXT_DATA__` behavior). `buildShopPageUrl` always pins `sortOrder=recent` because the shop's default `top selling` sort overlaps between pages and silently drops designs from the crawl.
 - **Step 2: Parse product pages**:
   An HTTP GET request is issued for every discovered link, with concurrency capped by `SYNC_CONCURRENCY` (default 1).
 - **Step 3: Extract JSON-LD microdata**:
@@ -122,7 +112,16 @@ Requires no browser or Chromium binaries, which makes it compatible with serverl
   If microdata is missing or blocked, data is extracted from meta tags:
   `meta[property='og:title']`, `meta[property='og:image']`, `meta[property='og:description']`, `meta[name='keywords']`.
 
-### 3.3 Shop URL normalization and SSRF protection
+### 3.3 Collections crawl
+
+After the listing pages are scraped (in either mode), the artist's collections — read from `artistInfo.collections` on shop page 1 — are crawled to build design↔collection membership:
+
+- For each collection, `?collections=<externalId>&page=N` is requested (via the same fetch path as the active mode: the Playwright session's `fetchHtml`, or the plain Cheerio `fetch`), paced by the same `RequestPacer`, for `N` from 1 up to `min(totalPages, maxPages)`; these pages also pin `sortOrder=recent` for the same paging-overlap reason as the main listing.
+- Each filtered page is parsed with `parseShopNextData`; every design it contains is added to a **set** (not a list) of that collection's member ids — a design that shows up on more than one page of the same collection (paging overlap) is still only a member once. The final per-design `collections: string[]` is built from that set, in `artistInfo.collections` order — so a design that belongs to several collections gets `collections: ["Cats", "Dogs"]` in that order, and `collection` (the legacy single-value field) is set to the first title.
+- `collectionsComplete` is `true` only if **every** collection was fully crawled: a fetch failure (network error, Cloudflare, missing `__NEXT_DATA__`) marks it `false` and is recorded in `errors`; a collection whose `totalPages` exceeds `maxPages` (so only a prefix of its pages was fetched) also marks it `false` and adds a `Collection "<title>" truncated at maxPages=N of totalPages=M` warning — a partial membership must never be written as if it were complete. Either way the run skips writing collections/links entirely instead of writing from incomplete data (see §6.2).
+- Request cost example: an artist with 3 shop listing pages and 13 collections (each a single page) adds 13 requests to the 3 listing-page requests — no extra product-page requests, since collection pages reuse the same `__NEXT_DATA__` parsing as the shop listing.
+
+### 3.4 Shop URL normalization and SSRF protection
 
 Before any request is made, `normalizeShopUrl()` (`lib/sync/redbubble.ts`) validates the shop URL:
 
@@ -242,7 +241,8 @@ curl -X POST https://your-domain.com/api/sync/redbubble \
   "errors": 0,
   "errorMessages": [],
   "dryRun": false,
-  "warnings": []
+  "warnings": [],
+  "collections": { "found": 13, "upserted": 13, "links": 51 }
 }
 ```
 
@@ -270,9 +270,35 @@ Convenient for local development, initial catalog population, and dedicated cont
 npm run sync:redbubble
 ```
 
-The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `getSiteConfig()`, runs the same `syncRedbubbleToSupabase()` core, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure, including when the result reports `errors > 0`.
+The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `loadSiteConfig()` (falling back to `REDBUBBLE_SHOP_URL` if config isn't reachable), runs the sync, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure, including when the result reports `errors > 0`.
 
 Because RLS only grants anon `SELECT`, real writes require `SUPABASE_SERVICE_ROLE_KEY` — the script throws if it is missing. Pass `--dry-run` (or `npm run sync:redbubble:dry`) to preview the insert/update plan without writing; in dry-run mode the anon key is accepted since no write occurs.
+
+#### Output target (`--target`)
+
+`--target=db|json|both` (default `db`, or env `SYNC_TARGET`) controls where the scrape ends up:
+
+- `db` (default): scrapes and writes to Supabase only, same as before — `syncRedbubbleToSupabase` under the hood.
+- `json`: scrapes only (`fetchRedbubbleDesigns`) and writes the result to a JSON file. **Never creates a Supabase client** and never calls `loadSiteConfig()` unless `REDBUBBLE_SHOP_URL` is unset (in which case it tries config and fails with a clear error if that also comes up empty). Convenient for inspecting a scrape, or for feeding another process, without any DB credentials.
+- `both`: scrapes once, writes to Supabase, and also writes the JSON file (reusing the single scrape — it never scrapes twice).
+
+`--out=<path>` (default `.cache/redbubble-sync.json`, or env `SYNC_OUT`) sets the JSON file's location; the parent directory is created if missing. `.cache/` is gitignored.
+
+JSON file shape:
+
+```json
+{
+  "meta": { "shopUrl": "...", "fetchedAt": "2026-09-24T12:00:00.000Z", "mode": "playwright", "target": "json" },
+  "collections": [
+    { "externalId": 4167183, "title": "States of the USA", "description": null, "coverImageUrl": "...", "workIds": [173146884] }
+  ],
+  "designs": [ /* DesignRecord[], each with a `collections: string[]` title list */ ],
+  "result": { /* SyncResult — only present for --target=both */ },
+  "errors": []
+}
+```
+
+Run `npm run sync:redbubble:json` for the `json` target directly.
 
 ---
 
@@ -290,12 +316,26 @@ The `designs` table has two unique constraints — `externalId` and `title` (see
    If a chunk's read fails, that chunk's rows are added to `errors`, excluded from any write, and the next chunk is still processed.
 3. Classifies each remaining row:
    - **skip** — its title is already used by a different `externalId` in the database;
-   - **update** — an existing row for its `externalId` exists: `title`, `externalLink`, `externalImageUrl`, `imageName`, and `updatedAt` are always refreshed; `description`, `keywords`, `category`, `collection` are filled from the scraped value only if the existing value is empty or the schema default (`""`, `"no_category"`, `"no_collection"`); `id`, `createdAt`, `backgroundColor`, `backgroundColors`, `shared`, and `props` are never touched;
-   - **insert** — no existing row for its `externalId`, written as-is.
-4. In `dryRun` mode, no writes happen — the response includes `plan: { insert, update }` with the rows that would be written.
+   - **update** — an existing row for its `externalId` exists: `title`, `externalLink`, `externalImageUrl`, `imageName`, and `updatedAt` are always refreshed; `description`, `keywords`, `category` are filled from the scraped value only if the existing value is empty or the schema default (`""`, `"no_category"`); `collection` is overwritten unconditionally with the scraped value when the collections crawl succeeded (`collectionsComplete`, §3.3 — Redbubble is the source of truth), otherwise it falls back to the same fill-if-empty rule as `description`/`keywords`/`category`; `id`, `createdAt`, `backgroundColor`, `backgroundColors`, `shared`, and `props` are never touched;
+   - **insert** — no existing row for its `externalId`, written as-is (with the `collections` title list stripped — the `designs` table has no such column).
+4. In `dryRun` mode, no writes happen — the response includes `plan: { insert, update, collections, links }` with the rows that would be written (see §6.2).
 5. Otherwise, inserts and updates are written in separate chunked calls of 100 (`.insert(chunk).select("id")` and `.upsert(chunk, { onConflict: "externalId" }).select("id")`); a failed chunk adds its rows to `errors` and the Supabase error message to `errorMessages`, and the next chunk is still processed.
 
-### 6.2 Architectural caveat: target database of the sync
+### 6.2 Collections and `design_collections` write
+
+Only runs when the collections crawl fully succeeded (`collectionsComplete`, §3.3); otherwise a warning is added and this step is skipped entirely (existing `collections`/`design_collections` rows are left untouched — collections removed from a Redbubble collection just lose their links, the `collections` row itself is never deleted).
+
+1. Upserts `collections` by `externalId` (chunks of 100, `.select("id, externalId")` to get back each row's uuid).
+2. Resolves the uuid `id` of every design that was successfully inserted or updated in this run (chunks of 100, `.select("id, externalId").in("externalId", ids)` — a design whose insert/update chunk failed is excluded, so its links are never touched).
+3. For each chunk of 100 resolved designs, **link writes are upsert-before-delete** so a failed write can never leave a design with zero links:
+   - Builds the chunk's fresh `{ designId, collectionId }` rows from each design's `collections` title list and writes them with `.upsert(rows, { onConflict: "designId,collectionId", ignoreDuplicates: true }).select()`. A duplicate pair within the same design (e.g. paging overlap) can't occur — membership is deduped per design before this point (§3.3) — but `ignoreDuplicates` is also a safety net against a row that already exists from a previous run.
+   - If that upsert fails, the chunk's errors are counted, `errorMessages` gets the Supabase message, and **no delete is issued for that chunk** — existing links are left exactly as they were, and the next chunk is still processed.
+   - If it succeeds, stale links are removed for that chunk only: for each collection known this run, one `.delete().eq("collectionId", cid).in("designId", nonMemberIds)` scoped to the chunk's designs that are no longer members of it (skipped when there are none — keeps the request count to roughly `chunks × collections`, e.g. 3 chunks × 13 collections for ~300 designs); then one more `.delete().in("designId", chunkDesignIds).not("collectionId", "in", currentCollectionUuids)` to drop links to any collection that isn't part of this run's fetched set at all.
+4. Any failure at any of these steps is pushed to `errorMessages`, counted in `errors`, and does not abort the rest of the sync.
+
+`SyncResult.collections = { found, upserted, links }` reports the number of collections scraped, the number of collection rows upserted, and the number of `design_collections` rows successfully upserted (0/0 when `dryRun`, when `collectionsComplete` is `false`, or for a chunk whose link upsert failed).
+
+### 6.3 Architectural caveat: target database of the sync
 
 > **IMPORTANT ARCHITECTURAL NOTE**:
 > The sync core `syncRedbubbleToSupabase` (`lib/sync/redbubble.ts`) connects **directly to Supabase via `@supabase/supabase-js`**, using `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` (falling back to `NEXT_PUBLIC_SUPABASE_ANON_KEY`). It never writes to MySQL. The two entry points differ in how they handle `DATABASE_PROVIDER=mysql`:

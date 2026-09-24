@@ -129,25 +129,126 @@ CREATE TABLE designs (
 
 ---
 
-### 2.3 Row Level Security (PostgreSQL / Supabase)
+### 2.3 Table `collections` (Redbubble Collections)
 
-In addition to the tables, `init/postgres_tables.sql` enables Row Level Security and creates four policies:
+Stores Redbubble collections, each grouping a set of designs.
+
+#### PostgreSQL schema (`init/postgres_tables.sql`)
+```sql
+CREATE TABLE public.collections (
+    id UUID NOT NULL DEFAULT gen_random_uuid(),
+    "externalId" BIGINT NOT NULL,
+    title CHARACTER VARYING NOT NULL,
+    description TEXT NULL,
+    "coverImageUrl" TEXT NULL,
+    "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    "updatedAt" TIMESTAMP WITHOUT TIME ZONE NULL,
+    CONSTRAINT collections_pkey PRIMARY KEY (id),
+    CONSTRAINT collections_externalid_key UNIQUE ("externalId")
+) TABLESPACE pg_default;
+```
+
+#### MySQL schema (`init/mysql_tables.sql`)
+```sql
+CREATE TABLE collections (
+  id CHAR(36) NOT NULL DEFAULT (UUID()),
+  `externalId` BIGINT NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  `coverImageUrl` TEXT,
+  `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updatedAt` TIMESTAMP NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY collections_externalid_key(`externalId`)
+);
+```
+
+#### Field reference for `collections`
+| Field | PostgreSQL type | MySQL type | Constraints | Purpose |
+|---|---|---|---|---|
+| `id` | `UUID` | `CHAR(36)` | PRIMARY KEY, DEFAULT UUID | Internal unique record identifier. |
+| `externalId` | `BIGINT` | `BIGINT` | UNIQUE, NOT NULL | Unique numeric collection ID on Redbubble. Used for deduplication during synchronization. |
+| `title` | `VARCHAR` | `VARCHAR(255)` | NOT NULL | Collection title. |
+| `description` | `TEXT` | `TEXT` | NULL | Collection description, if available. |
+| `coverImageUrl` | `TEXT` | `TEXT` | NULL | Direct URL to the collection cover image. |
+| `createdAt` | `TIMESTAMP WITH TIME ZONE` | `TIMESTAMP` | DEFAULT NOW | Date the collection was added. |
+| `updatedAt` | `TIMESTAMP` | `TIMESTAMP` | NULL | Date of the last metadata update or synchronization. |
+
+Note: this table is distinct from the pre-existing `designs.collection` text column (a free-text label). `collections` models Redbubble collections as first-class entities, linked to `designs` via `design_collections`.
+
+---
+
+### 2.4 Table `design_collections` (Design ↔ Collection Join Table)
+
+Many-to-many join table linking `designs` to `collections`.
+
+#### PostgreSQL schema (`init/postgres_tables.sql`)
+```sql
+CREATE TABLE public.design_collections (
+    "designId" UUID NOT NULL REFERENCES public.designs (id) ON DELETE CASCADE,
+    "collectionId" UUID NOT NULL REFERENCES public.collections (id) ON DELETE CASCADE,
+    CONSTRAINT design_collections_pkey PRIMARY KEY ("designId", "collectionId")
+) TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS design_collections_collectionid_idx ON public.design_collections ("collectionId");
+```
+
+#### MySQL schema (`init/mysql_tables.sql`)
+```sql
+CREATE TABLE design_collections (
+  `designId` CHAR(36) NOT NULL,
+  `collectionId` CHAR(36) NOT NULL,
+  PRIMARY KEY (`designId`, `collectionId`),
+  KEY design_collections_collectionid_idx (`collectionId`),
+  CONSTRAINT design_collections_design_fk FOREIGN KEY (`designId`) REFERENCES designs (id) ON DELETE CASCADE,
+  CONSTRAINT design_collections_collection_fk FOREIGN KEY (`collectionId`) REFERENCES collections (id) ON DELETE CASCADE
+);
+```
+
+#### Field reference for `design_collections`
+| Field | PostgreSQL type | MySQL type | Constraints | Purpose |
+|---|---|---|---|---|
+| `designId` | `UUID` | `CHAR(36)` | PK (part 1), FK → `designs.id`, ON DELETE CASCADE | The design side of the relation. |
+| `collectionId` | `UUID` | `CHAR(36)` | PK (part 2), FK → `collections.id`, ON DELETE CASCADE, indexed | The collection side of the relation. |
+
+---
+
+### 2.5 Row Level Security (PostgreSQL / Supabase)
+
+In addition to the tables, `init/postgres_tables.sql` enables Row Level Security and creates eight policies:
 
 ```sql
 ALTER TABLE public.studio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.designs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.design_collections ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public Read Studio" ON public.studio FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "Public Read Designs" ON public.designs FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public Read Collections" ON public.collections FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public Read Design Collections" ON public.design_collections FOR SELECT TO anon, authenticated USING (true);
 
 CREATE POLICY "Service Role Studio All" ON public.studio FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Service Role Designs All" ON public.designs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Collections All" ON public.collections FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Design Collections All" ON public.design_collections FOR ALL TO service_role USING (true) WITH CHECK (true);
 ```
 
 Consequences:
 
-- The `anon` and `authenticated` Supabase roles can only **read** both tables — this is sufficient for the storefront.
+- The `anon` and `authenticated` Supabase roles can only **read** all four tables — this is sufficient for the storefront.
 - All writes (INSERT/UPDATE/DELETE, including the Redbubble sync upsert) must go through the **service role** key (`SUPABASE_SERVICE_ROLE_KEY`), which bypasses RLS. Attempts to write with the anon key fail with a row-level security policy violation.
+
+---
+
+### 2.6 Migrations
+
+For deployments that already have `studio` and `designs` provisioned, apply the `collections` / `design_collections` tables (and their RLS policies) with the idempotent scripts in `init/migrations/`:
+
+- `init/migrations/001_collections_postgres.sql` — run once in the Supabase SQL editor (or via `psql`). Uses `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and guards each `CREATE POLICY` with a `pg_policies` existence check, so it is safe to re-run.
+- `init/migrations/001_collections_mysql.sql` — run once via the `mysql` client. Uses `CREATE TABLE IF NOT EXISTS`.
+
+The full `init/postgres_tables.sql` / `init/mysql_tables.sql` scripts remain the source of truth for fresh installs; the migration scripts only backfill existing databases.
 
 ---
 
@@ -311,6 +412,8 @@ Returns the list of distinct collection names, excluding empty strings and the `
 ---
 
 ## 5. Step-by-Step Initialization and Migration Instructions
+
+> For an existing deployment that already has `studio`/`designs` and only needs the `collections`/`design_collections` tables added, skip to the idempotent scripts in `init/migrations/` (see § 2.6) instead of re-running the full files below.
 
 ### 5.1 Initializing in Supabase (PostgreSQL)
 

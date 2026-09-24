@@ -4,6 +4,7 @@ import {
   extractExternalIdFromUrl,
   RequestPacer,
   syncRedbubbleToSupabase,
+  parseShopNextData,
 } from "@/lib/sync/redbubble";
 
 // ---------------------------------------------------------------------------
@@ -121,18 +122,24 @@ describe("RequestPacer", () => {
 
 type Row = Record<string, unknown>;
 type MockResponse = { data: Row[] | null; error: { message: string } | null };
+type DeleteFilter = { op: "eq" | "in" | "not-in"; col: string; val: unknown };
 
 type Call =
   | { type: "select-in"; table: string; col: string; vals: unknown[] }
   | { type: "select-filter"; table: string; col: string; op: string; value: string }
   | { type: "insert"; table: string; rows: Row[] }
-  | { type: "upsert"; table: string; rows: Row[]; opts: Record<string, unknown> };
+  | { type: "upsert"; table: string; rows: Row[]; opts: Record<string, unknown> }
+  | { type: "delete"; table: string; filters: DeleteFilter[] };
 
 let calls: Call[] = [];
 let selectByIdResponses: MockResponse[] = [];
 let selectByTitleResponses: MockResponse[] = [];
 let insertResponses: MockResponse[] = [];
 let upsertResponses: MockResponse[] = [];
+let collectionsUpsertResponses: MockResponse[] = [];
+let designIdLookupResponses: MockResponse[] = [];
+let designCollectionsUpsertResponses: MockResponse[] = [];
+let designCollectionsDeleteResponses: MockResponse[] = [];
 
 function nextOr(queue: MockResponse[], rows: Row[]): Promise<MockResponse> {
   const queued = queue.shift();
@@ -146,12 +153,35 @@ function nextSelectResponse(queue: MockResponse[]): Promise<MockResponse> {
   return Promise.resolve({ data: [], error: null });
 }
 
+// Default id-resolution response: echoes back a synthetic design id for every requested
+// externalId, so tests that don't care about the collections wiring still get links written.
+function nextIdLookupResponse(queue: MockResponse[], vals: unknown[]): Promise<MockResponse> {
+  const queued = queue.shift();
+  if (queued) return Promise.resolve(queued);
+  return Promise.resolve({
+    data: (vals as number[]).map((v) => ({ id: `design-id-${v}`, externalId: v })),
+    error: null,
+  });
+}
+
+function nextCollectionsUpsertResponse(queue: MockResponse[], rows: Row[]): Promise<MockResponse> {
+  const queued = queue.shift();
+  if (queued) return Promise.resolve(queued);
+  return Promise.resolve({
+    data: rows.map((r) => ({ id: `col-id-${r.externalId}`, externalId: r.externalId })),
+    error: null,
+  });
+}
+
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
     from: (table: string) => ({
-      select: () => ({
+      select: (cols?: string) => ({
         in: (col: string, vals: unknown[]) => {
           calls.push({ type: "select-in", table, col, vals });
+          if (table === "designs" && cols === "id, externalId") {
+            return nextIdLookupResponse(designIdLookupResponses, vals);
+          }
           return nextSelectResponse(col === "externalId" ? selectByIdResponses : selectByTitleResponses);
         },
         filter: (col: string, op: string, value: string) => {
@@ -168,9 +198,39 @@ vi.mock("@supabase/supabase-js", () => ({
       upsert: (rows: Row[], opts: Record<string, unknown>) => ({
         select: () => {
           calls.push({ type: "upsert", table, rows, opts });
+          if (table === "collections") return nextCollectionsUpsertResponse(collectionsUpsertResponses, rows);
+          if (table === "design_collections") return nextOr(designCollectionsUpsertResponses, rows);
           return nextOr(upsertResponses, rows);
         },
       }),
+      // Real supabase-js filter builders are themselves thenables (no terminal method is
+      // required) — mimic that so `.delete().eq(...).in(...)` / `.delete().in(...).not(...)`
+      // both resolve once awaited, recording every chained filter on one Call.
+      delete: () => {
+        const filters: DeleteFilter[] = [];
+        const builder = {
+          eq(col: string, val: unknown) {
+            filters.push({ op: "eq", col, val });
+            return builder;
+          },
+          in(col: string, vals: unknown[]) {
+            filters.push({ op: "in", col, val: vals });
+            return builder;
+          },
+          not(col: string, _op: string, val: unknown) {
+            filters.push({ op: "not-in", col, val });
+            return builder;
+          },
+          then(
+            resolve: (r: MockResponse) => unknown,
+            reject?: (e: unknown) => unknown,
+          ) {
+            calls.push({ type: "delete", table, filters: [...filters] });
+            return nextSelectResponse(designCollectionsDeleteResponses).then(resolve, reject);
+          },
+        };
+        return builder;
+      },
     }),
   })),
 }));
@@ -242,6 +302,46 @@ function selectInCalls(): Extract<Call, { type: "select-in" }>[] {
   return calls.filter((c): c is Extract<Call, { type: "select-in" }> => c.type === "select-in");
 }
 
+function deleteCalls(): Extract<Call, { type: "delete" }>[] {
+  return calls.filter((c): c is Extract<Call, { type: "delete" }> => c.type === "delete");
+}
+
+function forTable<T extends Call>(list: T[], table: string): T[] {
+  return list.filter((c) => c.table === table);
+}
+
+// ---------------------------------------------------------------------------
+// __NEXT_DATA__ shop-page fixtures (structure verified against a live shop page,
+// see notes referenced in the sync module dispatch).
+// ---------------------------------------------------------------------------
+
+function nextDataHtml(pageProps: Record<string, unknown>): string {
+  const data = { props: { pageProps } };
+  return `<!doctype html><html><head><script id="__NEXT_DATA__" type="application/json">${JSON.stringify(
+    data,
+  )}</script></head><body></body></html>`;
+}
+
+function rbResultEntry(opts: {
+  workId: number;
+  title: string;
+  tags?: string[];
+  productPageUrl: string;
+  imageUrl: string;
+}) {
+  return {
+    inventoryItem: {
+      productPageUrl: opts.productPageUrl,
+      previewSet: { previews: [{ previewTypeId: "product_close", url: opts.imageUrl }] },
+      work: { id: String(opts.workId), title: opts.title, tags: opts.tags || [] },
+    },
+  };
+}
+
+function rbCollection(id: number, title: string) {
+  return { id, title, description: null, coverImageUrl: null };
+}
+
 function mockShopAndProducts(productUrls: string[], productHtmls: Record<string, string>) {
   return vi.fn(async (url: string) => {
     const u = url.toString();
@@ -286,6 +386,10 @@ describe("syncRedbubbleToSupabase", () => {
     selectByTitleResponses = [];
     insertResponses = [];
     upsertResponses = [];
+    collectionsUpsertResponses = [];
+    designIdLookupResponses = [];
+    designCollectionsUpsertResponses = [];
+    designCollectionsDeleteResponses = [];
   });
 
   afterEach(() => {
@@ -316,6 +420,29 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(0);
     expect(result.dryRun).toBe(false);
+  });
+
+  it("requests shop listing pages with a stable sortOrder=recent", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const fetchMock = mockShopAndProducts([productA], {
+      [productA]: productHtml({
+        name: "Design A",
+        description: "Desc A",
+        image: "https://ih1.redbubble.net/image.111.jpg",
+        url: productA,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const listingUrls = fetchMock.mock.calls
+      .map(([url]) => url.toString())
+      .filter((u) => u.startsWith(SHOP_URL) && u.includes("page="));
+    expect(listingUrls.length).toBeGreaterThan(0);
+    for (const u of listingUrls) {
+      expect(u).toContain("sortOrder=recent");
+    }
   });
 
   it("updates an existing row via upsert, keeping curated fields and refreshing link/image/title", async () => {
@@ -738,5 +865,563 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.inserted).toBe(0);
     expect(result.updated).toBe(0);
     expect(result.warnings).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseShopNextData
+// ---------------------------------------------------------------------------
+
+describe("parseShopNextData", () => {
+  it("maps results[].inventoryItem into DesignRecord fields", () => {
+    const html = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 173146884,
+          title: "Handyman Repairman Problem Solver",
+          tags: ["fix", "repair"],
+          productPageUrl:
+            "https://www.redbubble.com/i/hoodie/Handyman-Repairman-Problem-Solver-by-ThreadQuirk/173146884/lgcw",
+          imageUrl: "https://ih1.redbubble.net/image.5909636486.6884/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 3 },
+      artistInfo: { collections: [] },
+      filteredCollection: null,
+    });
+
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/ThreadQuirk/shop");
+
+    expect(result.totalPages).toBe(3);
+    expect(result.filteredCollection).toBeNull();
+    expect(result.designs).toHaveLength(1);
+    expect(result.designs[0]).toMatchObject({
+      externalId: 173146884,
+      title: "Handyman Repairman Problem Solver",
+      keywords: "fix, repair",
+      externalLink:
+        "https://www.redbubble.com/i/hoodie/Handyman-Repairman-Problem-Solver-by-ThreadQuirk/173146884/lgcw",
+      externalImageUrl: "https://ih1.redbubble.net/image.5909636486.6884/a.jpg",
+      category: "hoodie",
+      collection: "no_collection",
+    });
+  });
+
+  it("prefers the product_close preview over other preview types", () => {
+    const html = nextDataHtml({
+      results: [
+        {
+          inventoryItem: {
+            productPageUrl: "https://www.redbubble.com/i/mug/Foo/11111111",
+            previewSet: {
+              previews: [
+                { previewTypeId: "alternate_product_close", url: "https://ih1.redbubble.net/alt.jpg" },
+                { previewTypeId: "product_close", url: "https://ih1.redbubble.net/main.jpg" },
+              ],
+            },
+            work: { id: "11111111", title: "Foo", tags: [] },
+          },
+        },
+      ],
+    });
+
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    expect(result.designs[0].externalImageUrl).toBe("https://ih1.redbubble.net/main.jpg");
+  });
+
+  it("dedupes by externalId, keeping the first occurrence", () => {
+    const html = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 22222222,
+          title: "First",
+          productPageUrl: "https://www.redbubble.com/i/t-shirt/First/22222222",
+          imageUrl: "https://ih1.redbubble.net/first.jpg",
+        }),
+        rbResultEntry({
+          workId: 22222222,
+          title: "First (sticker)",
+          productPageUrl: "https://www.redbubble.com/i/sticker/First/22222222",
+          imageUrl: "https://ih1.redbubble.net/first-sticker.jpg",
+        }),
+      ],
+    });
+
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    expect(result.designs).toHaveLength(1);
+    expect(result.designs[0].title).toBe("First");
+  });
+
+  it("skips entries missing id/title/link/image", () => {
+    const html = nextDataHtml({
+      results: [
+        { inventoryItem: { productPageUrl: "", previewSet: { previews: [] }, work: { id: "1", title: "" } } },
+      ],
+    });
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    expect(result.designs).toHaveLength(0);
+  });
+
+  it("maps artistInfo.collections and filteredCollection", () => {
+    const html = nextDataHtml({
+      results: [],
+      artistInfo: { collections: [rbCollection(4167183, "States of the USA"), rbCollection(4167186, "Abstract Pattern")] },
+      filteredCollection: { id: 4167183, title: "States of the USA", description: null, coverImageUrl: null },
+    });
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop?collections=4167183");
+    expect(result.collections).toEqual([
+      { externalId: 4167183, title: "States of the USA", description: null, coverImageUrl: null },
+      { externalId: 4167186, title: "Abstract Pattern", description: null, coverImageUrl: null },
+    ]);
+    expect(result.filteredCollection).toEqual({
+      externalId: 4167183,
+      title: "States of the USA",
+      description: null,
+      coverImageUrl: null,
+    });
+  });
+
+  it("treats a null pagination object as a single page", () => {
+    const html = nextDataHtml({ results: [], pagination: null });
+    const result = parseShopNextData(html, "https://www.redbubble.com/people/x/shop");
+    expect(result.totalPages).toBe(1);
+  });
+
+  it("throws a clear error when __NEXT_DATA__ is missing", () => {
+    expect(() => parseShopNextData("<html><body>no next data here</body></html>", "https://x")).toThrow(
+      /Redbubble page has no __NEXT_DATA__/,
+    );
+  });
+
+  it("throws a clear error when __NEXT_DATA__ contains invalid JSON", () => {
+    const html =
+      '<html><head><script id="__NEXT_DATA__" type="application/json">{not json}</script></head></html>';
+    expect(() => parseShopNextData(html, "https://x")).toThrow(/Redbubble page has no __NEXT_DATA__/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Collections crawl + sync (cheerio mode, __NEXT_DATA__ driven)
+// ---------------------------------------------------------------------------
+
+describe("syncRedbubbleToSupabase — collections", () => {
+  beforeEach(() => {
+    calls = [];
+    selectByIdResponses = [];
+    selectByTitleResponses = [];
+    insertResponses = [];
+    upsertResponses = [];
+    collectionsUpsertResponses = [];
+    designIdLookupResponses = [];
+    designCollectionsUpsertResponses = [];
+    designCollectionsDeleteResponses = [];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+  const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/22222222.ST123";
+
+  function mockShopWithCollections() {
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+        rbResultEntry({
+          workId: 22222222,
+          title: "Design B",
+          productPageUrl: productB,
+          imageUrl: "https://ih1.redbubble.net/b.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
+      filteredCollection: null,
+    });
+
+    const catsPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+      ],
+      pagination: null,
+      artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
+      filteredCollection: rbCollection(100, "Cats"),
+    });
+
+    const dogsPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+        rbResultEntry({
+          workId: 22222222,
+          title: "Design B",
+          productPageUrl: productB,
+          imageUrl: "https://ih1.redbubble.net/b.jpg",
+        }),
+      ],
+      pagination: null,
+      artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
+      filteredCollection: rbCollection(200, "Dogs"),
+    });
+
+    return vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        return new Response(catsPage, { status: 200 });
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("collections=200")) {
+        return new Response(dogsPage, { status: 200 });
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
+        return new Response(shopPage, { status: 200 });
+      }
+      if (u === productA) {
+        return new Response(
+          productHtml({
+            name: "Design A",
+            description: "Desc A",
+            image: "https://ih1.redbubble.net/a.jpg",
+            url: productA,
+          }),
+          { status: 200 },
+        );
+      }
+      if (u === productB) {
+        return new Response(
+          productHtml({
+            name: "Design B",
+            description: "Desc B",
+            image: "https://ih1.redbubble.net/b.jpg",
+            url: productB,
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+  }
+
+  it("crawls collection-filtered pages, builds membership, and writes collections + links", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(result.collections.found).toBe(2);
+    expect(result.collections.upserted).toBe(2);
+    // Design A: Cats + Dogs, Design B: Dogs only.
+    expect(result.collections.links).toBe(3);
+
+    const collectionsUpserts = forTable(upsertCalls(), "collections");
+    expect(collectionsUpserts).toHaveLength(1);
+    expect(collectionsUpserts[0].rows.map((r) => r.title)).toEqual(["Cats", "Dogs"]);
+
+    const linkUpserts = forTable(upsertCalls(), "design_collections");
+    expect(linkUpserts).toHaveLength(1);
+    expect(linkUpserts[0].rows).toHaveLength(3);
+    expect(linkUpserts[0].opts).toMatchObject({ onConflict: "designId,collectionId", ignoreDuplicates: true });
+
+    // Deletes: one "not a Cats member" delete for design B, plus one "not in any current
+    // collection" catch-all for the chunk. Dogs has no non-member in this chunk, so it
+    // issues no delete (see the request-count guard tested separately).
+    const linkDeletes = forTable(deleteCalls(), "design_collections");
+    expect(linkDeletes).toHaveLength(2);
+    const catsStaleDelete = linkDeletes.find((d) =>
+      d.filters.some((f) => f.op === "eq" && f.col === "collectionId"),
+    );
+    expect(catsStaleDelete?.filters).toEqual(
+      expect.arrayContaining([{ op: "eq", col: "collectionId", val: "col-id-100" }]),
+    );
+    const catchAllDelete = linkDeletes.find((d) => d.filters.some((f) => f.op === "not-in"));
+    expect(catchAllDelete).toBeDefined();
+
+    const designInserts = forTable(insertCalls(), "designs");
+    expect(designInserts).toHaveLength(1);
+    // `collections` must never be sent as a column on the `designs` table.
+    for (const row of designInserts[0].rows) {
+      expect(row).not.toHaveProperty("collections");
+    }
+    const rowA = designInserts[0].rows.find((r) => r.externalId === 11111111);
+    expect(rowA?.collection).toBe("Cats");
+  });
+
+  it("requests collection-filtered pages with a stable sortOrder=recent", async () => {
+    const fetchMock = mockShopWithCollections();
+    vi.stubGlobal("fetch", fetchMock);
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const collectionUrls = fetchMock.mock.calls
+      .map(([url]) => url.toString())
+      .filter((u) => u.startsWith(SHOP_URL) && u.includes("collections="));
+    expect(collectionUrls.length).toBeGreaterThan(0);
+    for (const u of collectionUrls) {
+      expect(u).toContain("sortOrder=recent");
+    }
+  });
+
+  it("does not issue a stale-link delete for a collection with no non-member designs in the chunk", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const linkDeletes = forTable(deleteCalls(), "design_collections");
+    // Dogs (both A and B are members) must not get a per-collection stale delete.
+    const dogsStaleDelete = linkDeletes.find((d) =>
+      d.filters.some((f) => f.op === "eq" && f.col === "collectionId" && f.val === "col-id-200"),
+    );
+    expect(dogsStaleDelete).toBeUndefined();
+  });
+
+  it("dedupes membership when a design appears on more than one page of the same collection", async () => {
+    const catsPageOne = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 2 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+      filteredCollection: rbCollection(100, "Cats"),
+    });
+    const catsPageTwo = nextDataHtml({
+      results: [
+        // Same design repeated on page 2 (paging overlap) — must not double the link.
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 2 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+      filteredCollection: rbCollection(100, "Cats"),
+    });
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+      filteredCollection: null,
+    });
+
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100") && u.includes("page=2")) {
+        return new Response(catsPageTwo, { status: 200 });
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        return new Response(catsPageOne, { status: 200 });
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
+        return new Response(shopPage, { status: 200 });
+      }
+      if (u === productA) {
+        return new Response(
+          productHtml({
+            name: "Design A",
+            description: "Desc A",
+            image: "https://ih1.redbubble.net/a.jpg",
+            url: productA,
+          }),
+          { status: 200 },
+        );
+      }
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, maxPages: 3 }));
+
+    expect(result.collections.links).toBe(1);
+    const linkUpserts = forTable(upsertCalls(), "design_collections");
+    expect(linkUpserts).toHaveLength(1);
+    expect(linkUpserts[0].rows).toHaveLength(1);
+  });
+
+  it("overwrites the collection field on an existing row when collectionsComplete", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+    selectByIdResponses = [
+      {
+        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const designUpserts = forTable(upsertCalls(), "designs");
+    expect(designUpserts).toHaveLength(1);
+    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
+    expect(rowA?.collection).toBe("Cats");
+    expect(result.updated).toBe(1);
+  });
+
+  it("dry-run: makes no writes and returns a collections + links plan", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, dryRun: true }));
+
+    expect(insertCalls()).toHaveLength(0);
+    expect(upsertCalls()).toHaveLength(0);
+    expect(deleteCalls()).toHaveLength(0);
+    expect(result.dryRun).toBe(true);
+    expect(result.plan?.collections).toHaveLength(2);
+    expect(result.plan?.links).toEqual(
+      expect.arrayContaining([
+        { externalId: 11111111, collections: [100, 200] },
+        { externalId: 22222222, collections: [200] },
+      ]),
+    );
+  });
+
+  it("collectionsComplete=false: skips collections/links writes, keeps fill-if-empty rule, and warns", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        throw new Error("network error fetching Cats collection");
+      }
+      const base = mockShopWithCollections();
+      return base(u);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    selectByIdResponses = [
+      {
+        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(forTable(upsertCalls(), "collections")).toHaveLength(0);
+    expect(deleteCalls()).toHaveLength(0);
+    expect(forTable(upsertCalls(), "design_collections")).toHaveLength(0);
+    expect(result.collections.upserted).toBe(0);
+    expect(result.collections.links).toBe(0);
+    expect(result.warnings.some((w) => /Collections crawl incomplete/.test(w))).toBe(true);
+
+    // Fill-if-empty rule still applies for `collection` on the existing row: since the
+    // existing value isn't empty/default it must be kept as-is.
+    const designUpserts = forTable(upsertCalls(), "designs");
+    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
+    expect(rowA?.collection).toBe("Old Collection");
+  });
+
+  it("truncated collection (totalPages > maxPages): collectionsComplete=false, no collections/links writes, collection field not overwritten", async () => {
+    const catsPageTruncated = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/a.jpg",
+        }),
+      ],
+      // totalPages=2 but maxPages below is 1, so only page 1 is fetched.
+      pagination: { totalPages: 2 },
+      artistInfo: { collections: [rbCollection(100, "Cats"), rbCollection(200, "Dogs")] },
+      filteredCollection: rbCollection(100, "Cats"),
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        return new Response(catsPageTruncated, { status: 200 });
+      }
+      const base = mockShopWithCollections();
+      return base(u);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    selectByIdResponses = [
+      {
+        data: [existingRow({ externalId: 11111111, title: "Design A", collection: "Old Collection" })],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, maxPages: 1 }));
+
+    expect(result.warnings.some((w) => /Collection "Cats" truncated at maxPages=1 of totalPages=2/.test(w))).toBe(
+      true,
+    );
+    expect(forTable(upsertCalls(), "collections")).toHaveLength(0);
+    expect(forTable(upsertCalls(), "design_collections")).toHaveLength(0);
+    expect(deleteCalls()).toHaveLength(0);
+    expect(result.collections.upserted).toBe(0);
+    expect(result.collections.links).toBe(0);
+
+    const designUpserts = forTable(upsertCalls(), "designs");
+    const rowA = designUpserts[0].rows.find((r) => r.externalId === 11111111);
+    expect(rowA?.collection).toBe("Old Collection");
+  });
+
+  it("link upsert failure: issues no deletes for that chunk and counts the error", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+    designCollectionsUpsertResponses = [{ data: null, error: { message: "link upsert failed" } }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(forTable(upsertCalls(), "design_collections")).toHaveLength(1);
+    expect(forTable(deleteCalls(), "design_collections")).toHaveLength(0);
+    expect(result.collections.links).toBe(0);
+    expect(result.errorMessages).toContain("link upsert failed");
+    expect(result.errors).toBeGreaterThan(0);
+  });
+
+  it("collections upsert failure: skips the whole design_collections phase (no upserts, no deletes) and warns", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+    collectionsUpsertResponses = [{ data: null, error: { message: "collections upsert failed" } }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(forTable(upsertCalls(), "design_collections")).toHaveLength(0);
+    expect(forTable(deleteCalls(), "design_collections")).toHaveLength(0);
+    expect(result.collections.links).toBe(0);
+    expect(result.errorMessages).toContain("collections upsert failed");
+    expect(result.warnings).toContain("Skipped collection links: collections upsert failed");
+  });
+
+  it("issues stale-link deletes only after a successful upsert (call order)", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    // `calls` is a single chronological log across every table/operation.
+    const linkUpsertIndex = calls.findIndex((c) => c.type === "upsert" && c.table === "design_collections");
+    const linkDeleteIndexes = calls
+      .map((c, i) => (c.type === "delete" && c.table === "design_collections" ? i : -1))
+      .filter((i) => i !== -1);
+    expect(linkUpsertIndex).toBeGreaterThanOrEqual(0);
+    expect(linkDeleteIndexes.length).toBeGreaterThan(0);
+    for (const deleteIndex of linkDeleteIndexes) {
+      expect(deleteIndex).toBeGreaterThan(linkUpsertIndex);
+    }
   });
 });

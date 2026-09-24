@@ -30,11 +30,39 @@ create table
                        constraint designs_title_key unique (title)
 ) tablespace pg_default;
 
+create table
+    public.collections (
+                       id uuid not null default gen_random_uuid (),
+                       "externalId" bigint not null,
+                       title character varying not null,
+                       description text null,
+                       "coverImageUrl" text null,
+                       "createdAt" timestamp with time zone not null default now(),
+                       "updatedAt" timestamp without time zone null,
+                       constraint collections_pkey primary key (id),
+                       constraint collections_externalid_key unique ("externalId")
+) tablespace pg_default;
+
+create table
+    public.design_collections (
+                       "designId" uuid not null references public.designs (id) on delete cascade,
+                       "collectionId" uuid not null references public.collections (id) on delete cascade,
+                       constraint design_collections_pkey primary key ("designId", "collectionId")
+) tablespace pg_default;
+
+create index if not exists design_collections_collectionid_idx on public.design_collections ("collectionId");
+
 ALTER TABLE public.studio ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.designs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.design_collections ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Public Read Studio" ON public.studio FOR SELECT TO anon, authenticated USING (true);
 CREATE POLICY "Public Read Designs" ON public.designs FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public Read Collections" ON public.collections FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "Public Read Design Collections" ON public.design_collections FOR SELECT TO anon, authenticated USING (true);
 
 CREATE POLICY "Service Role Studio All" ON public.studio FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "Service Role Designs All" ON public.designs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Designs All" ON public.designs FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Collections All" ON public.collections FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Design Collections All" ON public.design_collections FOR ALL TO service_role USING (true) WITH CHECK (true);

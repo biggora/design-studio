@@ -1,3 +1,5 @@
+import {cache} from "react";
+import {unstable_cache} from "next/cache";
 import {createClient} from "@supabase/supabase-js";
 import mysql from "mysql2/promise";
 import {SiteConfig} from "@/lib/store";
@@ -105,7 +107,7 @@ function handleSiteConfigFailure(err: unknown): SiteConfig {
     throw new Error("Failed to load site config", {cause: err});
 }
 
-export async function getSiteConfig(): Promise<SiteConfig> {
+export async function loadSiteConfig(): Promise<SiteConfig> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
@@ -129,6 +131,15 @@ export async function getSiteConfig(): Promise<SiteConfig> {
     }
 }
 
+export const SITE_CONFIG_TAG = "site-config";
+
+// Per-render dedupe (React cache) around a cross-request cache (unstable_cache),
+// invalidated by /api/revalidate/config; the 5-min revalidate is a safety TTL.
+export const getSiteConfig = cache(unstable_cache(loadSiteConfig, ["site-config"], {
+    tags: [SITE_CONFIG_TAG],
+    revalidate: 300,
+}));
+
 export async function fetchDesigns(
     page: number,
     searchQuery: string,
@@ -145,17 +156,38 @@ export async function fetchDesigns(
         const start = offset;
         const end = offset + safeLimit - 1;
 
-        let query = supabaseClient.from("designs").select("*", {count: "exact"});
-        if (searchQuery) {
-            query = query.ilike("title", `%${searchQuery}%`);
-        }
-        if (collection) {
-            query = query.eq("collection", collection);
+        const runLegacyQuery = async () => {
+            let query = supabaseClient.from("designs").select("*", {count: "exact"});
+            if (searchQuery) {
+                query = query.ilike("title", `%${searchQuery}%`);
+            }
+            if (collection) {
+                query = query.eq("collection", collection);
+            }
+            query = query.order("createdAt", { ascending: false });
+            return query.range(start, end);
+        };
+
+        const runJoinQuery = async () => {
+            let query = supabaseClient
+                .from("designs")
+                .select("*, design_collections!inner(collections!inner(title))", {count: "exact"});
+            if (searchQuery) {
+                query = query.ilike("title", `%${searchQuery}%`);
+            }
+            query = query.eq("design_collections.collections.title", collection);
+            query = query.order("createdAt", { ascending: false });
+            return query.range(start, end);
+        };
+
+        let {data, error, count} = collection ? await runJoinQuery() : await runLegacyQuery();
+
+        // Fall back to the legacy single-collection filter if the join errors
+        // (tables not migrated yet) or matches nothing.
+        if (collection && (error || !count)) {
+            ({data, error, count} = await runLegacyQuery());
         }
 
-        query = query.order("createdAt", { ascending: false });
-
-        const {data, error, count} = await query.range(start, end);
         if (error) {
             console.error("Error fetching designs:", error);
             return {designs: [], total: 0};
@@ -189,32 +221,58 @@ export async function fetchDesigns(
     }
 
     const pool = getMySQLPool();
-    let base = "FROM designs WHERE 1";
-    const params: (string | number)[] = [];
 
-    if (searchQuery) {
-        base += " AND title LIKE ?";
-        params.push(`%${searchQuery}%`);
-    }
+    const buildBase = (withCollectionJoin: boolean) => {
+        let base = "FROM designs WHERE 1";
+        const params: (string | number)[] = [];
+
+        if (searchQuery) {
+            base += " AND title LIKE ?";
+            params.push(`%${searchQuery}%`);
+        }
+        if (collection) {
+            base += withCollectionJoin
+                ? " AND (collection = ? OR EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId WHERE dc.designId = designs.id AND c.title = ?))"
+                : " AND collection = ?";
+            params.push(collection);
+            if (withCollectionJoin) {
+                params.push(collection);
+            }
+        }
+
+        return {base, params};
+    };
+
+    const runMySQLQuery = async (withCollectionJoin: boolean) => {
+        const {base, params} = buildBase(withCollectionJoin);
+        const [rows] = await pool.query<mysql.RowDataPacket[]>(
+            `SELECT * ${base} ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
+            [...params, safeLimit, offset],
+        );
+        const [countRows] = await pool.query<mysql.RowDataPacket[]>(
+            `SELECT COUNT(*) as total ${base}`,
+            params,
+        );
+
+        return {rows, total: countRows[0]?.total ? Number(countRows[0].total) : 0};
+    };
+
+    let result;
     if (collection) {
-        base += " AND collection = ?";
-        params.push(collection);
+        try {
+            result = await runMySQLQuery(true);
+        } catch (err) {
+            console.error("Error fetching designs with collection join, falling back:", err);
+            result = await runMySQLQuery(false);
+        }
+    } else {
+        result = await runMySQLQuery(false);
     }
-
-    const [rows] = await pool.query<mysql.RowDataPacket[]>(
-        `SELECT * ${base} ORDER BY createdAt DESC LIMIT ? OFFSET ?`,
-        [...params, safeLimit, offset],
-    );
-    const [countRows] = await pool.query<mysql.RowDataPacket[]>(
-        `SELECT COUNT(*) as total ${base}`,
-        params,
-    );
 
     // Convert rows to Design[]
-    const designs: Design[] = rows.map(mapRowToDesign);
+    const designs: Design[] = result.rows.map(mapRowToDesign);
 
-    const total = countRows[0]?.total ? Number(countRows[0].total) : 0;
-    return {designs, total};
+    return {designs, total: result.total};
 }
 
 export async function getDesignById(
@@ -323,8 +381,7 @@ export async function getDesignById(
     return {design, relatedDesigns};
 }
 
-export async function fetchCollections(): Promise<string[]> {
-    const provider = getProvider();
+async function fetchLegacyCollections(provider: string): Promise<string[]> {
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
         const {data, error} = await supabaseClient
@@ -342,7 +399,7 @@ export async function fetchCollections(): Promise<string[]> {
         const collections = data
             .map(item => item.collection as string)
             .filter(Boolean);
-        
+
         return Array.from(new Set(collections));
     }
 
@@ -350,6 +407,39 @@ export async function fetchCollections(): Promise<string[]> {
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
         "SELECT DISTINCT collection FROM designs WHERE collection IS NOT NULL AND collection != '' AND collection != 'no_collection' ORDER BY collection ASC",
     );
-    
+
     return rows.map(row => row.collection as string);
+}
+
+export async function fetchCollections(): Promise<string[]> {
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const {data, error} = await supabaseClient
+            .from("collections")
+            .select("title")
+            .order("title");
+
+        if (error || !data || !data.length) {
+            return fetchLegacyCollections(provider);
+        }
+
+        return Array.from(new Set(data.map(item => item.title as string).filter(Boolean)));
+    }
+
+    try {
+        const pool = getMySQLPool();
+        const [rows] = await pool.query<mysql.RowDataPacket[]>(
+            "SELECT title FROM collections ORDER BY title",
+        );
+
+        if (!rows.length) {
+            return fetchLegacyCollections(provider);
+        }
+
+        return Array.from(new Set(rows.map(row => row.title as string).filter(Boolean)));
+    } catch (err) {
+        console.error("Error fetching collections table, falling back:", err);
+        return fetchLegacyCollections(provider);
+    }
 }

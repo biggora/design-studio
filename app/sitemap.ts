@@ -3,6 +3,10 @@ import { SiteConfig } from "@/lib/store";
 import { Design } from "@/types/design";
 import { getSiteConfig, fetchDesigns } from "@/utils/database";
 
+// Safety-net TTL for the studio config cache; edits also trigger
+// /api/revalidate/config for near-immediate invalidation.
+export const revalidate = 300;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const newConfig: SiteConfig = await getSiteConfig();
   const staticRoutes: MetadataRoute.Sitemap = [
