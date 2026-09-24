@@ -1,3 +1,4 @@
+import {cache} from "react";
 import {createClient} from "@supabase/supabase-js";
 import mysql from "mysql2/promise";
 import {SiteConfig} from "@/lib/store";
@@ -105,7 +106,7 @@ function handleSiteConfigFailure(err: unknown): SiteConfig {
     throw new Error("Failed to load site config", {cause: err});
 }
 
-export async function getSiteConfig(): Promise<SiteConfig> {
+async function loadSiteConfig(): Promise<SiteConfig> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
@@ -128,6 +129,9 @@ export async function getSiteConfig(): Promise<SiteConfig> {
         return handleSiteConfigFailure(err);
     }
 }
+
+// Dedupes the studio query within a single server render
+export const getSiteConfig = cache(loadSiteConfig);
 
 export async function fetchDesigns(
     page: number,
