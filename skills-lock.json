@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "next-best-practices": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/next-best-practices/SKILL.md",
+      "computedHash": "f2d557fd01c8702a1603a975bb45a061e32bfd80b3d363c2af88146a112f28ea"
+    },
+    "seo-best-practices": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/seo-best-practices/SKILL.md",
+      "computedHash": "27cde75a055324ce46a868d51b131b415133966abb868b8acc50511690d6665c"
+    },
+    "tailwindcss-best-practices": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/tailwindcss-best-practices/SKILL.md",
+      "computedHash": "5278fc1e399301e8171b2eb110315ccdfc5af47b2088e5c8ad1c137d1085c83e"
+    },
+    "test-web-ui": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/test-web-ui/SKILL.md",
+      "computedHash": "ffec9cb9527875ceb8d17bb9965f236979a01d46eb7af1bf78e859c71565d53c"
+    },
+    "ui-audit": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/ui-audit/SKILL.md",
+      "computedHash": "0287ca49cc7ad44559085f8588f2fedf9c9c5cc66b7959424de21821e6b3ab3b"
+    }
+  }
+}
