@@ -40,3 +40,6 @@ next-env.d.ts
 /.agents/
 /.claude/
 /docs/MY_SHOPS.md
+
+# redbubble sync JSON output / storage state
+/.cache/
