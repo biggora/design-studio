@@ -43,3 +43,7 @@ next-env.d.ts
 
 # redbubble sync JSON output / storage state
 /.cache/
+/.playwright-mcp/
+/.impeccable/critique/
+/.impeccable/live/annotations/
+/.impeccable/live/sessions/

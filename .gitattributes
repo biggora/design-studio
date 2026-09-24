@@ -1,0 +1,9 @@
+# Normalize all text files to LF in the repository and on checkout (Windows
+# included), matching the prettier `endOfLine: "lf"` policy enforced by CI.
+# `text=auto` leaves binary files (images, fonts, archives) untouched.
+* text=auto eol=lf
+
+# Windows shell scripts require CRLF: cmd.exe misparses LF-only .cmd/.bat
+# files (goto labels, multi-line parsing).
+*.cmd text eol=crlf
+*.bat text eol=crlf
