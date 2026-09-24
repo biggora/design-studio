@@ -270,7 +270,7 @@ Convenient for local development, initial catalog population, and dedicated cont
 npm run sync:redbubble
 ```
 
-The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `getSiteConfig()` (falling back to `REDBUBBLE_SHOP_URL` if config isn't reachable), runs the sync, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure, including when the result reports `errors > 0`.
+The script loads variables from `.env` via `dotenv/config`, reads the shop settings via `loadSiteConfig()` (falling back to `REDBUBBLE_SHOP_URL` if config isn't reachable), runs the sync, prints the formatted JSON result to the console, and closes the MySQL pool (if any) via `closeDatabaseConnections()` before exiting. It sets a non-zero exit code on failure, including when the result reports `errors > 0`.
 
 Because RLS only grants anon `SELECT`, real writes require `SUPABASE_SERVICE_ROLE_KEY` — the script throws if it is missing. Pass `--dry-run` (or `npm run sync:redbubble:dry`) to preview the insert/update plan without writing; in dry-run mode the anon key is accepted since no write occurs.
 
@@ -279,7 +279,7 @@ Because RLS only grants anon `SELECT`, real writes require `SUPABASE_SERVICE_ROL
 `--target=db|json|both` (default `db`, or env `SYNC_TARGET`) controls where the scrape ends up:
 
 - `db` (default): scrapes and writes to Supabase only, same as before — `syncRedbubbleToSupabase` under the hood.
-- `json`: scrapes only (`fetchRedbubbleDesigns`) and writes the result to a JSON file. **Never creates a Supabase client** and never calls `getSiteConfig()` unless `REDBUBBLE_SHOP_URL` is unset (in which case it tries config and fails with a clear error if that also comes up empty). Convenient for inspecting a scrape, or for feeding another process, without any DB credentials.
+- `json`: scrapes only (`fetchRedbubbleDesigns`) and writes the result to a JSON file. **Never creates a Supabase client** and never calls `loadSiteConfig()` unless `REDBUBBLE_SHOP_URL` is unset (in which case it tries config and fails with a clear error if that also comes up empty). Convenient for inspecting a scrape, or for feeding another process, without any DB credentials.
 - `both`: scrapes once, writes to Supabase, and also writes the JSON file (reusing the single scrape — it never scrapes twice).
 
 `--out=<path>` (default `.cache/redbubble-sync.json`, or env `SYNC_OUT`) sets the JSON file's location; the parent directory is created if missing. `.cache/` is gitignored.

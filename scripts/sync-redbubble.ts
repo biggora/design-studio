@@ -1,7 +1,7 @@
 import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
-import { closeDatabaseConnections, getSiteConfig } from "../utils/database";
+import { closeDatabaseConnections, loadSiteConfig } from "../utils/database";
 import {
   fetchRedbubbleDesigns,
   writeDesignsToSupabase,
@@ -43,7 +43,7 @@ async function resolveShopUrl(target: SyncTarget): Promise<string> {
   }
 
   try {
-    const config = await getSiteConfig();
+    const config = await loadSiteConfig();
     const configShopUrl = config.representation?.redbubbleShopUrl || config.representation?.redbuble || "";
     return pickShopUrl(target, envShopUrl, configShopUrl);
   } catch (error) {
