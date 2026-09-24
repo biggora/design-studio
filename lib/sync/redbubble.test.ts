@@ -6,10 +6,39 @@ import {
   syncRedbubbleToSupabase,
   parseShopNextData,
   buildArtworkImageUrl,
-  buildMockupTshirtUrl,
+  extractClassicTeeMockupUrl,
 } from "@/lib/sync/redbubble";
 
-const MOCKUP_TSHIRT_SUFFIX = "ssrco,classic_tee,flatlay,000000:44f0b734a5,front,tall_portrait,x1000.jpg";
+// Fixture work ids used throughout: the mockup extractor keys off the last 4 digits of the
+// work id, so every image id below ends in the matching work id's last 4 digits.
+const WHITE_TOKEN = "fafafa:ca443f4786";
+const BLACK_TOKEN = "101010:01c5ca27c6";
+
+// Builds a fragment matching the shape of a real /shop/ap/<workId> page's Apollo state entry
+// for a Classic T-Shirt preview: `https://<host>/image.<A>.<last4>/ssrco,classic_tee,<variant>,<colorToken>,front,...`.
+function shopApMockupHtml(opts: {
+  workId: number;
+  imageA: string;
+  colorToken: string;
+  host?: string;
+  variant?: string;
+  encodeSlashes?: boolean;
+}): string {
+  const host = opts.host ?? "ih1.redbubble.net";
+  const variant = opts.variant ?? "mens_02";
+  const last4 = String(opts.workId).slice(-4);
+  const url = `https://${host}/image.${opts.imageA}.${last4}/ssrco,classic_tee,${variant},${opts.colorToken},front,square_close_portrait,x1000.u1.jpg`;
+  const encoded = opts.encodeSlashes ? url.replace(/\//g, "{{%2F}}") : url;
+  return `<!doctype html><html><body><script>{"preview":"${encoded.replace(
+    /"/g,
+    '\\"',
+  )}"}</script></body></html>`;
+}
+
+function mockupUrl(opts: { host?: string; imageA: string; last4: string; colorToken: string }): string {
+  const host = opts.host ?? "ih1.redbubble.net";
+  return `https://${host}/image.${opts.imageA}.${opts.last4}/ssrco,classic_tee,flatlay,${opts.colorToken},front,tall_portrait,x1000.jpg`;
+}
 
 // ---------------------------------------------------------------------------
 // normalizeShopUrl
@@ -119,26 +148,56 @@ describe("buildArtworkImageUrl", () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildMockupTshirtUrl
+// extractClassicTeeMockupUrl
 // ---------------------------------------------------------------------------
 
-describe("buildMockupTshirtUrl", () => {
-  it("builds the T-shirt mockup URL from an ih1 preview URL, preserving host and image id", () => {
-    expect(
-      buildMockupTshirtUrl(
-        "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
-      ),
-    ).toBe(`https://ih1.redbubble.net/image.5909636501.6884/${MOCKUP_TSHIRT_SUFFIX}`);
+describe("extractClassicTeeMockupUrl", () => {
+  it("extracts a white Classic T-Shirt mockup (fafafa) for the matching work id", () => {
+    const html = shopApMockupHtml({ workId: 165517994, imageA: "5674585231", colorToken: WHITE_TOKEN });
+    expect(extractClassicTeeMockupUrl(html, 165517994)).toBe(
+      mockupUrl({ imageA: "5674585231", last4: "7994", colorToken: WHITE_TOKEN }),
+    );
   });
 
-  it("preserves an ih0 host unchanged", () => {
-    expect(
-      buildMockupTshirtUrl("https://ih0.redbubble.net/image.123.4/st,small,507x507.jpg"),
-    ).toBe(`https://ih0.redbubble.net/image.123.4/${MOCKUP_TSHIRT_SUFFIX}`);
+  it("extracts a black Classic T-Shirt mockup (101010) for the matching work id", () => {
+    const html = shopApMockupHtml({ workId: 173148090, imageA: "6240296681", colorToken: BLACK_TOKEN });
+    expect(extractClassicTeeMockupUrl(html, 173148090)).toBe(
+      mockupUrl({ imageA: "6240296681", last4: "8090", colorToken: BLACK_TOKEN }),
+    );
   });
 
-  it("returns null when the input isn't a recognizable Redbubble image URL", () => {
-    expect(buildMockupTshirtUrl("https://example.com/not-an-image")).toBeNull();
+  it("decodes {{%2F}}-encoded slashes before matching", () => {
+    const html = shopApMockupHtml({
+      workId: 165517994,
+      imageA: "5674585231",
+      colorToken: WHITE_TOKEN,
+      encodeSlashes: true,
+    });
+    expect(html).toContain("{{%2F}}");
+    expect(extractClassicTeeMockupUrl(html, 165517994)).toBe(
+      mockupUrl({ imageA: "5674585231", last4: "7994", colorToken: WHITE_TOKEN }),
+    );
+  });
+
+  it("ignores a related work's preview (different image-id suffix) and picks this work's own", () => {
+    const relatedWorkFragment = shopApMockupHtml({
+      workId: 199999999, // last4 "9999" — different from the target work below
+      imageA: "1111111111",
+      colorToken: BLACK_TOKEN,
+    });
+    const ownWorkFragment = shopApMockupHtml({
+      workId: 165517994,
+      imageA: "5674585231",
+      colorToken: WHITE_TOKEN,
+    });
+    const html = `<html><body>${relatedWorkFragment}${ownWorkFragment}</body></html>`;
+    expect(extractClassicTeeMockupUrl(html, 165517994)).toBe(
+      mockupUrl({ imageA: "5674585231", last4: "7994", colorToken: WHITE_TOKEN }),
+    );
+  });
+
+  it("returns null when no matching Classic T-Shirt preview is found", () => {
+    expect(extractClassicTeeMockupUrl("<html><body>no previews here</body></html>", 165517994)).toBeNull();
   });
 });
 
@@ -300,8 +359,14 @@ vi.mock("playwright", () => ({
   },
 }));
 
-function shopApHtml(description: string): string {
-  return `<!doctype html><html><head><meta name="description" content="${description.replace(/"/g, "&quot;")}"></head><body></body></html>`;
+// Builds a /shop/ap/<workId> page fixture with a description meta tag and, optionally, a
+// Classic T-Shirt mockup fragment (see shopApMockupHtml) for the given work.
+function shopApHtml(
+  description: string,
+  mockup?: { workId: number; imageA: string; colorToken: string },
+): string {
+  const mockupFragment = mockup ? shopApMockupHtml(mockup).match(/<script>.*<\/script>/)?.[0] ?? "" : "";
+  return `<!doctype html><html><head><meta name="description" content="${description.replace(/"/g, "&quot;")}"></head><body>${mockupFragment}</body></html>`;
 }
 
 function baseOptions(overrides?: Partial<Parameters<typeof syncRedbubbleToSupabase>[0]>) {
@@ -441,7 +506,11 @@ describe("syncRedbubbleToSupabase", () => {
       pagination: { totalPages: 1 },
     });
     const fetchMock = mockShop(shopPage, {
-      11111111: shopApHtml("A hand-drawn design.\n\nPrinted on demand."),
+      11111111: shopApHtml("A hand-drawn design.\n\nPrinted on demand.", {
+        workId: 11111111,
+        imageA: "5674585231",
+        colorToken: WHITE_TOKEN,
+      }),
     });
     vi.stubGlobal("fetch", fetchMock);
 
@@ -466,7 +535,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(row.backgroundColors).toBe("");
     expect(row.shared).toBe(false);
     expect(row.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.5909636501.6884/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "5674585231", last4: "1111", colorToken: WHITE_TOKEN }),
     });
     expect(row.description).toBe("A hand-drawn design.\n\nPrinted on demand.");
     expect(typeof row.updatedAt).toBe("string");
@@ -476,7 +545,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(result.dryRun).toBe(false);
   });
 
-  it("fetches the description from /shop/ap/<workId> only for designs that don't exist yet", async () => {
+  it("fetches /shop/ap/<workId> for a new design's description, and never re-fetches an existing design that already has its mockup", async () => {
     const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
     const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/22222222.ST123";
     const shopPage = nextDataHtml({
@@ -491,8 +560,19 @@ describe("syncRedbubbleToSupabase", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
 
-    // Design A already exists in the DB — its description must never be fetched.
-    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111 })], error: null }];
+    // Design A already exists in the DB and already has a mockup — no /shop/ap fetch at all
+    // for it (a fetch attempt would throw here, since 11111111 has no mock registered above).
+    selectByIdResponses = [
+      {
+        data: [
+          {
+            externalId: 11111111,
+            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+          },
+        ],
+        error: null,
+      },
+    ];
 
     await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
 
@@ -529,7 +609,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(inserts).toHaveLength(1);
     expect(inserts[0].rows[0].description).toBe("");
     expect(result.inserted).toBe(1);
-    expect(result.errorMessages.some((m) => m.includes("Failed to fetch description for 11111111"))).toBe(true);
+    expect(result.errorMessages.some((m) => m.includes("Failed to fetch /shop/ap/11111111"))).toBe(true);
     expect(result.errors).toBeGreaterThan(0);
   });
 
@@ -573,7 +653,9 @@ describe("syncRedbubbleToSupabase", () => {
       results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
       pagination: { totalPages: 1 },
     });
-    const simpleFetchMock = mockShop(shopPageNoCollections, {});
+    const simpleFetchMock = mockShop(shopPageNoCollections, {
+      11111111: shopApHtml("Desc A", { workId: 11111111, imageA: "111", colorToken: BLACK_TOKEN }),
+    });
     vi.stubGlobal("fetch", simpleFetchMock);
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -586,16 +668,17 @@ describe("syncRedbubbleToSupabase", () => {
     expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
     expect(updates[0].changes.collection).toBe("no_collection");
     // The DB row (mocked via existingRow()) has no stored props, so a missing mockup is
-    // backfilled from the freshly scraped externalImageUrl alongside the collection sync.
+    // backfilled from a fresh /shop/ap/<workId> fetch, alongside the collection sync.
     expect(updates[0].changes.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.111.1/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "111", last4: "1111", colorToken: BLACK_TOKEN }),
     });
     expect(typeof updates[0].changes.updatedAt).toBe("string");
     expect(updates[0].filters).toEqual([{ col: "externalId", val: 11111111 }]);
 
-    // No description fetch for an existing row.
+    // The /shop/ap/<workId> page is fetched for the mockup backfill (but its description is
+    // discarded — existing rows never have their description overwritten).
     const fetchedUrls = simpleFetchMock.mock.calls.map(([url]) => url.toString());
-    expect(fetchedUrls).not.toContain("https://www.redbubble.com/shop/ap/11111111");
+    expect(fetchedUrls).toContain("https://www.redbubble.com/shop/ap/11111111");
 
     expect(result.inserted).toBe(0);
     expect(result.updated).toBe(1);
@@ -615,6 +698,12 @@ describe("syncRedbubbleToSupabase", () => {
       }
       if (u.startsWith(SHOP_URL) && u.includes("page=1")) return new Response(shopPage, { status: 200 });
       if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      if (u === "https://www.redbubble.com/shop/ap/11111111") {
+        return new Response(
+          shopApHtml("Desc A", { workId: 11111111, imageA: "111", colorToken: BLACK_TOKEN }),
+          { status: 200 },
+        );
+      }
       throw new Error(`unexpected fetch: ${u}`);
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -632,7 +721,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(updates).toHaveLength(1);
     expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
     expect(updates[0].changes.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.111.1/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "111", last4: "1111", colorToken: BLACK_TOKEN }),
     });
     expect(result.updated).toBe(1);
     expect(result.warnings.some((w) => /left unchanged/.test(w))).toBe(false);
@@ -698,7 +787,10 @@ describe("syncRedbubbleToSupabase", () => {
       ],
       pagination: { totalPages: 1 },
     });
-    const fetchMock = mockShop(shopPage, { 11111111: shopApHtml("Desc A") });
+    const fetchMock = mockShop(shopPage, {
+      11111111: shopApHtml("Desc A"),
+      22222222: shopApHtml("Desc B", { workId: 22222222, imageA: "222", colorToken: BLACK_TOKEN }),
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     selectByIdResponses = [{ data: [existingRow({ externalId: 22222222 })], error: null }];
@@ -717,7 +809,7 @@ describe("syncRedbubbleToSupabase", () => {
         externalId: 22222222,
         collection: "no_collection",
         props: {
-          mockup_tshirt: `https://ih1.redbubble.net/image.222.1/${MOCKUP_TSHIRT_SUFFIX}`,
+          mockup_tshirt: mockupUrl({ imageA: "222", last4: "2222", colorToken: BLACK_TOKEN }),
         },
       },
     ]);
@@ -919,7 +1011,9 @@ describe("syncRedbubbleToSupabase", () => {
       results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
       pagination: { totalPages: 1 },
     });
-    const fetchMock = mockShop(shopPage, {});
+    const fetchMock = mockShop(shopPage, {
+      55555555: shopApHtml("Desc A", { workId: 55555555, imageA: "555", colorToken: WHITE_TOKEN }),
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     selectByIdResponses = [{ data: [existingRow({ externalId: 55555555 })], error: null }];
@@ -992,25 +1086,10 @@ describe("parseShopNextData", () => {
       backgroundColor: "#FFFFFF",
       backgroundColors: "",
       shared: false,
-      props: { mockup_tshirt: `https://ih1.redbubble.net/image.5909636486.6884/${MOCKUP_TSHIRT_SUFFIX}` },
+      // The mockup color is never known at listing time — it's only extracted from a
+      // /shop/ap/<workId> fetch (see the sync-level "props.mockup_tshirt" tests below).
+      props: null,
     });
-  });
-
-  it("sets props to null when the preview image URL isn't a recognizable Redbubble image URL", () => {
-    const html = nextDataHtml({
-      results: [
-        {
-          inventoryItem: {
-            productPageUrl: "https://www.redbubble.com/i/mug/Foo/11111111",
-            previewSet: { previews: [{ previewTypeId: "product_close", url: "https://example.com/not-an-image" }] },
-            work: { id: "11111111", title: "Foo", tags: [] },
-          },
-        },
-      ],
-    });
-
-    const result = parseShopNextData(html);
-    expect(result.designs[0].props).toBeNull();
   });
 
   it("prefers the product_close preview over other preview types", () => {
@@ -1176,10 +1255,16 @@ describe("syncRedbubbleToSupabase — collections", () => {
         return new Response(shopPage, { status: 200 });
       }
       if (u === "https://www.redbubble.com/shop/ap/11111111") {
-        return new Response(shopApHtml("Desc A"), { status: 200 });
+        return new Response(
+          shopApHtml("Desc A", { workId: 11111111, imageA: "1", colorToken: WHITE_TOKEN }),
+          { status: 200 },
+        );
       }
       if (u === "https://www.redbubble.com/shop/ap/22222222") {
-        return new Response(shopApHtml("Desc B"), { status: 200 });
+        return new Response(
+          shopApHtml("Desc B", { workId: 22222222, imageA: "2", colorToken: BLACK_TOKEN }),
+          { status: 200 },
+        );
       }
       throw new Error(`unexpected fetch: ${u}`);
     });
@@ -1368,7 +1453,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(updates).toHaveLength(1);
     expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
     expect(updates[0].changes.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.1.1/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "1", last4: "1111", colorToken: WHITE_TOKEN }),
     });
     expect(result.updated).toBe(1);
   });
@@ -1411,7 +1496,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     expect(updates).toHaveLength(1);
     expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
     expect(updates[0].changes.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.1.1/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "1", last4: "1111", colorToken: WHITE_TOKEN }),
     });
     expect(result.updated).toBe(1);
   });
@@ -1487,7 +1572,7 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
 
   // No collections declared: collectionsComplete stays true with nothing to crawl, so the
   // "existing row is updated" path always includes `collection` — isolating the props effect.
-  function mockSimpleShop() {
+  function mockSimpleShop(shopApByWorkId: Record<number, string> = {}) {
     const shopPage = nextDataHtml({
       results: [
         rbResultEntry({
@@ -1499,20 +1584,19 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
       ],
       pagination: { totalPages: 1 },
     });
-    return mockShop(shopPage, {});
+    return mockShop(shopPage, shopApByWorkId);
   }
 
   it("existing row with props: null gets its mockup backfilled, alongside the collection update", async () => {
-    vi.stubGlobal("fetch", mockSimpleShop());
+    vi.stubGlobal(
+      "fetch",
+      mockSimpleShop({
+        11111111: shopApHtml("Desc A", { workId: 11111111, imageA: "999", colorToken: WHITE_TOKEN }),
+      }),
+    );
     selectByIdResponses = [
       {
-        data: [
-          {
-            externalId: 11111111,
-            props: null,
-            externalImageUrl: "https://ih1.redbubble.net/image.999.9/existing.jpg",
-          },
-        ],
+        data: [{ externalId: 11111111, props: null }],
         error: null,
       },
     ];
@@ -1522,24 +1606,23 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
     const updates = updateCalls();
     expect(updates).toHaveLength(1);
     expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
-    // Built from the DB row's own externalImageUrl, not the freshly scraped one.
+    // Built from the /shop/ap/<workId> fetch, not from any stored externalImageUrl.
     expect(updates[0].changes.props).toEqual({
-      mockup_tshirt: `https://ih1.redbubble.net/image.999.9/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "999", last4: "1111", colorToken: WHITE_TOKEN }),
     });
     expect(result.updated).toBe(1);
   });
 
   it("existing row with other props keys keeps them and adds mockup_tshirt alongside", async () => {
-    vi.stubGlobal("fetch", mockSimpleShop());
+    vi.stubGlobal(
+      "fetch",
+      mockSimpleShop({
+        11111111: shopApHtml("Desc A", { workId: 11111111, imageA: "888", colorToken: BLACK_TOKEN }),
+      }),
+    );
     selectByIdResponses = [
       {
-        data: [
-          {
-            externalId: 11111111,
-            props: { foo: "bar" },
-            externalImageUrl: "https://ih1.redbubble.net/image.888.8/existing.jpg",
-          },
-        ],
+        data: [{ externalId: 11111111, props: { foo: "bar" } }],
         error: null,
       },
     ];
@@ -1550,12 +1633,14 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
     expect(updates).toHaveLength(1);
     expect(updates[0].changes.props).toEqual({
       foo: "bar",
-      mockup_tshirt: `https://ih1.redbubble.net/image.888.8/${MOCKUP_TSHIRT_SUFFIX}`,
+      mockup_tshirt: mockupUrl({ imageA: "888", last4: "1111", colorToken: BLACK_TOKEN }),
     });
     expect(result.updated).toBe(1);
   });
 
-  it("existing row that already has mockup_tshirt: update omits props entirely (collection still synced)", async () => {
+  it("existing row that already has mockup_tshirt: update omits props entirely, no /shop/ap fetch (collection still synced)", async () => {
+    // mockSimpleShop() has no /shop/ap mock registered — a fetch attempt would throw and
+    // fail this test, so a passing run proves no fetch happened for this row.
     vi.stubGlobal("fetch", mockSimpleShop());
     selectByIdResponses = [
       {
@@ -1563,7 +1648,6 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
           {
             externalId: 11111111,
             props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
-            externalImageUrl: "https://ih1.redbubble.net/image.777.7/existing.jpg",
           },
         ],
         error: null,
@@ -1608,7 +1692,6 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
           {
             externalId: 11111111,
             props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
-            externalImageUrl: "https://ih1.redbubble.net/image.777.7/existing.jpg",
           },
         ],
         error: null,
@@ -1623,16 +1706,15 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
   });
 
   it("dry-run: plan.update includes props for a row whose mockup needs backfilling", async () => {
-    vi.stubGlobal("fetch", mockSimpleShop());
+    vi.stubGlobal(
+      "fetch",
+      mockSimpleShop({
+        11111111: shopApHtml("Desc A", { workId: 11111111, imageA: "555", colorToken: WHITE_TOKEN }),
+      }),
+    );
     selectByIdResponses = [
       {
-        data: [
-          {
-            externalId: 11111111,
-            props: null,
-            externalImageUrl: "https://ih1.redbubble.net/image.555.5/existing.jpg",
-          },
-        ],
+        data: [{ externalId: 11111111, props: null }],
         error: null,
       },
     ];
@@ -1644,8 +1726,93 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
       {
         externalId: 11111111,
         collection: "no_collection",
-        props: { mockup_tshirt: `https://ih1.redbubble.net/image.555.5/${MOCKUP_TSHIRT_SUFFIX}` },
+        props: { mockup_tshirt: mockupUrl({ imageA: "555", last4: "1111", colorToken: WHITE_TOKEN }) },
       },
     ]);
+  });
+
+  it("existing design not found on /shop/ap: no props change, warning recorded", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockSimpleShop({
+        11111111: shopApHtml("Desc A"), // no Classic T-Shirt preview in this fixture
+      }),
+    );
+    selectByIdResponses = [
+      {
+        data: [{ externalId: 11111111, props: null }],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(updates[0].changes).not.toHaveProperty("props");
+    expect(
+      result.warnings.some((w) => w === "No Classic T-Shirt preview for 11111111; mockup_tshirt not set"),
+    ).toBe(true);
+  });
+
+  it("existing design /shop/ap fetch error: no props change, error message recorded, row otherwise handled as today", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) {
+        return new Response(
+          nextDataHtml({
+            results: [
+              rbResultEntry({
+                workId: 11111111,
+                title: "Design A",
+                productPageUrl: productA,
+                imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg",
+              }),
+            ],
+            pagination: { totalPages: 1 },
+          }),
+          { status: 200 },
+        );
+      }
+      if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      if (u === "https://www.redbubble.com/shop/ap/11111111") throw new Error("network error");
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    selectByIdResponses = [
+      {
+        data: [{ externalId: 11111111, props: null }],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(updates[0].changes).not.toHaveProperty("props");
+    expect(result.errorMessages.some((m) => m.includes("Failed to fetch /shop/ap/11111111"))).toBe(true);
+    expect(result.errors).toBeGreaterThan(0);
+    expect(result.updated).toBe(1);
+  });
+
+  it("new design not found on /shop/ap: props null, warning recorded", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockSimpleShop({
+        11111111: shopApHtml("Desc A"), // no Classic T-Shirt preview in this fixture
+      }),
+    );
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const inserts = insertCalls();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].rows[0].props).toBeNull();
+    expect(
+      result.warnings.some((w) => w === "No Classic T-Shirt preview for 11111111; mockup_tshirt not set"),
+    ).toBe(true);
   });
 });
