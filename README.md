@@ -32,9 +32,11 @@ Copy `.env.example` to `.env` and fill in your settings.
 
 Sync-related variables (`SYNC_SECRET`, `SYNC_MAX_PAGES`, `REDBUBBLE_SHOP_URL`, …) are listed in the [Redbubble Sync](#redbubble-sync) section below; the full reference is in [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md).
 
+The contact form uses one optional variable: `CONTACT_WEBHOOK_URL` — a webhook that receives `{ name, email, message, submittedAt }`. When it's unset, the form honestly reports that sending isn't configured and offers a direct email link instead of silently dropping messages.
+
 ## Running Tests
 
-This project uses [Vitest](https://vitest.dev/) for unit testing. `lib/utils.test.ts` holds 18 tests (a gitignored worktree copy under `.claude/worktrees/` may double the reported count in some runs).
+This project uses [Vitest](https://vitest.dev/) for unit testing — 7 test files / 163 tests covering `lib/utils`, the database facade, the public prints API, sync auth, the sync pipeline, and the sync/revalidate route handlers. Stale git worktrees under `.claude/worktrees/` can duplicate (and fail) the run — delete them, or exclude them with `npx vitest run --exclude "**/.claude/**"`.
 
 ```bash
 npm test          # one-shot run
@@ -59,7 +61,7 @@ mysql -u <user> -p <database> < init/mysql_tables.sql
 mysql -u <user> -p <database> < init/mysql_functions.sql
 ```
 
-Schemas and migration notes are documented in [docs/DATABASE.md](docs/DATABASE.md).
+Schemas and migration notes are documented in [docs/DATABASE.md](docs/DATABASE.md). Installs created before the collections tables existed can be upgraded with `init/migrations/001_collections_postgres.sql` / `001_collections_mysql.sql`.
 
 ## Redbubble Sync
 
