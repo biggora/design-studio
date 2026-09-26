@@ -21,7 +21,7 @@ export function DesignCard({ design }: DesignCardProps) {
         className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div
-          className="relative w-full aspect-square overflow-hidden bg-muted"
+          className="relative w-full aspect-[3/4] overflow-hidden bg-muted"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
         >
           <Image

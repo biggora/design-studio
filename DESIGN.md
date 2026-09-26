@@ -153,7 +153,7 @@ Depth is tonal first: dark bands frame the light field, white cards lift off Lin
 
 ## Shapes
 
-Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media sits in a square 1:1 frame with `object-contain` over the design's baked background color (nothing is cropped — artwork shows whole, the baked color fills the letterbox). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
+Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media sits in a portrait 3:4 frame with `object-contain` over the design's baked background color (nothing is cropped — the Classic T-Shirt mockup fills the frame nearly edge-to-edge, square artwork letterboxes top and bottom). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
 
 ## Components
 
@@ -177,7 +177,7 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Shadow Strategy:** structural card shadow, constant (see Elevation & Depth)
 - **Border:** none — shadow and tonal contrast do the separation
 - **Internal Padding:** 16px; detail pages step to 24px
-- **Catalog card anatomy:** square 1:1 image top, Title-weight name (line-clamped to 2), Warp Grey description and collection line (clamped to 3), Indigo Thread "View Design Details" anchored to the card bottom (`mt-auto`)
+- **Catalog card anatomy:** portrait 3:4 image top, Title-weight name (line-clamped to 2), Warp Grey description and collection line (clamped to 3), Indigo Thread "View Design Details" anchored to the card bottom (`mt-auto`)
 
 ### Inputs / Fields
 - **Style:** Card White background, 1px Warp Grey border, 6px radius, 8px/12–16px padding; select shares the treatment
@@ -200,7 +200,7 @@ Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist 
 - **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) or the primitives in `components/ui/`.
 - **Do** keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
 - **Do** give every interactive element a visible 2px Indigo Thread focus ring (`focus-visible`).
-- **Do** frame catalog media in a square 1:1 with `object-contain` over the baked background color and lazy-load below the fold.
+- **Do** frame catalog media in a portrait 3:4 (the Classic T-Shirt mockup's native shape) with `object-contain` over the baked background color and lazy-load below the fold.
 - **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:
