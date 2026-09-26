@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -18,7 +18,6 @@ export function CatalogSearchBar({
   collections,
 }: CatalogSearchBarProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
 
   const [search, setSearch] = useState(searchQuery);
@@ -76,7 +75,7 @@ export function CatalogSearchBar({
           />
           <button
             type="submit"
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-accent"
+            className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Submit search"
           >
             <Search size={20} />

@@ -31,13 +31,16 @@ export default function Header() {
       isActive(href)
         ? "font-semibold text-primary-foreground"
         : "text-primary-foreground/70 hover:text-primary-foreground"
-    } transition-colors`;
+    } transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground`;
 
   return (
     <header className="bg-primary/80 text-primary-foreground shadow-md fixed w-full z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link href="/" className="text-2xl font-bold text-primary-foreground">
+          <Link
+            href="/"
+            className="text-2xl font-bold text-primary-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+          >
             {config.name}
           </Link>
           <nav className="hidden md:flex space-x-6">
@@ -57,7 +60,7 @@ export default function Header() {
               onClick={toggleMenu}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMenuOpen}
-              className="text-primary-foreground hover:text-primary-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="text-primary-foreground hover:text-primary-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>

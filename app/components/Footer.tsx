@@ -33,7 +33,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/privacy-policy"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   Privacy Policy
                 </Link>
@@ -41,7 +41,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/terms-of-service"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   Terms of Service
                 </Link>
@@ -56,7 +56,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.facebook)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   <SiFacebook size={24} />
                   <span className="sr-only">Facebook</span>
@@ -67,7 +67,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.twitter)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   <SiX size={24} />
                   <span className="sr-only">Twitter</span>
@@ -78,7 +78,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   <SiInstagram size={24} />
                   <span className="sr-only">Instagram</span>
@@ -89,7 +89,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.linkedin)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   <SiLinkedin size={24} />
                   <span className="sr-only">LinkedIn</span>
@@ -100,7 +100,7 @@ export default function Footer() {
                   href={sanitizeUrl(config.social.pinterest)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
                   <SiPinterest size={24} />
                   <span className="sr-only">Pinterest</span>

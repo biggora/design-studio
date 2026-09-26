@@ -83,3 +83,14 @@
   right: 25px !important;
   z-index: 10;
 }
+
+/* Keyboard focus for the carousel controls slick renders as bare buttons
+   (light outline — they sit on photography). !important: slick-theme's own
+   `:focus { outline: none }` loads after globals and would win the cascade. */
+.slick-prev:focus-visible,
+.slick-next:focus-visible,
+.slick-dots li button:focus-visible {
+  outline: 2px solid hsl(var(--primary-foreground)) !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+}
