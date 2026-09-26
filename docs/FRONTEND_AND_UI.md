@@ -161,7 +161,7 @@ Note the two SEO guards: `?search=…` result pages are marked `noindex, follow`
 - Missing records return `title: "Design Not Found"` with `robots: { index: false }` before the page itself calls `notFound()`.
 
 #### Root layout (`app/layout.tsx`):
-- `metadataBase` from the configured domain, default title `${config.name} - ${config.intro}`, favicon set (16/32/apple + `site.webmanifest`).
+- `metadataBase` from the configured domain, default title `${config.name} - ${config.intro}`, favicon: a configured `favicon` wins, else a configured `siteLogo`, else the bundled generic set (16/32/apple + `site.webmanifest`).
 - Pinterest domain verification (`p:domain_verify`) injected when `verification.pinterest` is set.
 - Google Analytics (`@next/third-parties/google`) loaded only when `analytics.google` is configured.
 - `viewport.themeColor` set to `#212A31` (Loom Ink) for browser chrome.

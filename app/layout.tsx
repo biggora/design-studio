@@ -9,6 +9,7 @@ import { JsonLd } from "@/app/components/JsonLd";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import ContextWrapper from "@/app/wrapper";
+import baseConfig from "@/config/config.json";
 
 // Safety-net TTL for the studio config cache; edits also trigger
 // /api/revalidate/config for near-immediate invalidation.
@@ -18,7 +19,14 @@ const inter = Inter({ subsets: ["latin"] });
 
 export async function generateMetadata(): Promise<Metadata> {
   const newConfig: SiteConfig = await getSiteConfig();
-  const favIcon = newConfig?.favicon || "/favicon/favicon.ico";
+
+  // A deployment's own favicon wins, then its logo; otherwise the bundled generic set.
+  const brandIcon =
+    newConfig?.favicon && newConfig.favicon !== baseConfig.favicon
+      ? newConfig.favicon
+      : newConfig?.siteLogo && newConfig.siteLogo !== baseConfig.siteLogo
+        ? newConfig.siteLogo
+        : undefined;
 
   return {
     metadataBase: new URL(`https://${newConfig.domain}`),
@@ -28,14 +36,16 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: newConfig.description,
     applicationName: newConfig.name,
-    icons: {
-      icon: [
-        { url: favIcon },
-        { url: "/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
-        { url: "/favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
-      ],
-      apple: "/favicon/apple-touch-icon.png",
-    },
+    icons: brandIcon
+      ? { icon: brandIcon, apple: brandIcon }
+      : {
+          icon: [
+            { url: "/favicon/favicon.ico" },
+            { url: "/favicon/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+            { url: "/favicon/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+          ],
+          apple: "/favicon/apple-touch-icon.png",
+        },
     manifest: "/favicon/site.webmanifest",
     ...(newConfig?.verification?.pinterest
       ? {
