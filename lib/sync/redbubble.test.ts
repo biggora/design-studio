@@ -538,8 +538,11 @@ describe("syncRedbubbleToSupabase", () => {
     expect(row.externalId).toBe(11111111);
     expect(row.title).toBe("Design A");
     expect(row.externalLink).toBe("https://www.redbubble.com/shop/ap/11111111");
+    // Built from the mockup upload's own image id (5674585231.1111), not the listing preview's
+    // (5909636501.6884) — Redbubble stores several uploads per work, and the mockup upload is
+    // always the correct tee artwork.
     expect(row.externalImageUrl).toBe(
-      "https://ih1.redbubble.net/image.5909636501.6884/raf,750x,075,f,fafafa:ca443f4786.jpg",
+      "https://ih1.redbubble.net/image.5674585231.1111/raf,750x,075,f,fafafa:ca443f4786.jpg",
     );
     expect(row.imageName).toBeNull();
     expect(row.category).toBe("no_category");
