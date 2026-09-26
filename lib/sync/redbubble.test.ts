@@ -526,12 +526,14 @@ describe("syncRedbubbleToSupabase", () => {
     expect(row.externalId).toBe(11111111);
     expect(row.title).toBe("Design A");
     expect(row.externalLink).toBe("https://www.redbubble.com/shop/ap/11111111");
-    expect(row.externalImageUrl).toBe("https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg");
+    expect(row.externalImageUrl).toBe(
+      "https://ih1.redbubble.net/image.5909636501.6884/raf,750x,075,f,fafafa:ca443f4786.jpg",
+    );
     expect(row.imageName).toBeNull();
     expect(row.category).toBe("no_category");
     expect(row.collection).toBe("no_collection");
     expect(row.keywords).toBe("fix, repair");
-    expect(row.backgroundColor).toBe("#FFFFFF");
+    expect(row.backgroundColor).toBe("#fafafa");
     expect(row.backgroundColors).toBe("");
     expect(row.shared).toBe(false);
     expect(row.props).toEqual({
@@ -1811,6 +1813,10 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
     const inserts = insertCalls();
     expect(inserts).toHaveLength(1);
     expect(inserts[0].rows[0].props).toBeNull();
+    // No mockup means no color token to rewrite the image with — the design keeps the
+    // old "white fills transparency" default instead of a raf,... background URL.
+    expect(inserts[0].rows[0].externalImageUrl).toBe("https://ih1.redbubble.net/image.111.1/flat,500x,075,f.u2.jpg");
+    expect(inserts[0].rows[0].backgroundColor).toBe("#FFFFFF");
     expect(
       result.warnings.some((w) => w === "No Classic T-Shirt preview for 11111111; mockup_tshirt not set"),
     ).toBe(true);

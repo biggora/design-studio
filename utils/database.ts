@@ -592,6 +592,37 @@ export async function fetchRandomDesigns(
     }
 }
 
+export async function updateDesignBackground(
+    id: string,
+    externalImageUrl: string,
+    backgroundColor: string,
+): Promise<void> {
+    const provider = getProvider();
+    const now = new Date();
+
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const {error} = await supabaseClient
+            .from("designs")
+            .update({externalImageUrl, backgroundColor, updatedAt: now.toISOString()})
+            .eq("id", id);
+
+        if (error) {
+            console.error("Error updating design background:", error);
+            throw new Error("Failed to update design background", {cause: error});
+        }
+        return;
+    }
+
+    const pool = getMySQLPool();
+    // A Date object here (not an ISO string with a trailing "Z") — mysql2 serializes it to
+    // MySQL's own DATETIME format; a raw ISO string fails strict-mode TIMESTAMP parsing.
+    await pool.query(
+        "UPDATE designs SET externalImageUrl = ?, backgroundColor = ?, updatedAt = ? WHERE id = ?",
+        [externalImageUrl, backgroundColor, now, id],
+    );
+}
+
 export async function fetchCollections(): Promise<string[]> {
     const provider = getProvider();
     if (provider === "supabase") {

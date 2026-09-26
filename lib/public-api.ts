@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Design } from "@/types/design";
+import { applyBackground } from "@/lib/background";
 
 export type PublicPrint = {
   id: string;
@@ -13,7 +14,10 @@ export type PublicPrint = {
   backgroundColor: string | null;
 };
 
-export function toPublicPrint(design: Design): PublicPrint {
+// `bg` is an optional on-the-fly background override (see lib/background.ts) — when it
+// resolves for this design, imageUrl/backgroundColor reflect the requested background instead
+// of the stored ones; otherwise the design is returned unchanged.
+export function toPublicPrint(design: Design, bg?: string): PublicPrint {
   const collection =
     design.collection && design.collection !== "no_collection" ? design.collection : null;
 
@@ -24,16 +28,18 @@ export function toPublicPrint(design: Design): PublicPrint {
         .filter(Boolean)
     : [];
 
+  const overridden = bg ? applyBackground(design, bg) : null;
+
   return {
     id: design.id,
     title: design.title,
     description: design.description,
-    imageUrl: design.externalImageUrl,
+    imageUrl: overridden?.externalImageUrl ?? design.externalImageUrl,
     mockupUrl: (design.props as { mockup_tshirt?: string })?.mockup_tshirt ?? null,
     link: design.externalLink,
     collection,
     keywords,
-    backgroundColor: design.backgroundColor || null,
+    backgroundColor: overridden?.backgroundColor ?? (design.backgroundColor || null),
   };
 }
 

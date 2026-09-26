@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import {
   formatDate,
   getRedBubbleDesignPageLink,
+  safeHexColor,
   sanitizeUrl,
   truncateText,
 } from "@/lib/utils";
@@ -137,13 +138,16 @@ export default async function DesignDetails(
         </Link>
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="relative md:pb-0 md:h-full">
+            <div
+              className="relative md:pb-0 md:h-full"
+              style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
+            >
               <Image
                 src={design.externalImageUrl || getPlaceholderImage(900, 600)}
                 alt={design.title}
                 width={designCardWidth}
                 height={designCardHeight}
-                className="object-cover w-full h-full"
+                className="object-contain w-full h-full"
               />
             </div>
             <div className="p-6">

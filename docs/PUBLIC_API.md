@@ -40,6 +40,7 @@ Paginated, searchable list of prints.
 | `q` | string | `""` | Trimmed, then truncated to 100 characters. Matched case-insensitively against `title` (SQL `ILIKE`/`LIKE` substring match). |
 | `collection` | string | `""` | Trimmed, then truncated to 100 characters. Exact match against a collection title. |
 | `keywords` | string | `""` | Comma-separated list. Each entry is trimmed, lowercased, and must match `[\p{L}\p{N} _-]{1,50}` (letters, numbers, spaces, `_`/`-`, 1-50 chars) or it is silently dropped; duplicates are removed and at most 10 entries are kept. A print matches if it contains **any** of the given keywords as a case-insensitive substring of its `keywords` tag list (OR semantics). Combinable with `q`/`collection` (AND between `q`, `collection`, and `keywords`). |
+| `bg` | string | *(none)* | Optional per-request background override — `auto`, `white`, `black`, or a raw signed color token. See §3.5. Omitting it leaves `imageUrl`/`backgroundColor` unchanged. `400` (`{"error":"Invalid bg"}`) if given and not one of those forms. |
 
 Response body:
 
@@ -52,7 +53,7 @@ Response body:
 }
 ```
 
-Status codes: `200` on success, `500` (`{"error":"Internal server error"}`) if the database query throws.
+Status codes: `200` on success, `400` (`{"error":"Invalid bg"}`) for an invalid `bg`, `500` (`{"error":"Internal server error"}`) if the database query throws.
 
 Cache-Control: `public, s-maxage=300, stale-while-revalidate=600` (5-minute CDN cache, 10-minute stale-while-revalidate) on success; `no-store` on error responses.
 
@@ -65,6 +66,7 @@ Random sample of prints, for rotating referral widgets.
 | `limit` | integer | `3` | Clamped to `1`–`12`; missing/non-numeric/non-integer falls back to the default. |
 | `collection` | string | `""` | Trimmed, then truncated to 100 characters. Exact match against a collection title. When empty, no collection filter is applied (all designs are eligible). |
 | `keywords` | string | `""` | Same parsing and OR-semantics as in §3.1's `keywords` param. Combinable with `collection`. |
+| `bg` | string | *(none)* | Same optional background override as §3.1's `bg` param — see §3.5. |
 
 Response body:
 
@@ -76,7 +78,7 @@ Response body:
 
 There is no `page`/`total` — this endpoint is a single random draw, not a paginated list.
 
-Status codes: `200` on success, `500` (`{"error":"Internal server error"}`) if the query throws.
+Status codes: `200` on success, `400` (`{"error":"Invalid bg"}`) for an invalid `bg`, `500` (`{"error":"Internal server error"}`) if the query throws.
 
 Cache-Control: always `no-store` — random results are never cached (each request re-rolls the sample).
 
@@ -87,6 +89,7 @@ A single print by its internal `id`.
 | Param | Type | Default | Range / limits |
 |---|---|---|---|
 | `id` (path) | string | — | Rejected with `400` if longer than 100 characters. No other format validation. |
+| `bg` | string | *(none)* | Same optional background override as §3.1's `bg` param — see §3.5. |
 
 Response body:
 
@@ -98,7 +101,7 @@ Response body:
 
 Status codes:
 - `200` — found.
-- `400` — `{"error":"Invalid id"}` when the id exceeds 100 characters.
+- `400` — `{"error":"Invalid id"}` when the id exceeds 100 characters, or `{"error":"Invalid bg"}` for an invalid `bg`.
 - `404` — `{"error":"Not found"}` when no design matches.
 - `500` — `{"error":"Internal server error"}` if the query throws.
 
@@ -123,6 +126,19 @@ Response body:
 Status codes: `200` on success, `500` (`{"error":"Internal server error"}`) if the query throws.
 
 Cache-Control: `public, s-maxage=300, stale-while-revalidate=600` on success; `no-store` on error.
+
+### 3.5 The `bg` param (on `/prints`, `/prints/random`, `/prints/{id}`)
+
+Redbubble only fills transparent artwork areas with a color that has a matching signed token — arbitrary hex is rejected server-side by the CDN — so `bg` accepts exactly these forms:
+
+| Value | Meaning |
+|---|---|
+| `auto` | Use this design's own artist-chosen Classic T-Shirt mockup color, if one was captured during sync. No effect (falls back to the stored image) if the design has none. |
+| `white` | The site's white background preset. |
+| `black` | The site's black background preset. |
+| a raw color token (`<hex6>[~<hex6>]:<hash10>`, e.g. `fafafa:ca443f4786`) | Used as-is. |
+
+When `bg` resolves to a usable token for a given print, `imageUrl` and `backgroundColor` in the response are overridden accordingly; `mockupUrl` is unaffected. When it doesn't resolve (e.g. `auto` on a design with no captured mockup), that print's fields are left as stored. An unset `bg` leaves every response byte-identical to omitting it entirely. A `bg` value that doesn't match any of the forms above is rejected with `400`.
 
 ---
 
