@@ -1,17 +1,37 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useContext, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ConfigContext } from "@/app/wrapper";
 
+const navItems = [
+  { href: "/", label: "Home" },
+  { href: "/designs", label: "Our Designs" },
+  { href: "/about", label: "About Us" },
+  { href: "/services", label: "Services" },
+  { href: "/contact", label: "Contact" },
+] as const;
+
 export default function Header() {
   const config = useContext(ConfigContext);
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  const linkClassName = (href: string) =>
+    `${
+      isActive(href)
+        ? "font-semibold text-primary-foreground"
+        : "text-primary-foreground/70 hover:text-primary-foreground"
+    } transition-colors`;
 
   return (
     <header className="bg-primary/80 text-primary-foreground shadow-md fixed w-full z-10">
@@ -21,30 +41,16 @@ export default function Header() {
             {config.name}
           </Link>
           <nav className="hidden md:flex space-x-6">
-            <Link
-              href="/"
-              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-            >
-              Home
-            </Link>
-            <Link
-              href="/designs"
-              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-            >
-              Our Designs
-            </Link>
-            <Link
-              href="/about"
-              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-            >
-              About Us
-            </Link>
-            <Link
-              href="/contact"
-              className="text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-            >
-              Contact
-            </Link>
+            {navItems.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={linkClassName(href)}
+              >
+                {label}
+              </Link>
+            ))}
           </nav>
           <div className="md:hidden">
             <button
@@ -62,34 +68,17 @@ export default function Header() {
       {isMenuOpen && (
         <nav className="md:hidden bg-primary/95">
           <div className="container mx-auto px-4 py-4 space-y-4">
-            <Link
-              href="/"
-              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-              onClick={toggleMenu}
-            >
-              Home
-            </Link>
-            <Link
-              href="/designs"
-              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-              onClick={toggleMenu}
-            >
-              Our Designs
-            </Link>
-            <Link
-              href="/about"
-              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-              onClick={toggleMenu}
-            >
-              About Us
-            </Link>
-            <Link
-              href="/contact"
-              className="block text-primary-foreground hover:text-primary-foreground/70 transition-colors"
-              onClick={toggleMenu}
-            >
-              Contact
-            </Link>
+            {navItems.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                aria-current={isActive(href) ? "page" : undefined}
+                className={`block ${linkClassName(href)}`}
+                onClick={toggleMenu}
+              >
+                {label}
+              </Link>
+            ))}
           </div>
         </nav>
       )}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
 import { designPath } from "@/lib/slug";
+import { imageBlurPlaceholder } from "@/lib/image";
 import { safeHexColor } from "@/lib/utils";
 
 type DesignCardProps = {
@@ -28,13 +29,20 @@ export function DesignCard({ design }: DesignCardProps) {
             alt={design.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw"
+            placeholder="blur"
+            blurDataURL={imageBlurPlaceholder}
             className="object-contain"
           />
         </div>
       </Link>
       <CardContent className="p-4 flex flex-col flex-grow">
-        <h2 className="text-xl font-semibold mb-2 text-foreground line-clamp-2">
-          {design.title}
+        <h2 className="text-xl font-semibold mb-2 line-clamp-2">
+          <Link
+            href={designPath(design)}
+            className="text-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            {design.title}
+          </Link>
         </h2>
         <p className="text-muted-foreground mb-4 line-clamp-3">{design.description}</p>
         {design.collection && (
@@ -42,7 +50,7 @@ export function DesignCard({ design }: DesignCardProps) {
             Collection:&nbsp;
             <Link
               href={`/designs?collection=${encodeURIComponent(design.collection)}`}
-              className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {design.collection}
             </Link>

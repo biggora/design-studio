@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Slider from "react-slick";
 import Image from "next/image";
 import { Pause, Play } from "lucide-react";
@@ -14,6 +14,12 @@ const defaultSettings = {
   autoplay: true,
   autoplaySpeed: 5000,
 };
+
+function subscribeToReducedMotion(onChange: () => void): () => void {
+  const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
 
 type CarouselProps = {
   carouselItems: {
@@ -29,33 +35,29 @@ export function Carousel({
   settings = defaultSettings,
 }: CarouselProps) {
   const sliderRef = useRef<Slider>(null);
-  // Hydration-safe: initial state matches the server; prefers-reduced-motion
-  // (and live changes to it) pause autoplay right after mount.
-  const [autoplay, setAutoplay] = useState(true);
+  // Hydration-safe: the server snapshot is false, so the first client render
+  // matches it; the stored OS preference takes over right after mount.
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+    () => false,
+  );
+  const [userPaused, setUserPaused] = useState(false);
+  const autoplay = !userPaused && !prefersReducedMotion;
 
+  // Sync the external slider with the resolved autoplay state (covers the
+  // reduced-motion preference flipping on mid-session).
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    if (mediaQuery.matches) {
-      setAutoplay(false);
-      sliderRef.current?.slickPause();
-    }
-    const onChange = (event: MediaQueryListEvent) => {
-      if (event.matches) {
-        setAutoplay(false);
-        sliderRef.current?.slickPause();
-      }
-    };
-    mediaQuery.addEventListener("change", onChange);
-    return () => mediaQuery.removeEventListener("change", onChange);
-  }, []);
+    if (!autoplay) sliderRef.current?.slickPause();
+  }, [autoplay]);
 
   const toggleAutoplay = () => {
     if (autoplay) {
       sliderRef.current?.slickPause();
-      setAutoplay(false);
+      setUserPaused(true);
     } else {
       sliderRef.current?.slickPlay();
-      setAutoplay(true);
+      setUserPaused(false);
     }
   };
 
@@ -76,9 +78,9 @@ export function Carousel({
               style={{ objectFit: "cover" }}
             />
             <div className="absolute inset-0 bg-primary/60 flex flex-col justify-center items-center text-center p-4">
-              <p className="text-3xl md:text-5xl font-bold mb-4 text-primary-foreground">
+              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-primary-foreground">
                 {item.title}
-              </p>
+              </h2>
               <p className="text-xl md:text-2xl text-primary-foreground/95">
                 {item.description}
               </p>

@@ -119,6 +119,12 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} bg-background`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:inline-flex focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"
+        >
+          Skip to content
+        </a>
         <JsonLd data={jsonLdData} />
         {isAllowedThemeUrl(themeLink) ? (
           <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
@@ -128,7 +134,9 @@ export default async function RootLayout({
         ) : null}
         <ContextWrapper config={newConfig}>
           <Header />
-          <main className="main-container pt-16">{children}</main>
+          <main id="main-content" className="main-container pt-16">
+            {children}
+          </main>
           <CookieBanner />
           <Footer />
         </ContextWrapper>

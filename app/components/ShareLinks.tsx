@@ -18,7 +18,7 @@ export default function ShareLinks({
         href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-accent hover:text-secondary transition-colors"
+        className="text-muted-foreground hover:text-accent transition-colors"
         aria-label="Share on Facebook"
       >
         <SiFacebook size={24} />
@@ -27,8 +27,8 @@ export default function ShareLinks({
         href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-accent hover:text-secondary transition-colors"
-        aria-label="Share on Twitter"
+        className="text-muted-foreground hover:text-accent transition-colors"
+        aria-label="Share on X"
       >
         <SiX size={24} />
       </a>
@@ -36,7 +36,7 @@ export default function ShareLinks({
         href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(imageUrl)}&description=${encodeURIComponent(shareText)}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-accent hover:text-secondary transition-colors"
+        className="text-muted-foreground hover:text-accent transition-colors"
         aria-label="Share on Pinterest"
       >
         <SiPinterest size={24} />

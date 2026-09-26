@@ -153,7 +153,7 @@ Depth is tonal first: dark bands frame the light field, white cards lift off Lin
 
 ## Shapes
 
-Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media is cropped to a square 1:1 ratio with `object-cover` (center crop — square marketplace artwork fits untouched, wider artwork loses its top and bottom). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
+Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media sits in a square 1:1 frame with `object-contain` over the design's baked background color (nothing is cropped — artwork shows whole, the baked color fills the letterbox). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
 
 ## Components
 
@@ -200,7 +200,7 @@ Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist 
 - **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) or the primitives in `components/ui/`.
 - **Do** keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
 - **Do** give every interactive element a visible 2px Indigo Thread focus ring (`focus-visible`).
-- **Do** crop catalog media to a square 1:1 with `object-cover` and lazy-load below the fold.
+- **Do** frame catalog media in a square 1:1 with `object-contain` over the baked background color and lazy-load below the fold.
 - **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:

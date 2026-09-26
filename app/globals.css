@@ -53,12 +53,20 @@
 }
 
 /* Custom styles for the carousel */
+/* Dots sit inside the slide (slick's default -25px drops them onto the page
+   background, detached from the imagery they control); light on the scrim. */
+.slick-dots {
+  bottom: 1rem !important;
+}
+
 .slick-dots li button:before {
-  color: hsl(var(--muted-foreground)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  opacity: 0.55;
 }
 
 .slick-dots li.slick-active button:before {
-  color: hsl(var(--accent)) !important;
+  color: hsl(var(--primary-foreground)) !important;
+  opacity: 1;
 }
 
 .slick-prev:before,

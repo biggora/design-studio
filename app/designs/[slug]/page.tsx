@@ -6,6 +6,7 @@ import {
   getPlaceholderImage,
   designCardHeight,
   designCardWidth,
+  imageBlurPlaceholder,
 } from "@/lib/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
@@ -20,6 +21,7 @@ import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
+import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { RedBubble } from "@/app/components/Icons/RedBubble";
 import { TeePublic } from "@/app/components/Icons/TeePublic";
@@ -150,12 +152,7 @@ export default async function DesignDetails(
     <>
       <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd]} />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <Link
-          href="/designs"
-          className="text-accent hover:underline mb-4 inline-block"
-        >
-          &larr; Back to Designs
-        </Link>
+        <BackToCatalog fallbackHref={collectionUrl} />
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div
@@ -167,6 +164,9 @@ export default async function DesignDetails(
                 alt={design.title}
                 width={designCardWidth}
                 height={designCardHeight}
+                priority
+                placeholder="blur"
+                blurDataURL={imageBlurPlaceholder}
                 className="object-contain w-full h-full"
               />
             </div>
@@ -177,39 +177,14 @@ export default async function DesignDetails(
               <p className="text-muted-foreground min-h-[200px] mb-6">
                 {design.description}
               </p>
-              {/*<div className="grid grid-cols-2 gap-4 mb-6">*/}
-              {/*  <div>*/}
-              {/*    <h2 className="text-xl font-semibold mb-2 text-[#212A31]">*/}
-              {/*      Dimensions*/}
-              {/*    </h2>*/}
-              {/*    <p className="text-[#748D92]">{design.dimensions}</p>*/}
-              {/*  </div>*/}
-              {/*  <div>*/}
-              {/*    <h2 className="text-xl font-semibold mb-2 text-[#212A31]">*/}
-              {/*      Material*/}
-              {/*    </h2>*/}
-              {/*    <p className="text-[#748D92]">{design.material}</p>*/}
-              {/*  </div>*/}
-              {/*  <div>*/}
-              {/*    <h2 className="text-xl font-semibold mb-2 text-[#212A31]">*/}
-              {/*      Price*/}
-              {/*    </h2>*/}
-              {/*    <p className="text-[#748D92]">${design.price}</p>*/}
-              {/*  </div>*/}
-              {/*  <div>*/}
-              {/*    <h2 className="text-xl font-semibold mb-2 text-[#212A31]">*/}
-              {/*      Availability*/}
-              {/*    </h2>*/}
-              {/*    <p className="text-[#748D92]">*/}
-              {/*      {design.inStock ? "In Stock" : "Out of Stock"}*/}
-              {/*    </p>*/}
-              {/*  </div>*/}
-              {/*</div>*/}
               <div className={`grid grid-cols-1 md:grid-cols-2`}>
                 {design.collection && (
                   <p className="text-muted-foreground mb-4">
                     Collection:&nbsp;
-                    <Link href={collectionUrl}>
+                    <Link
+                      href={collectionUrl}
+                      className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                       {design.collection}
                     </Link>
                   </p>

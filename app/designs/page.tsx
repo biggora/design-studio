@@ -5,6 +5,7 @@ import { getSiteConfig, fetchDesigns, fetchCollections } from "@/utils/database"
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
+import TrackCatalogState from "@/app/components/TrackCatalogState";
 import { buttonVariants } from "@/components/ui/button";
 import { SiteConfig } from "@/lib/store";
 import { parsePageParam } from "@/lib/utils";
@@ -98,6 +99,7 @@ export default async function DesignFolio(
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <TrackCatalogState />
       <h1 className="text-4xl font-bold mb-8 text-foreground">Our Designs</h1>
 
       <CatalogSearchBar
@@ -113,8 +115,21 @@ export default async function DesignFolio(
           ))}
         </div>
       ) : (
-        <div className="text-center py-8">
-          No designs found. Try adjusting your search or filter.
+        <div className="text-center py-16 space-y-6">
+          <p className="text-muted-foreground">
+            No designs found
+            {searchQuery ? ` for "${searchQuery}"` : ""}
+            {selectedCollection ? ` in "${selectedCollection}"` : ""}. Try
+            adjusting your search or filter.
+          </p>
+          {(searchQuery || selectedCollection) && (
+            <Link
+              href="/designs"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              Clear search &amp; filters
+            </Link>
+          )}
         </div>
       )}
 
