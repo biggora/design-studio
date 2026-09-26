@@ -46,7 +46,7 @@ function parseThreshold(): number | undefined {
 }
 
 async function resolveStoreUrl(): Promise<string> {
-  const envStoreUrl = process.env.TEEPUBLIC_STORE_URL || "";
+  const envStoreUrl = process.env.TEEPUBLIC_SHOP_URL || "";
   if (envStoreUrl) {
     return normalizeTeepublicStoreUrl(envStoreUrl);
   }
@@ -54,7 +54,7 @@ async function resolveStoreUrl(): Promise<string> {
   const config = await loadSiteConfig();
   const configStoreUrl = config.representation?.teepublic || "";
   if (!configStoreUrl) {
-    throw new Error("Missing TeePublic store URL: set TEEPUBLIC_STORE_URL or representation.teepublic");
+    throw new Error("Missing TeePublic store URL: set TEEPUBLIC_SHOP_URL or representation.teepublic");
   }
   return normalizeTeepublicStoreUrl(configStoreUrl);
 }
