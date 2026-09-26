@@ -107,9 +107,9 @@ export default async function Home() {
     <>
       <Carousel carouselItems={resolveCarouselItems(config.slides)} />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <section className="text-center mb-12 bg-primary text-primary-foreground py-16 rounded-lg">
-          <h1 className="text-4xl font-bold mb-4">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+        <section className="text-center mb-8 bg-primary text-primary-foreground py-8 rounded-lg">
+          <h1 className="text-4xl font-bold mb-3">
             {config.name}: {config.intro}
           </h1>
           {config.subtitle && (
