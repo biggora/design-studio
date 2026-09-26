@@ -1,36 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { saveCookieConsent, useCookieConsent } from "@/lib/consent";
 
 export function CookieBanner() {
-  const [showBanner, setShowBanner] = useState(false);
+  const consent = useCookieConsent();
 
-  useEffect(() => {
-    try {
-      const accepted = localStorage.getItem("cookiesAccepted");
-      if (accepted !== "true") {
-        setShowBanner(true);
-      }
-    } catch {}
-  }, []);
-
-  const handleAccept = () => {
-    try {
-      localStorage.setItem("cookiesAccepted", "true");
-    } catch {}
-    setShowBanner(false);
-  };
-
-  if (!showBanner) return null;
+  // Shown until the visitor makes an explicit choice; a stored decline keeps
+  // it hidden just like an accept. Renders after hydration, when the stored
+  // choice (if any) is known.
+  if (consent !== "unset") return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-primary text-primary-foreground p-4 shadow-lg">
-      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between">
-        <p className="text-sm mb-4 sm:mb-0">
-          We use cookies to enhance your experience. By continuing to visit this
-          site you agree to our use of cookies.{" "}
+    <div
+      role="region"
+      aria-label="Cookie consent"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg"
+    >
+      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p className="text-sm">
+          We use cookies to understand how visitors use this site. Analytics
+          load only after you accept.{" "}
           <Link
             href="/privacy-policy"
             className="underline hover:text-primary-foreground/70"
@@ -38,9 +29,18 @@ export function CookieBanner() {
             Learn more
           </Link>
         </p>
-        <Button size="sm" onClick={handleAccept}>
-          Accept
-        </Button>
+        <div className="flex items-center gap-3 shrink-0">
+          <Button size="sm" onClick={() => saveCookieConsent("accepted")}>
+            Accept
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => saveCookieConsent("declined")}
+          >
+            Decline
+          </Button>
+        </div>
       </div>
     </div>
   );

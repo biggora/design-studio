@@ -1,10 +1,10 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
+import { AnalyticsGate } from "./components/AnalyticsGate";
 import { JsonLd } from "@/app/components/JsonLd";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
@@ -124,13 +124,13 @@ export default async function RootLayout({
           <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
         ) : null}
         {newConfig?.analytics?.google ? (
-          <GoogleAnalytics gaId={newConfig?.analytics?.google || ""} />
+          <AnalyticsGate gaId={newConfig.analytics.google} />
         ) : null}
         <ContextWrapper config={newConfig}>
           <Header />
           <main className="main-container pt-16">{children}</main>
-          <Footer />
           <CookieBanner />
+          <Footer />
         </ContextWrapper>
       </body>
     </html>
