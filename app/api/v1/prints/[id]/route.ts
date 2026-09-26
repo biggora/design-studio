@@ -1,4 +1,5 @@
 import { getDesignById } from "@/utils/database";
+import { isValidBackgroundValue } from "@/lib/background";
 import { jsonResponse, optionsResponse, toPublicPrint } from "@/lib/public-api";
 
 export async function GET(
@@ -11,12 +12,18 @@ export async function GET(
     return jsonResponse(request, { error: "Invalid id" }, { status: 400 });
   }
 
+  const { searchParams } = new URL(request.url);
+  const bg = searchParams.get("bg");
+  if (bg !== null && !isValidBackgroundValue(bg)) {
+    return jsonResponse(request, { error: "Invalid bg" }, { status: 400 });
+  }
+
   try {
     const result = await getDesignById(id);
     if (!result) {
       return jsonResponse(request, { error: "Not found" }, { status: 404 });
     }
-    return jsonResponse(request, { item: toPublicPrint(result.design) });
+    return jsonResponse(request, { item: toPublicPrint(result.design, bg || undefined) });
   } catch (err) {
     console.error("Error fetching print:", err);
     return jsonResponse(request, { error: "Internal server error" }, { status: 500 });

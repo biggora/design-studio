@@ -59,6 +59,12 @@ export function getRedBubbleDesignPageLink(designId: number): string {
   return `https://www.redbubble.com/shop/ap/${designId}`;
 }
 
+/** Returns the value if it is a strict 6-digit hex color (e.g. "#101010"), otherwise undefined. */
+export function safeHexColor(value?: string | null): string | undefined {
+  if (!value) return undefined;
+  return /^#[0-9a-f]{6}$/i.test(value) ? value : undefined;
+}
+
 export function sanitizeUrl(url?: string | null): string {
   if (!url) return "#";
   const trimmed = url.trim();

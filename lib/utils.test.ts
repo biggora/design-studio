@@ -5,6 +5,7 @@ import {
   generateSlug,
   calculateReadingTime,
   getRedBubbleDesignPageLink,
+  safeHexColor,
   sanitizeUrl,
   parsePageParam,
 } from '@/lib/utils';
@@ -116,6 +117,23 @@ describe('sanitizeUrl', () => {
     expect(sanitizeUrl('not-a-valid-url')).toBe('#');
     expect(sanitizeUrl('data:text/html,<script>alert(1)</script>')).toBe('#');
     expect(sanitizeUrl('vbscript:msgbox(1)')).toBe('#');
+  });
+});
+
+// safeHexColor
+
+describe('safeHexColor', () => {
+  it('returns valid 6-digit hex colors unchanged', () => {
+    expect(safeHexColor('#101010')).toBe('#101010');
+    expect(safeHexColor('#FAFAFA')).toBe('#FAFAFA');
+  });
+
+  it('returns undefined for invalid or unsafe values', () => {
+    expect(safeHexColor('red; background:url(x)')).toBeUndefined();
+    expect(safeHexColor('#fff')).toBeUndefined();
+    expect(safeHexColor('')).toBeUndefined();
+    expect(safeHexColor(null)).toBeUndefined();
+    expect(safeHexColor(undefined)).toBeUndefined();
   });
 });
 

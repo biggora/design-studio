@@ -1,4 +1,5 @@
 import { fetchRandomDesigns } from "@/utils/database";
+import { isValidBackgroundValue } from "@/lib/background";
 import {
   jsonResponse,
   optionsResponse,
@@ -13,12 +14,16 @@ export async function GET(request: Request) {
   const limit = parseIntParam(searchParams.get("limit"), 3, 1, 12);
   const collection = (searchParams.get("collection") || "").trim().slice(0, 100);
   const keywords = parseKeywordsParam(searchParams.get("keywords"));
+  const bg = searchParams.get("bg");
+  if (bg !== null && !isValidBackgroundValue(bg)) {
+    return jsonResponse(request, { error: "Invalid bg" }, { status: 400 });
+  }
 
   try {
     const designs = await fetchRandomDesigns(limit, collection || undefined, keywords);
     return jsonResponse(
       request,
-      { items: designs.map(toPublicPrint) },
+      { items: designs.map(design => toPublicPrint(design, bg || undefined)) },
       { cache: "no-store" },
     );
   } catch (err) {

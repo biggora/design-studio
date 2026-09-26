@@ -1,4 +1,5 @@
 import { fetchDesigns } from "@/utils/database";
+import { isValidBackgroundValue } from "@/lib/background";
 import {
   jsonResponse,
   optionsResponse,
@@ -15,11 +16,15 @@ export async function GET(request: Request) {
   const q = (searchParams.get("q") || "").trim().slice(0, 100);
   const collection = (searchParams.get("collection") || "").trim().slice(0, 100);
   const keywords = parseKeywordsParam(searchParams.get("keywords"));
+  const bg = searchParams.get("bg");
+  if (bg !== null && !isValidBackgroundValue(bg)) {
+    return jsonResponse(request, { error: "Invalid bg" }, { status: 400 });
+  }
 
   try {
     const { designs, total } = await fetchDesigns(page, q, collection, limit, keywords);
     return jsonResponse(request, {
-      items: designs.map(toPublicPrint),
+      items: designs.map(design => toPublicPrint(design, bg || undefined)),
       page,
       limit,
       total,

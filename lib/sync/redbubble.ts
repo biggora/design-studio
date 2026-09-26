@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
 import { designSlugBase, uniqueSlug } from "@/lib/slug";
+import { buildBackgroundImageUrl, extractMockupToken, tokenToHex } from "@/lib/background";
 
 // Options needed to scrape Redbubble, independent of where the result ends up — lets
 // callers (e.g. the CLI's `--target=json`) fetch without ever touching Supabase.
@@ -958,15 +959,26 @@ export async function writeDesignsToSupabase(
         for (const r of newRows) {
           const data = shopApData.get(r.externalId);
           let props: { mockup_tshirt: string } | null = null;
+          let externalImageUrl = r.externalImageUrl;
+          let backgroundColor = r.backgroundColor;
           if (data) {
             if (data.mockupUrl) {
               props = { mockup_tshirt: data.mockupUrl };
+              // New designs get the artist's own mockup color baked into the artwork image
+              // right away, instead of shipping with the "white fills transparency" default.
+              const token = extractMockupToken(data.mockupUrl);
+              if (token) {
+                externalImageUrl = buildBackgroundImageUrl(r.externalImageUrl, token);
+                backgroundColor = tokenToHex(token);
+              }
             } else {
               warnings.push(`No Classic T-Shirt preview for ${r.externalId}; mockup_tshirt not set`);
             }
           }
           insertRows.push({
             ...r,
+            externalImageUrl,
+            backgroundColor,
             description: data?.description ?? "",
             props,
             slug: slugByExternalId.get(r.externalId),

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
 import { designPath } from "@/lib/slug";
+import { safeHexColor } from "@/lib/utils";
 
 type DesignCardProps = {
   design: Design;
@@ -18,13 +19,16 @@ export function DesignCard({ design }: DesignCardProps) {
         href={designPath(design)}
         className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <div className="relative w-full aspect-square overflow-hidden bg-muted">
+        <div
+          className="relative w-full aspect-square overflow-hidden bg-muted"
+          style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
+        >
           <Image
             src={imageUrl}
             alt={design.title}
             fill
             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw"
-            className="object-cover"
+            className="object-contain"
           />
         </div>
       </Link>

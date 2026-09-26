@@ -67,6 +67,32 @@ describe("GET /api/v1/prints", () => {
     expect(fetchDesignsMock).toHaveBeenCalledWith(1, "", "", 12, ["cat", "space"]);
   });
 
+  it("rewrites imageUrl/backgroundColor when a valid bg is given", async () => {
+    fetchDesignsMock.mockResolvedValue({
+      designs: [
+        makeDesign({
+          externalImageUrl: "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
+        }),
+      ],
+      total: 1,
+    });
+    const { GET } = await import("@/app/api/v1/prints/route");
+    const request = new Request("http://localhost/api/v1/prints?bg=black");
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(body.items[0].imageUrl).toContain("raf,750x,075,f,101010:01c5ca27c6");
+    expect(body.items[0].backgroundColor).toBe("#101010");
+  });
+
+  it("returns 400 for an invalid bg value", async () => {
+    const { GET } = await import("@/app/api/v1/prints/route");
+    const request = new Request("http://localhost/api/v1/prints?bg=not-a-color");
+    const response = await GET(request);
+    expect(response.status).toBe(400);
+    expect(fetchDesignsMock).not.toHaveBeenCalled();
+  });
+
   it("returns 500 without leaking error details when fetchDesigns throws", async () => {
     fetchDesignsMock.mockRejectedValue(new Error("db exploded"));
     const { GET } = await import("@/app/api/v1/prints/route");
