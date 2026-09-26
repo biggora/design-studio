@@ -19,9 +19,25 @@ export interface AnalyticsProps {
 
 export type ConfigValue = string | SocialMedia | Record<string, string>;
 
+export interface CarouselSlide {
+  image: string;
+  title: string;
+  description: string;
+}
+
+export interface AboutConfig {
+  /** Story paragraphs. "{{name}}" is replaced with the site name at render time. */
+  story: string[];
+  approachIntro: string;
+  approachPoints: string[];
+  approachOutro: string;
+}
+
 export interface SiteConfig {
   name: string;
   intro: string;
+  subtitle: string;
+  tagline: string;
   description: string;
   keywords: string;
   domain: string;
@@ -37,6 +53,8 @@ export interface SiteConfig {
   analytics: AnalyticsProps;
   favicon: string;
   themeLink: string;
+  slides: CarouselSlide[];
+  about: AboutConfig;
 }
 
 interface SiteConfigStore {

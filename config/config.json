@@ -1,6 +1,8 @@
 {
   "name": "Design Studio",
   "intro": "Innovative Design Studio",
+  "subtitle": "Weaving innovation into every design",
+  "tagline": "Innovative designs that weave stories.",
   "description": "We are a cutting-edge design studio specializing in unique and quirky print-on-demand designs.",
   "keywords": "print-on-demand, apparel design, t-shirt print",
   "siteLogo": "https://via.placeholder.com/200x200",
@@ -30,8 +32,39 @@
   "analytics": {
     "google": ""
   },
-  "slides": {
-    "test": ""
+  "slides": [
+    {
+      "image": "/images/slide_1.png",
+      "title": "Original Designs for Everyday Wear",
+      "description": "Original artwork for t-shirts, hoodies and more"
+    },
+    {
+      "image": "/images/slide_2.png",
+      "title": "Bespoke Creations",
+      "description": "Tailored solutions for your unique vision"
+    },
+    {
+      "image": "/images/slide_3.png",
+      "title": "Artistic Excellence",
+      "description": "Where creativity meets craftsmanship"
+    }
+  ],
+  "about": {
+    "story": [
+      "{{name}} was founded in 2024 with a vision to revolutionize the world of design through the innovative use of AI tools. Our journey began with a small team of passionate designers who believed in the power of unconventional tools to create stunning visual narratives.",
+      "At {{name}}, we believe that fashion is more than just clothing—it's a reflection of your personality and passions. Our mission is to transform everyday apparel into bold statements of individuality and creativity.",
+      "We've assembled a talented team of designers who thrive on turning imaginative ideas into wearable art. Whether you're looking for a quirky design, a heartfelt message, or a bold statement piece, our collections are crafted to inspire and empower your unique style.",
+      "From versatile t-shirts and cozy hoodies to timeless polos, our wide range of products ensures there's something for everyone. With {{name}}, you're not just wearing clothes; you're wearing your story.",
+      "Dare to be different, celebrate your quirks, and let your fashion do the talking—because at {{name}}, individuality is always in style."
+    ],
+    "approachIntro": "At {{name}}, we believe that great design is born from a perfect blend of creativity, technical skill, and a deep understanding of our clients' needs. Our approach is rooted in:",
+    "approachPoints": [
+      "Collaborative ideation with our clients",
+      "Extensive research and experimentation with AI tools",
+      "Sustainable design practices",
+      "Continuous learning and adaptation to emerging trends"
+    ],
+    "approachOutro": "This approach allows us to create designs that are not only visually striking but also meaningful and impactful."
   },
   "favicon": "/favicon/favicon.ico",
   "themeLink": ""

@@ -21,9 +21,11 @@ export default function Footer() {
         <div className="flex flex-wrap justify-between items-center">
           <div className="w-full md:w-1/3 text-center md:text-left">
             <h3 className="text-lg font-semibold">{config.name}</h3>
-            <p className="mt-2 text-sm text-primary-foreground/70">
-              Innovative designs that weave stories.
-            </p>
+            {config.tagline && (
+              <p className="mt-2 text-sm text-primary-foreground/70">
+                {config.tagline}
+              </p>
+            )}
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0">
             <h4 className="text-lg font-semibold mb-2">Quick Links</h4>

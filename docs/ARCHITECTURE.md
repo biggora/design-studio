@@ -127,10 +127,10 @@ Executed exclusively on the server. They ship no JavaScript to the client bundle
 
 | Component / Route | File | Responsibility |
 |---|---|---|
-| `RootLayout` | `app/layout.tsx` | Loads configuration via `getSiteConfig()`, injects JSON-LD (`Organization`, `WebSite`), the Pinterest `p:domain_verify` meta tag, Google Analytics, and the optional `themeLink` override stylesheet (validated by `isAllowedThemeUrl`), then wraps the page in `ContextWrapper`. Applies the Inter font via `next/font/google`. |
-| `HomePage` | `app/page.tsx` | Builds the home page: full-viewport hero `Carousel`, an intro band driven by config, and a `FeaturedDesigns` preview fetched with `fetchDesigns(1, "", "", 3)`. |
-| `DesignFolio` | `app/designs/page.tsx` | The catalog with pagination. Reads `searchParams` (`page`, `search`, `collection`), calls `fetchDesigns()` (12 items per page) and `fetchCollections()`, renders the `CatalogSearchBar` + `DesignCard` grid, pagination links styled with `buttonVariants({ size: "sm" })`, and generates dynamic `Metadata`. |
-| `DesignDetails` | `app/designs/[slug]/page.tsx` | Single-design page. Loads the record by slug via `getDesignBySlug()`, or by UUID via `getDesignById()` with a `permanentRedirect` (308) to the slug URL when one exists; renders shop/share links and `FeaturedDesigns` ("More from this collection"), emits `BreadcrumbList` + `CreativeWork` JSON-LD, and generates OpenGraph tags. |
+| `RootLayout` | `app/layout.tsx` | Loads configuration via `getSiteConfig()`, injects JSON-LD (`Organization`, `WebSite`), the Pinterest `p:domain_verify` meta tag, consent-gated Google Analytics (`AnalyticsGate` loads it only after an explicit cookie accept), and the optional `themeLink` override stylesheet (validated by `isAllowedThemeUrl`), then wraps the page in `ContextWrapper`. Applies the Inter font via `next/font/google`. |
+| `HomePage` | `app/page.tsx` | Builds the home page: full-viewport hero `Carousel` driven by `config.slides` (bundled fallback slides when unset or malformed), an intro band driven by config (`name`/`intro`/`subtitle`), and a `FeaturedDesigns` preview fetched with `fetchDesigns(1, "", "", 5)`. |
+| `DesignFolio` | `app/designs/page.tsx` | The catalog with pagination. Reads `searchParams` (`page`, `search`, `collection`), calls `fetchDesigns()` (15 items per page) and `fetchCollections()`, renders the `CatalogSearchBar` + `DesignCard` grid, pagination links styled with `buttonVariants({ size: "sm" })`, and generates dynamic `Metadata`. |
+| `DesignDetails` | `app/designs/[slug]/page.tsx` | Single-design page. Loads the record by slug via `getDesignBySlug()`, or by UUID via `getDesignById()` with a `permanentRedirect` (308) to the slug URL when one exists; renders one primary "Buy on Redbubble" CTA (trust line underneath) plus a conditional TeePublic secondary and share links, `FeaturedDesigns` ("More from this collection"), emits `BreadcrumbList` + `CreativeWork` JSON-LD, and generates OpenGraph tags. |
 | `Sitemap` | `app/sitemap.ts` | Dynamic `sitemap.xml` generator. Emits the static routes with priorities, then pages through `fetchDesigns()` 100 records at a time (up to Google's 50,000-URL sitemap limit) to add every design URL with its real `lastModified` date. |
 | `Robots` | `app/robots.ts` | Dynamic `robots.txt`: allows all crawlers on `/`, disallows `/api/`, and points to `https://<domain>/sitemap.xml`. |
 | `About`, `Services`, `Contact`, `Policy`, `Terms` | `app/{about,services,contact,privacy-policy,terms-of-service}/page.tsx` | Static and semi-static informational pages with page-specific SEO metadata. |
@@ -234,7 +234,7 @@ The `init/` SQL scripts additionally define `get_random_design` / `get_random_de
 
 Site configuration uses a three-tier value-override hierarchy:
 
-1. **Default JSON** (`config/config.json`) — base metadata, social placeholders, contact data, `themeLink`.
+1. **Default JSON** (`config/config.json`) — base metadata, hero `slides`, `about` copy (supports a `{{name}}` placeholder), `subtitle`/`tagline`, social placeholders, contact data, `themeLink`.
 2. **Database (`studio` table)** — dynamic settings stored by the administrator as `key`/`value` pairs.
 3. **Environment variables (`.env`)** — secrets, access tokens, and hosting settings.
 
