@@ -2,6 +2,7 @@ export interface Design {
   id: string;
   externalId: number;
   title: string;
+  slug?: string | null;
   externalLink: string;
   externalImageUrl: string;
   category: string;

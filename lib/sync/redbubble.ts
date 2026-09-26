@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
+import { designSlugBase, uniqueSlug } from "@/lib/slug";
 
 // Options needed to scrape Redbubble, independent of where the result ends up — lets
 // callers (e.g. the CLI's `--target=json`) fetch without ever touching Supabase.
@@ -40,6 +41,7 @@ type DesignRecord = {
   backgroundColors: string;
   shared: boolean;
   props: object | null;
+  slug?: string;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -890,6 +892,51 @@ export async function writeDesignsToSupabase(
           }
         }
 
+        // Slugs are assigned once, on insert, and never rewritten (URLs must stay stable).
+        // Group new rows by their slug base and run one `LIKE` lookup per distinct base to
+        // find any slugs already taken in the database (bases only ever contain [a-z0-9-],
+        // never `%`/`_`, so they're safe to interpolate into a LIKE pattern). A failed lookup
+        // means we can't safely assign a slug for that base, so those rows are dropped from
+        // this run and counted as errors, the same as any other per-row lookup failure.
+        const slugBaseByExternalId = new Map<number, string>();
+        for (const r of newRows) {
+          slugBaseByExternalId.set(r.externalId, designSlugBase(r.title, r.externalId));
+        }
+        const distinctBases = Array.from(new Set(slugBaseByExternalId.values()));
+        const takenSlugs = new Set<string>();
+        const failedSlugBases = new Set<string>();
+        for (const base of distinctBases) {
+          const { data, error } = await supabase.from("designs").select("slug").like("slug", `${base}%`);
+          if (error) {
+            errorMessages.push(error.message);
+            failedSlugBases.add(base);
+            continue;
+          }
+          for (const row of (data as { slug: string | null }[] | null) || []) {
+            if (row.slug) takenSlugs.add(row.slug);
+          }
+        }
+        if (failedSlugBases.size) {
+          const survivingNewRows: (typeof rows)[0][] = [];
+          for (const r of newRows) {
+            const base = slugBaseByExternalId.get(r.externalId)!;
+            if (failedSlugBases.has(base)) {
+              errorsCount += 1;
+            } else {
+              survivingNewRows.push(r);
+            }
+          }
+          newRows.length = 0;
+          newRows.push(...survivingNewRows);
+        }
+        const slugByExternalId = new Map<number, string>();
+        for (const r of newRows) {
+          const base = slugBaseByExternalId.get(r.externalId)!;
+          const slug = uniqueSlug(base, takenSlugs);
+          takenSlugs.add(slug);
+          slugByExternalId.set(r.externalId, slug);
+        }
+
         // One /shop/ap/<workId> fetch per new design (description + mockup color) and per
         // existing design still missing props.mockup_tshirt (mockup color only) — a design
         // that already has a mockup is never fetched.
@@ -918,7 +965,13 @@ export async function writeDesignsToSupabase(
               warnings.push(`No Classic T-Shirt preview for ${r.externalId}; mockup_tshirt not set`);
             }
           }
-          insertRows.push({ ...r, description: data?.description ?? "", props, updatedAt: nowIso });
+          insertRows.push({
+            ...r,
+            description: data?.description ?? "",
+            props,
+            slug: slugByExternalId.get(r.externalId),
+            updatedAt: nowIso,
+          });
         }
 
         for (const c of existingCandidates) {

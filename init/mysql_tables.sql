@@ -9,6 +9,7 @@ CREATE TABLE designs (
   id CHAR(36) NOT NULL DEFAULT (UUID()),
   `externalId` BIGINT NOT NULL,
   title VARCHAR(255) NOT NULL,
+  slug VARCHAR(255),
   description TEXT NOT NULL,
   keywords TEXT NOT NULL,
   `imageName` VARCHAR(255),
@@ -24,7 +25,8 @@ CREATE TABLE designs (
   `updatedAt` TIMESTAMP NULL,
   PRIMARY KEY (id),
   UNIQUE KEY designs_externalid_key(`externalId`),
-  UNIQUE KEY designs_title_key(title)
+  UNIQUE KEY designs_title_key(title),
+  UNIQUE KEY designs_slug_key(slug)
 );
 
 CREATE TABLE collections (

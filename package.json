@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "sync:redbubble": "tsx scripts/sync-redbubble.ts",
     "sync:redbubble:dry": "tsx scripts/sync-redbubble.ts --dry-run",
-    "sync:redbubble:json": "tsx scripts/sync-redbubble.ts --target=json"
+    "sync:redbubble:json": "tsx scripts/sync-redbubble.ts --target=json",
+    "backfill:slugs": "tsx scripts/backfill-design-slugs.ts"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",

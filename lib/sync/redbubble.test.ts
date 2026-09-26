@@ -234,6 +234,7 @@ type DeleteFilter = { op: "eq" | "in" | "not-in"; col: string; val: unknown };
 type Call =
   | { type: "select-in"; table: string; col: string; vals: unknown[] }
   | { type: "select-filter"; table: string; col: string; op: string; value: string }
+  | { type: "select-like"; table: string; col: string; pattern: string }
   | { type: "insert"; table: string; rows: Row[] }
   | { type: "update"; table: string; changes: Row; filters: { col: string; val: unknown }[] }
   | { type: "upsert"; table: string; rows: Row[]; opts: Record<string, unknown> }
@@ -249,6 +250,7 @@ let collectionsUpsertResponses: MockResponse[] = [];
 let designIdLookupResponses: MockResponse[] = [];
 let designCollectionsUpsertResponses: MockResponse[] = [];
 let designCollectionsDeleteResponses: MockResponse[] = [];
+let slugLikeResponses: MockResponse[] = [];
 
 function nextOr(queue: MockResponse[], rows: Row[]): Promise<MockResponse> {
   const queued = queue.shift();
@@ -296,6 +298,11 @@ vi.mock("@supabase/supabase-js", () => ({
         filter: (col: string, op: string, value: string) => {
           calls.push({ type: "select-filter", table, col, op, value });
           return nextSelectResponse(col === "externalId" ? selectByIdResponses : selectByTitleResponses);
+        },
+        like: (col: string, pattern: string) => {
+          calls.push({ type: "select-like", table, col, pattern });
+          const queued = slugLikeResponses.shift();
+          return Promise.resolve(queued || { data: [], error: null });
         },
       }),
       insert: (rows: Row[]) => ({
@@ -406,6 +413,10 @@ function selectInCalls(): Extract<Call, { type: "select-in" }>[] {
   return calls.filter((c): c is Extract<Call, { type: "select-in" }> => c.type === "select-in");
 }
 
+function selectLikeCalls(): Extract<Call, { type: "select-like" }>[] {
+  return calls.filter((c): c is Extract<Call, { type: "select-like" }> => c.type === "select-like");
+}
+
 function deleteCalls(): Extract<Call, { type: "delete" }>[] {
   return calls.filter((c): c is Extract<Call, { type: "delete" }> => c.type === "delete");
 }
@@ -484,6 +495,7 @@ describe("syncRedbubbleToSupabase", () => {
     designIdLookupResponses = [];
     designCollectionsUpsertResponses = [];
     designCollectionsDeleteResponses = [];
+    slugLikeResponses = [];
   });
 
   afterEach(() => {
@@ -538,11 +550,117 @@ describe("syncRedbubbleToSupabase", () => {
       mockup_tshirt: mockupUrl({ imageA: "5674585231", last4: "1111", colorToken: WHITE_TOKEN }),
     });
     expect(row.description).toBe("A hand-drawn design.\n\nPrinted on demand.");
+    expect(row.slug).toBe("design-a");
     expect(typeof row.updatedAt).toBe("string");
 
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(0);
     expect(result.dryRun).toBe(false);
+  });
+
+  it("appends -2 when the slug base is already taken in the database", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, { 11111111: shopApHtml("Desc A") });
+    vi.stubGlobal("fetch", fetchMock);
+
+    slugLikeResponses = [{ data: [{ slug: "design-a" }], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const likes = selectLikeCalls();
+    expect(likes).toHaveLength(1);
+    expect(likes[0].pattern).toBe("design-a%");
+    const inserts = insertCalls();
+    expect(inserts[0].rows[0].slug).toBe("design-a-2");
+    expect(result.inserted).toBe(1);
+  });
+
+  it("assigns distinct slugs to two new titles sharing a base in one batch, with a single LIKE query", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/X-by-someartist/91111111.FB110";
+    const productB = "https://www.redbubble.com/i/sticker/X-by-someartist/92222222.ST123";
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 91111111, title: "X!", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.911.1/a.jpg" }),
+        rbResultEntry({ workId: 92222222, title: "X", productPageUrl: productB, imageUrl: "https://ih1.redbubble.net/image.922.1/b.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {
+      91111111: shopApHtml("Desc X1"),
+      92222222: shopApHtml("Desc X2"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const likes = selectLikeCalls();
+    expect(likes).toHaveLength(1);
+    expect(likes[0].pattern).toBe("x%");
+    const inserts = insertCalls();
+    expect(inserts[0].rows).toHaveLength(2);
+    const slugs = (inserts[0].rows as Row[]).map((r) => r.slug);
+    expect(slugs.sort()).toEqual(["x", "x-2"]);
+    expect(result.inserted).toBe(2);
+  });
+
+  it("drops rows whose slug base lookup fails and records the error, without inserting them", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {});
+    vi.stubGlobal("fetch", fetchMock);
+
+    slugLikeResponses = [{ data: null, error: { message: "slug lookup failed" } }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(insertCalls()).toHaveLength(0);
+    expect(result.inserted).toBe(0);
+    expect(result.errors).toBeGreaterThan(0);
+    expect(result.errorMessages).toContain("slug lookup failed");
+  });
+
+  it("falls back to design-<externalId> for a title with no ASCII characters", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-by-someartist/93333333.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 93333333, title: "Кот", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.933.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, { 93333333: shopApHtml("Desc") });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const inserts = insertCalls();
+    expect(inserts[0].rows[0].slug).toBe("design-93333333");
+    expect(result.inserted).toBe(1);
+  });
+
+  it("never sends slug on an update to an existing row", async () => {
+    const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/55555555.FB110";
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 55555555, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.555.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {
+      55555555: shopApHtml("Desc A", { workId: 55555555, imageA: "555", colorToken: WHITE_TOKEN }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    selectByIdResponses = [{ data: [existingRow({ externalId: 55555555 })], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes)).not.toContain("slug");
+    expect(result.updated).toBe(1);
   });
 
   it("fetches /shop/ap/<workId> for a new design's description, and never re-fetches an existing design that already has its mockup", async () => {
@@ -804,6 +922,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(upsertCalls()).toHaveLength(0);
     expect(result.dryRun).toBe(true);
     expect(result.plan?.insert).toHaveLength(1);
+    expect((result.plan?.insert[0] as Row).slug).toBe("design-a");
     expect(result.plan?.update).toEqual([
       {
         externalId: 22222222,
@@ -1203,6 +1322,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     designIdLookupResponses = [];
     designCollectionsUpsertResponses = [];
     designCollectionsDeleteResponses = [];
+    slugLikeResponses = [];
   });
 
   afterEach(() => {
@@ -1561,6 +1681,7 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
     designIdLookupResponses = [];
     designCollectionsUpsertResponses = [];
     designCollectionsDeleteResponses = [];
+    slugLikeResponses = [];
   });
 
   afterEach(() => {

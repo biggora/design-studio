@@ -2,6 +2,7 @@ import { MetadataRoute } from "next";
 import { SiteConfig } from "@/lib/store";
 import { Design } from "@/types/design";
 import { getSiteConfig, fetchDesigns } from "@/utils/database";
+import { designPath } from "@/lib/slug";
 
 // Safety-net TTL for the studio config cache; edits also trigger
 // /api/revalidate/config for near-immediate invalidation.
@@ -69,7 +70,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const createdAt = design.createdAt ? new Date(design.createdAt) : null;
       const isValidDate = createdAt !== null && !isNaN(createdAt.getTime());
       return {
-        url: `https://${newConfig.domain}/designs/${design.id}`,
+        url: `https://${newConfig.domain}${designPath(design)}`,
         ...(isValidDate
           ? { lastModified: createdAt.toISOString().split("T")[0] }
           : {}),

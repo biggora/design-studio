@@ -29,6 +29,7 @@ function legacyChain(response: { data: unknown; error: unknown }) {
 
 const orderCalls: unknown[][] = [];
 const rangeCalls: unknown[][] = [];
+const neqCalls: unknown[][] = [];
 
 function nextResponse(response: DesignsQueryResponse | DesignsQueryResponse[]): DesignsQueryResponse {
     if (Array.isArray(response)) {
@@ -44,12 +45,17 @@ function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
     const builder = {
         ilike: () => builder,
         eq: (column: string) => {
-            if (!hasCount && column === "id") {
+            if (!hasCount && (column === "id" || column === "slug")) {
                 return {single: () => Promise.resolve(designResponse)};
             }
             if (!hasCount) {
                 // related-designs lookup: eq("collection", ...).neq("id", ...).limit(5)
-                return {neq: () => ({limit: () => Promise.resolve(relatedResponse)})};
+                return {
+                    neq: (...args: unknown[]) => {
+                        neqCalls.push(args);
+                        return {limit: () => Promise.resolve(relatedResponse)};
+                    },
+                };
             }
             return builder;
         },
@@ -133,6 +139,7 @@ describe("utils/database", () => {
         mysqlQuery.mockReset();
         orderCalls.length = 0;
         rangeCalls.length = 0;
+        neqCalls.length = 0;
     });
 
     describe("getSiteConfig", () => {
@@ -190,11 +197,81 @@ describe("utils/database", () => {
         });
     });
 
+    describe("getDesignBySlug (supabase)", () => {
+        const designRow = {
+            id: "design-1",
+            externalId: 1,
+            title: "Fox",
+            slug: "fox",
+            externalLink: "https://example.com/1",
+            externalImageUrl: "https://example.com/1.png",
+            category: "cat",
+            collection: "Nature",
+            imageName: "fox.png",
+            description: "desc",
+            keywords: "kw",
+            backgroundColors: "bg",
+            backgroundColor: "white",
+            createdAt: "2024-01-01T00:00:00.000Z",
+            updatedAt: "2024-01-02T00:00:00.000Z",
+            shared: true,
+        };
+
+        it("returns the mapped design including slug", async () => {
+            designResponse = {data: designRow, error: null};
+            const {getDesignBySlug} = await import("@/utils/database");
+            const result = await getDesignBySlug("fox");
+            expect(result?.design.slug).toBe("fox");
+            expect(result?.design.id).toBe("design-1");
+        });
+
+        it("returns null when no rows are found (PGRST116)", async () => {
+            designResponse = {data: null, error: {code: "PGRST116", message: "no rows"}};
+            const {getDesignBySlug} = await import("@/utils/database");
+            const result = await getDesignBySlug("missing-slug");
+            expect(result).toBeNull();
+        });
+
+        it("throws on other errors instead of returning null", async () => {
+            designResponse = {data: null, error: {code: "08006", message: "connection failed"}};
+            const {getDesignBySlug} = await import("@/utils/database");
+            await expect(getDesignBySlug("fox")).rejects.toThrow("Failed to fetch design");
+        });
+
+        it("excludes the loaded design's id (not the slug) from the related-designs lookup", async () => {
+            designResponse = {data: designRow, error: null};
+            relatedResponse = {data: [], error: null};
+            const {getDesignBySlug} = await import("@/utils/database");
+            await getDesignBySlug("fox");
+            expect(neqCalls[0]).toEqual(["id", "design-1"]);
+        });
+    });
+
+    describe("getDesignBySlug (mysql)", () => {
+        it("queries by slug with LIMIT 1", async () => {
+            stubMySQLEnv();
+            mysqlQuery.mockImplementation((sql: string) => {
+                if (sql === "SELECT * FROM designs WHERE slug = ? LIMIT 1") {
+                    return Promise.resolve([[]]);
+                }
+                return Promise.resolve([[]]);
+            });
+            const {getDesignBySlug} = await import("@/utils/database");
+            const result = await getDesignBySlug("my-slug");
+            expect(mysqlQuery).toHaveBeenCalledWith(
+                "SELECT * FROM designs WHERE slug = ? LIMIT 1",
+                ["my-slug"],
+            );
+            expect(result).toBeNull();
+        });
+    });
+
     describe("fetchDesigns (supabase)", () => {
         const joinRow = {
             id: "1",
             externalId: 1,
             title: "Fox",
+            slug: "fox",
             externalLink: "https://example.com/1",
             externalImageUrl: "https://example.com/1.png",
             category: "cat",
@@ -225,6 +302,7 @@ describe("utils/database", () => {
             expect(designs[0]).not.toHaveProperty("design_collections");
             expect(designs[0].id).toBe("1");
             expect(designs[0].title).toBe("Fox");
+            expect(designs[0].slug).toBe("fox");
         });
 
         it("falls back to the legacy filter when the join query errors", async () => {
@@ -316,6 +394,7 @@ describe("utils/database", () => {
             id: "1",
             externalId: 1,
             title: "Fox",
+            slug: "fox",
             externalLink: "https://example.com/1",
             externalImageUrl: "https://example.com/1.png",
             category: "cat",
@@ -350,6 +429,7 @@ describe("utils/database", () => {
             expect(total).toBe(1);
             expect(designs).toHaveLength(1);
             expect(designs[0].id).toBe("1");
+            expect(designs[0].slug).toBe("fox");
         });
 
         it("falls back to the legacy filter when the join query throws", async () => {

@@ -12,6 +12,7 @@ create table
                        id uuid not null default gen_random_uuid (),
                        "externalId" bigint not null,
                        title character varying not null,
+                       slug character varying null,
                        description text not null,
                        keywords text not null,
                        "imageName" character varying null,
@@ -27,7 +28,8 @@ create table
                        "updatedAt" timestamp without time zone null,
                        constraint designs_pkey primary key (id),
                        constraint designs_externalid_key unique ("externalId"),
-                       constraint designs_title_key unique (title)
+                       constraint designs_title_key unique (title),
+                       constraint designs_slug_key unique (slug)
 ) tablespace pg_default;
 
 create table

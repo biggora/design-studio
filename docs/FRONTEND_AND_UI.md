@@ -13,8 +13,8 @@ app/
 ├── robots.ts                      # "/robots.txt"  Crawler rules (allow all, disallow /api/, link to sitemap)
 ├── designs/
 │   ├── page.tsx                   # "/designs"     Full catalog with search, collection filter, pagination
-│   └── [id]/
-│       └── page.tsx               # "/designs/[id]" Single design detail page
+│   └── [slug]/
+│       └── page.tsx               # "/designs/[slug]" Single design detail page (redirects legacy UUID URLs)
 ├── about/
 │   └── page.tsx                   # "/about"        About the studio and the creative process
 ├── services/
@@ -51,7 +51,7 @@ graph TD
     CatalogPage --> SearchBar["CatalogSearchBar.tsx"]
     CatalogPage --> DesignGrid["Grid of DesignCard.tsx"]
 
-    MainArea -->|Route: /designs/[id]| DetailsPage["app/designs/[id]/page.tsx"]
+    MainArea -->|Route: /designs/[slug]| DetailsPage["app/designs/[slug]/page.tsx"]
     DetailsPage --> ShareBox["ShareLinks.tsx"]
     DetailsPage --> ShopBox["ShopLinks.tsx"]
     DetailsPage --> RelatedGrid["FeaturedDesigns.tsx"]
@@ -154,10 +154,10 @@ export async function generateMetadata(
 ```
 Note the two SEO guards: `?search=…` result pages are marked `noindex, follow`, and the canonical URL is normalized (search dropped, `page` kept only when > 1).
 
-#### Single design page (`app/designs/[id]/page.tsx`):
+#### Single design page (`app/designs/[slug]/page.tsx`):
 - Builds a precise `title` combining the work's name and the brand (`${design.title} - ${config.name} Design`).
 - Generates a `description` truncated to 180 characters (`truncateText`).
-- Uses the design preview image as `og:image` / `twitter:image`, with `alternates.canonical` on `/designs/${id}`.
+- Uses the design preview image as `og:image` / `twitter:image`, with `alternates.canonical` on the `designPath(design)` URL (`lib/slug.ts`) — the slug when set, else the UUID.
 - Missing records return `title: "Design Not Found"` with `robots: { index: false }` before the page itself calls `notFound()`.
 
 #### Root layout (`app/layout.tsx`):
@@ -252,7 +252,7 @@ Real usage examples from the codebase:
   <button className="… focus-visible:ring-2 focus-visible:ring-ring">
 
 // app/components/DesignCard.tsx — accent link on a card
-<Link href={`/designs/${design.id}`} className="text-accent hover:underline mt-auto">
+<Link href={designPath(design)} className="text-accent hover:underline mt-auto">
 
 // app/components/CatalogSearchBar.tsx — icon link color shift
 <button className="… text-muted-foreground hover:text-accent">

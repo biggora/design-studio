@@ -83,6 +83,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         id: row.id as string,
         externalId: row.externalId as number,
         title: row.title as string,
+        slug: (row.slug as string | null) ?? null,
         externalLink: row.externalLink as string,
         externalImageUrl: row.externalImageUrl as string,
         category: row.category as string,
@@ -224,28 +225,7 @@ export async function fetchDesigns(
         }
 
         // Convert data to Design[] using appropriate type checking
-        const designs: Design[] = (data || []).map(item => ({
-            id: item.id as string,
-            externalId: item.externalId as number,
-            title: item.title as string,
-            externalLink: item.externalLink as string,
-            externalImageUrl: item.externalImageUrl as string,
-            category: item.category as string,
-            collection: normalizeCollection(item.collection),
-            imageName: item.imageName as string,
-            description: item.description as string,
-            keywords: item.keywords as string,
-            backgroundColors: item.backgroundColors as string,
-            backgroundColor: item.backgroundColor as string,
-            createdAt: item.createdAt as string,
-            updatedAt: item.updatedAt as string,
-            dimensions: item.dimensions as string | undefined,
-            material: item.material as string | undefined,
-            price: item.price as number | undefined,
-            inStock: item.inStock as boolean | undefined,
-            shared: item.shared as boolean | undefined,
-            props: item.props as object | undefined,
-        }));
+        const designs: Design[] = (data || []).map(mapSupabaseRowToDesign);
 
         return {designs, total: count || 0};
     }
@@ -309,8 +289,10 @@ export async function fetchDesigns(
     return {designs, total: result.total};
 }
 
-export async function getDesignById(
-    id: string,
+// column is always one of the literal values below (never user input), so it's safe to interpolate into the MySQL query.
+async function getDesignBy(
+    column: "id" | "slug",
+    value: string,
 ): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
     const provider = getProvider();
     if (provider === "supabase") {
@@ -318,7 +300,7 @@ export async function getDesignById(
         const {data: designData, error} = await supabaseClient
             .from("designs")
             .select("*")
-            .eq("id", id)
+            .eq(column, value)
             .single();
 
         if (error) {
@@ -330,33 +312,12 @@ export async function getDesignById(
         if (!designData) return null;
 
         // Convert to Design
-        const design: Design = {
-            id: designData.id as string,
-            externalId: designData.externalId as number,
-            title: designData.title as string,
-            externalLink: designData.externalLink as string,
-            externalImageUrl: designData.externalImageUrl as string,
-            category: designData.category as string,
-            collection: normalizeCollection(designData.collection),
-            imageName: designData.imageName as string,
-            description: designData.description as string,
-            keywords: designData.keywords as string,
-            backgroundColors: designData.backgroundColors as string,
-            backgroundColor: designData.backgroundColor as string,
-            createdAt: designData.createdAt as string,
-            updatedAt: designData.updatedAt as string,
-            dimensions: designData.dimensions as string | undefined,
-            material: designData.material as string | undefined,
-            price: designData.price as number | undefined,
-            inStock: designData.inStock as boolean | undefined,
-            shared: designData.shared as boolean | undefined,
-            props: designData.props as object | undefined,
-        };
+        const design: Design = mapSupabaseRowToDesign(designData);
 
         // "More from this collection" only makes sense when the design has one;
         // an uncollected design would otherwise match legacy empty rows.
         const relatedDesigns: Design[] = design.collection
-            ? await fetchRelatedByCollection(supabaseClient, design.collection, id)
+            ? await fetchRelatedByCollection(supabaseClient, design.collection, design.id)
             : [];
 
         return {design, relatedDesigns};
@@ -364,8 +325,8 @@ export async function getDesignById(
 
     const pool = getMySQLPool();
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-        "SELECT * FROM designs WHERE id = ?",
-        [id],
+        `SELECT * FROM designs WHERE ${column} = ? LIMIT 1`,
+        [value],
     );
 
     if (!rows.length) {
@@ -376,10 +337,22 @@ export async function getDesignById(
     const design: Design = mapRowToDesign(rows[0]);
 
     const relatedDesigns: Design[] = design.collection
-        ? await fetchRelatedByCollectionMySQL(pool, design.collection, id)
+        ? await fetchRelatedByCollectionMySQL(pool, design.collection, design.id)
         : [];
 
     return {design, relatedDesigns};
+}
+
+export async function getDesignById(
+    id: string,
+): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
+    return getDesignBy("id", id);
+}
+
+export async function getDesignBySlug(
+    slug: string,
+): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
+    return getDesignBy("slug", slug);
 }
 
 async function fetchRelatedByCollection(
@@ -450,6 +423,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         id: item.id as string,
         externalId: item.externalId as number,
         title: item.title as string,
+        slug: (item.slug as string | null) ?? null,
         externalLink: item.externalLink as string,
         externalImageUrl: item.externalImageUrl as string,
         category: item.category as string,

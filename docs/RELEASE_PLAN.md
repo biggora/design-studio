@@ -88,7 +88,7 @@ and a complete set of technical documentation.
 ### Step 4: Post-release validation (smoke testing)
 - [ ] Check the home page `/` (hero, carousel, featured designs).
 - [ ] Check the catalog `/designs`: title search, collection filter, pagination.
-- [ ] Check a product card `/designs/[id]`: purchase and sharing links work.
+- [ ] Check a product card `/designs/[slug]`: purchase and sharing links work.
 - [ ] Check the dynamic `/sitemap.xml`.
 - [ ] Check that `/api/sync/redbubble` responds when the secret header `x-sync-secret` is passed.
 

@@ -63,6 +63,7 @@ CREATE TABLE public.designs (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
     "externalId" BIGINT NOT NULL,
     title CHARACTER VARYING NOT NULL,
+    slug CHARACTER VARYING NULL,
     description TEXT NOT NULL,
     keywords TEXT NOT NULL,
     "imageName" CHARACTER VARYING NULL,
@@ -78,7 +79,8 @@ CREATE TABLE public.designs (
     "updatedAt" TIMESTAMP WITHOUT TIME ZONE NULL,
     CONSTRAINT designs_pkey PRIMARY KEY (id),
     CONSTRAINT designs_externalid_key UNIQUE ("externalId"),
-    CONSTRAINT designs_title_key UNIQUE (title)
+    CONSTRAINT designs_title_key UNIQUE (title),
+    CONSTRAINT designs_slug_key UNIQUE (slug)
 ) TABLESPACE pg_default;
 ```
 
@@ -88,6 +90,7 @@ CREATE TABLE designs (
   id CHAR(36) NOT NULL DEFAULT (UUID()),
   `externalId` BIGINT NOT NULL,
   title VARCHAR(255) NOT NULL,
+  slug VARCHAR(255),
   description TEXT NOT NULL,
   keywords TEXT NOT NULL,
   `imageName` VARCHAR(255),
@@ -103,7 +106,8 @@ CREATE TABLE designs (
   `updatedAt` TIMESTAMP NULL,
   PRIMARY KEY (id),
   UNIQUE KEY designs_externalid_key(`externalId`),
-  UNIQUE KEY designs_title_key(title)
+  UNIQUE KEY designs_title_key(title),
+  UNIQUE KEY designs_slug_key(slug)
 );
 ```
 
@@ -113,6 +117,7 @@ CREATE TABLE designs (
 | `id` | `UUID` | `CHAR(36)` | PRIMARY KEY, DEFAULT UUID | Internal unique record identifier. |
 | `externalId` | `BIGINT` | `BIGINT` | UNIQUE, NOT NULL | Unique numeric artwork ID on Redbubble (e.g. `156782390`). Used for deduplication during synchronization. |
 | `title` | `VARCHAR` | `VARCHAR(255)` | UNIQUE, NOT NULL | Design title (e.g. *"Cosmic Cat Embroidery"*). |
+| `slug` | `VARCHAR` | `VARCHAR(255)` | UNIQUE, NULL | URL slug for `/designs/<slug>`, derived from `title` (`lib/slug.ts`). Assigned once on insert by the sync and never rewritten; `NULL` until backfilled, in which case the page falls back to the UUID. |
 | `description` | `TEXT` | `TEXT` | NOT NULL | Full text description used on the card and in SEO tags. |
 | `keywords` | `TEXT` | `TEXT` | NOT NULL | Comma-separated keyword list for search optimization. |
 | `imageName` | `VARCHAR` | `VARCHAR(255)` | NULL | Image file name (hash or slug from the CDN). |
@@ -247,8 +252,11 @@ For deployments that already have `studio` and `designs` provisioned, apply the 
 
 - `init/migrations/001_collections_postgres.sql` — run once in the Supabase SQL editor (or via `psql`). Uses `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and guards each `CREATE POLICY` with a `pg_policies` existence check, so it is safe to re-run.
 - `init/migrations/001_collections_mysql.sql` — run once via the `mysql` client. Uses `CREATE TABLE IF NOT EXISTS`.
+- `init/migrations/002_design_slugs_postgres.sql` / `002_design_slugs_mysql.sql` — add the nullable unique `designs.slug` column and `designs_slug_key` constraint. Idempotent (guarded by column/constraint existence checks).
 
 The full `init/postgres_tables.sql` / `init/mysql_tables.sql` scripts remain the source of truth for fresh installs; the migration scripts only backfill existing databases.
+
+**Rollout order for slugs:** 1) run migration 002 *before* the next Redbubble sync, since the sync writes `slug` on insert; 2) run `npm run backfill:slugs` (`--dry-run` supported) to fill `slug` for existing rows — oldest design gets the bare slug, collisions get a `-2`, `-3`, … suffix, and a rerun is a no-op; 3) deploy. Skipping the backfill is not harmful: designs without a slug simply keep resolving via their UUID and are never redirected.
 
 ---
 

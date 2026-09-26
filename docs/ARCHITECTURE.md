@@ -31,7 +31,7 @@ flowchart TB
             RootLayout["app/layout.tsx"]
             HomePage["app/page.tsx"]
             CatalogPage["app/designs/page.tsx"]
-            DetailPage["app/designs/[id]/page.tsx"]
+            DetailPage["app/designs/[slug]/page.tsx"]
             Sitemap["app/sitemap.ts"]
             Robots["app/robots.ts"]
         end
@@ -130,7 +130,7 @@ Executed exclusively on the server. They ship no JavaScript to the client bundle
 | `RootLayout` | `app/layout.tsx` | Loads configuration via `getSiteConfig()`, injects JSON-LD (`Organization`, `WebSite`), the Pinterest `p:domain_verify` meta tag, Google Analytics, and the optional `themeLink` override stylesheet (validated by `isAllowedThemeUrl`), then wraps the page in `ContextWrapper`. Applies the Inter font via `next/font/google`. |
 | `HomePage` | `app/page.tsx` | Builds the home page: full-viewport hero `Carousel`, an intro band driven by config, and a `FeaturedDesigns` preview fetched with `fetchDesigns(1, "", "", 3)`. |
 | `DesignFolio` | `app/designs/page.tsx` | The catalog with pagination. Reads `searchParams` (`page`, `search`, `collection`), calls `fetchDesigns()` (12 items per page) and `fetchCollections()`, renders the `CatalogSearchBar` + `DesignCard` grid, pagination links styled with `buttonVariants({ size: "sm" })`, and generates dynamic `Metadata`. |
-| `DesignDetails` | `app/designs/[id]/page.tsx` | Single-design page. Loads the record by UUID via `getDesignById()`, renders shop/share links and `FeaturedDesigns` ("More from this collection"), emits `BreadcrumbList` + `CreativeWork` JSON-LD, and generates OpenGraph tags. |
+| `DesignDetails` | `app/designs/[slug]/page.tsx` | Single-design page. Loads the record by slug via `getDesignBySlug()`, or by UUID via `getDesignById()` with a `permanentRedirect` (308) to the slug URL when one exists; renders shop/share links and `FeaturedDesigns` ("More from this collection"), emits `BreadcrumbList` + `CreativeWork` JSON-LD, and generates OpenGraph tags. |
 | `Sitemap` | `app/sitemap.ts` | Dynamic `sitemap.xml` generator. Emits the static routes with priorities, then pages through `fetchDesigns()` 100 records at a time (up to Google's 50,000-URL sitemap limit) to add every design URL with its real `lastModified` date. |
 | `Robots` | `app/robots.ts` | Dynamic `robots.txt`: allows all crawlers on `/`, disallows `/api/`, and points to `https://<domain>/sitemap.xml`. |
 | `About`, `Services`, `Contact`, `Policy`, `Terms` | `app/{about,services,contact,privacy-policy,terms-of-service}/page.tsx` | Static and semi-static informational pages with page-specific SEO metadata. |
@@ -218,8 +218,8 @@ All consumers call methods with identical signatures regardless of provider:
    - Orders by `createdAt` descending (`query.range(start, end)` with `count: "exact"` on Supabase; `LIMIT ? OFFSET ?` plus a `COUNT(*)` query on MySQL).
    - Returns a normalized `Design[]` and the exact `total` record count.
 
-3. `getDesignById(id: string): Promise<{ design: Design; relatedDesigns: Design[] } | null>`
-   - Finds the target design by primary key `id`.
+3. `getDesignById(id: string): Promise<{ design: Design; relatedDesigns: Design[] } | null>` / `getDesignBySlug(slug: string): Promise<{ design: Design; relatedDesigns: Design[] } | null>`
+   - Both wrap a private `getDesignBy(column)`, finding the target design by primary key `id` or by unique `slug`.
    - Fetches up to 3 related designs from the same collection (`collection = target.collection AND id != target.id`).
    - Returns `null` when the record does not exist (the detail page then calls `notFound()`).
 

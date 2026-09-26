@@ -1,12 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getSiteConfig, getDesignById } from "@/utils/database";
+import { cache } from "react";
+import { getSiteConfig, getDesignById, getDesignBySlug } from "@/utils/database";
 import {
   getPlaceholderImage,
   designCardHeight,
   designCardWidth,
 } from "@/lib/image";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
   formatDate,
   getRedBubbleDesignPageLink,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
+import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import ShopLinks from "@/app/components/ShopLinks";
 import ShareLinks from "@/app/components/ShareLinks";
@@ -22,14 +24,20 @@ import { JsonLd } from "@/app/components/JsonLd";
 import { buttonVariants } from "@/components/ui/button";
 
 type Props = {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 };
 
+// Per-request dedupe: generateMetadata and the page share one DB lookup.
+const loadDesign = cache(async (param: string) => {
+  if (UUID_PATTERN.test(param)) return getDesignById(param); // legacy /designs/<uuid> links
+  if (param.length > 255 || !SLUG_PATTERN.test(param)) return null; // skip the DB for junk
+  return getDesignBySlug(param);
+});
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
-  const id = params.id;
-  const data = await getDesignById(id);
+  const slug = params.slug;
+  const data = await loadDesign(slug);
   const config: SiteConfig = await getSiteConfig();
 
   if (!data || !data.design) {
@@ -46,9 +54,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     title,
     description,
     keywords: `${design.keywords}, art, t-shirt design, ${config.name} design`,
-    alternates: { canonical: `/designs/${id}` },
+    alternates: { canonical: designPath(design) },
     openGraph: {
-      url: `https://${config.domain}/designs/${id}`,
+      url: `https://${config.domain}${designPath(design)}`,
       type: "website",
       title,
       description,
@@ -64,12 +72,13 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
 export default async function DesignDetails(
   props: {
-    params: Promise<{ id: string }>;
+    params: Promise<{ slug: string }>;
   }
 ) {
   const params = await props.params;
+  const slug = params.slug;
   const config: SiteConfig = await getSiteConfig();
-  const data = await getDesignById(params.id);
+  const data = await loadDesign(slug);
 
   if (!data || !data.design) {
     notFound();
@@ -77,12 +86,16 @@ export default async function DesignDetails(
 
   const { design, relatedDesigns } = data;
 
+  if (UUID_PATTERN.test(slug) && design.slug) {
+    permanentRedirect(designPath(design));
+  }
+
   const collectionParams = new URLSearchParams();
   if (design.collection) collectionParams.set("collection", design.collection);
   const collectionQuery = collectionParams.toString();
   const collectionUrl = collectionQuery ? `/designs?${collectionQuery}` : "/designs";
 
-  const shareUrl = `https://${config.domain}/designs/${params.id}`;
+  const shareUrl = `https://${config.domain}${designPath(design)}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
   const breadcrumbJsonLd = {

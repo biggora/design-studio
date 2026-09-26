@@ -325,6 +325,10 @@ The `designs` table has two unique constraints — `externalId` and `title` (see
 5. In `dryRun` mode, no writes happen — the response includes `plan: { insert, update, collections, links }`, where `insert` holds the full rows that would be written and `update` holds `{ externalId, collection?, props? }` per row, including `props` only when a `mockup_tshirt` backfill would happen (see §6.2).
 6. Otherwise: inserts are written in chunked calls of 100 (`.insert(chunk).select("id")`); updates are written **one row at a time** as `.update({ collection?, props?, updatedAt }).eq("externalId", externalId)` (only the changed fields are included) — deliberately not a batch upsert, because an `upsert(rows, { onConflict: "externalId" })` with only these columns would violate the other columns' `NOT NULL` constraints on the insert branch Postgres builds internally for `ON CONFLICT DO UPDATE`, even though that branch is never actually taken. A failed insert chunk or a failed single-row update adds to `errors` and pushes the Supabase error message to `errorMessages`; the rest of the batch is still processed.
 
+### 6.1a Slug assignment
+
+Each **insert** row (step 3 above) is assigned a `slug` (`lib/slug.ts`: `designSlugBase` + `uniqueSlug`), deduplicated against existing DB rows via a `like '<base>%'` lookup and against other slugs assigned earlier in the same batch. The slug is set once, at insert time, and is **never** rewritten on a later update, so a design's `/designs/<slug>` URL stays stable even if its title changes on Redbubble. If the slug lookup itself fails, the affected rows are skipped and counted in `errors` rather than inserted without a slug.
+
 ### 6.2 Collections and `design_collections` write
 
 Only runs when the collections crawl fully succeeded (`collectionsComplete`, §3.4); otherwise a warning is added and this step is skipped entirely (existing `collections`/`design_collections` rows are left untouched — collections removed from a Redbubble collection just lose their links, the `collections` row itself is never deleted).

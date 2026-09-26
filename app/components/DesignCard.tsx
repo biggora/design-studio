@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
+import { designPath } from "@/lib/slug";
 
 type DesignCardProps = {
   design: Design;
@@ -14,7 +15,7 @@ export function DesignCard({ design }: DesignCardProps) {
   return (
     <Card key={design.id}>
       <Link
-        href={`/designs/${design.id}`}
+        href={designPath(design)}
         className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="relative w-full aspect-square overflow-hidden bg-muted">
@@ -44,7 +45,7 @@ export function DesignCard({ design }: DesignCardProps) {
           </p>
         )}
         <Link
-          href={`/designs/${design.id}`}
+          href={designPath(design)}
           className="text-accent hover:underline mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           View Design Details
