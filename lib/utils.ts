@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { Design } from "@/types/design";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -57,6 +58,25 @@ export function parsePageParam(value: string | undefined): number {
 
 export function getRedBubbleDesignPageLink(designId: number): string {
   return `https://www.redbubble.com/shop/ap/${designId}`;
+}
+
+/** Reads the TeePublic design page link from `props.teepublicLink`, returning it only if it's an https:// URL on teepublic.com (or www.teepublic.com); never throws. */
+export function getTeepublicLink(design: Pick<Design, "props">): string | null {
+  const raw = (design.props as { teepublicLink?: unknown })?.teepublicLink;
+  if (typeof raw !== "string") return null;
+
+  try {
+    const parsed = new URL(raw);
+    if (
+      parsed.protocol === "https:" &&
+      (parsed.hostname === "www.teepublic.com" || parsed.hostname === "teepublic.com")
+    ) {
+      return raw;
+    }
+  } catch {
+    // Invalid URL
+  }
+  return null;
 }
 
 export function sanitizeUrl(url?: string | null): string {

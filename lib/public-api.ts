@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { Design } from "@/types/design";
+import { getTeepublicLink } from "@/lib/utils";
 
 export type PublicPrint = {
   id: string;
@@ -8,6 +9,7 @@ export type PublicPrint = {
   imageUrl: string;
   mockupUrl: string | null;
   link: string;
+  teepublicLink: string | null;
   collection: string | null;
   keywords: string[];
   backgroundColor: string | null;
@@ -31,6 +33,7 @@ export function toPublicPrint(design: Design): PublicPrint {
     imageUrl: design.externalImageUrl,
     mockupUrl: (design.props as { mockup_tshirt?: string })?.mockup_tshirt ?? null,
     link: design.externalLink,
+    teepublicLink: getTeepublicLink(design),
     collection,
     keywords,
     backgroundColor: design.backgroundColor || null,

@@ -271,7 +271,7 @@ function getRequestHeaders(extra?: Record<string, string>): Record<string, strin
   };
 }
 
-function isCloudflareChallengePage(html: string): boolean {
+export function isCloudflareChallengePage(html: string): boolean {
   return (
     /Just a moment/i.test(html) ||
     /Verifying you are human/i.test(html) ||
@@ -467,7 +467,7 @@ async function crawlCollectionMembership(
   return { membership, complete };
 }
 
-async function createPlaywrightSession(options: {
+export async function createPlaywrightSession(options: {
   requestHeaders?: Record<string, string>;
   headless: boolean;
   storageStatePath?: string;
@@ -516,6 +516,31 @@ async function createPlaywrightSession(options: {
       }
 
       return body;
+    },
+    // Fetches a URL via `fetch()` run inside the already-navigated page, reusing its cookies
+    // (`credentials: "include"`) instead of a fresh top-level navigation — used by callers
+    // that find a fresh `page.goto` re-triggers a Cloudflare challenge on every page after the
+    // first, even though the same session's cookies satisfy it for a same-origin `fetch`.
+    async fetchInPage(url: string): Promise<{ status: number; body: string }> {
+      return page.evaluate(async (u) => {
+        const r = await fetch(u, { credentials: "include" });
+        return { status: r.status, body: await r.text() };
+      }, url);
+    },
+    // Bare navigation with none of `fetchHtml`'s challenge-detection throw — for callers that
+    // need to inspect/wait on the page themselves before deciding whether it's a challenge
+    // (e.g. giving a human running headful a chance to solve it) rather than failing fast.
+    async openPage(url: string): Promise<void> {
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    },
+    // Passive wait only — never interacts with the page. Resolves true once `selector`
+    // appears within `timeoutMs`, or false on timeout (e.g. a human didn't clear a challenge
+    // in time).
+    async waitForSelector(selector: string, timeoutMs: number): Promise<boolean> {
+      return page.waitForSelector(selector, { timeout: timeoutMs }).then(
+        () => true,
+        () => false,
+      );
     },
     async scrapeListingCards(pageUrl: string): Promise<ParsedShopPage> {
       const response = await page.goto(pageUrl, { waitUntil: "domcontentloaded", timeout: 60000 });

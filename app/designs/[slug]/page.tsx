@@ -11,6 +11,7 @@ import { notFound, permanentRedirect } from "next/navigation";
 import {
   formatDate,
   getRedBubbleDesignPageLink,
+  getTeepublicLink,
   sanitizeUrl,
   truncateText,
 } from "@/lib/utils";
@@ -231,6 +232,7 @@ export default async function DesignDetails(
                     title="Our Shops"
                     styleTitle={" "}
                     redBubble={getRedBubbleDesignPageLink(design.externalId)}
+                    teePublic={getTeepublicLink(design) ?? undefined}
                   />
                 </div>
               </div>

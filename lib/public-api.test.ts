@@ -28,7 +28,10 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
     updatedAt: "2024-01-02",
     price: 19.99,
     shared: true,
-    props: { mockup_tshirt: "https://redbubble.com/mockup.jpg" },
+    props: {
+      mockup_tshirt: "https://redbubble.com/mockup.jpg",
+      teepublicLink: "https://www.teepublic.com/t-shirt/123-cat",
+    },
     ...overrides,
   };
 }
@@ -39,11 +42,20 @@ describe("toPublicPrint", () => {
     expect(result.imageUrl).toBe("https://redbubble.com/image.jpg");
     expect(result.link).toBe("https://redbubble.com/i/d1");
     expect(result.mockupUrl).toBe("https://redbubble.com/mockup.jpg");
+    expect(result.teepublicLink).toBe("https://www.teepublic.com/t-shirt/123-cat");
   });
 
-  it("returns null mockupUrl when props is missing", () => {
+  it("returns null mockupUrl and teepublicLink when props is missing", () => {
     const result = toPublicPrint(makeDesign({ props: undefined }));
     expect(result.mockupUrl).toBeNull();
+    expect(result.teepublicLink).toBeNull();
+  });
+
+  it("returns null teepublicLink for a foreign host", () => {
+    const result = toPublicPrint(
+      makeDesign({ props: { teepublicLink: "https://evil.com/t-shirt/123-cat" } }),
+    );
+    expect(result.teepublicLink).toBeNull();
   });
 
   it("splits, trims, and filters empty keywords", () => {
