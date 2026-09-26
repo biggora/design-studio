@@ -6,6 +6,7 @@ import {
   calculateReadingTime,
   getRedBubbleDesignPageLink,
   safeHexColor,
+  getTeepublicLink,
   sanitizeUrl,
   parsePageParam,
 } from '@/lib/utils';
@@ -92,6 +93,40 @@ describe('calculateReadingTime', () => {
 describe('getRedBubbleDesignPageLink', () => {
   it('generates a proper design page URL', () => {
     expect(getRedBubbleDesignPageLink(123)).toBe('https://www.redbubble.com/shop/ap/123');
+  });
+});
+
+// getTeepublicLink
+
+describe('getTeepublicLink', () => {
+  it('returns the link when it is a valid teepublic.com URL', () => {
+    const url = 'https://www.teepublic.com/t-shirt/79297603-i-do-what-i-want-coffee-loving-cat';
+    expect(getTeepublicLink({ props: { teepublicLink: url, mockup_tshirt: 'x' } })).toBe(url);
+  });
+
+  it('accepts the bare teepublic.com host (no www)', () => {
+    const url = 'https://teepublic.com/t-shirt/123-foo';
+    expect(getTeepublicLink({ props: { teepublicLink: url } })).toBe(url);
+  });
+
+  it('returns null when props is missing', () => {
+    expect(getTeepublicLink({ props: undefined })).toBeNull();
+  });
+
+  it('returns null when teepublicLink is not a string', () => {
+    expect(getTeepublicLink({ props: { teepublicLink: 123 } })).toBeNull();
+  });
+
+  it('returns null for http: URLs', () => {
+    expect(getTeepublicLink({ props: { teepublicLink: 'http://www.teepublic.com/t-shirt/1-foo' } })).toBeNull();
+  });
+
+  it('returns null for a foreign host', () => {
+    expect(getTeepublicLink({ props: { teepublicLink: 'https://evil.com/t-shirt/1-foo' } })).toBeNull();
+  });
+
+  it('returns null for a malformed URL string', () => {
+    expect(getTeepublicLink({ props: { teepublicLink: 'javascript:alert(1)' } })).toBeNull();
   });
 });
 

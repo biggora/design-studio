@@ -12,6 +12,7 @@ import {
   formatDate,
   getRedBubbleDesignPageLink,
   safeHexColor,
+  getTeepublicLink,
   sanitizeUrl,
   truncateText,
 } from "@/lib/utils";
@@ -235,6 +236,7 @@ export default async function DesignDetails(
                     title="Our Shops"
                     styleTitle={" "}
                     redBubble={getRedBubbleDesignPageLink(design.externalId)}
+                    teePublic={getTeepublicLink(design) ?? undefined}
                   />
                 </div>
               </div>

@@ -18,7 +18,10 @@
     "sync:redbubble:json": "tsx scripts/sync-redbubble.ts --target=json",
     "backfill:slugs": "tsx scripts/backfill-design-slugs.ts",
     "designs:background": "tsx scripts/set-background.ts",
-    "designs:background:dry": "tsx scripts/set-background.ts --dry-run"
+    "designs:background:dry": "tsx scripts/set-background.ts --dry-run",
+    "sync:teepublic": "tsx scripts/sync-teepublic.ts",
+    "sync:teepublic:dry": "tsx scripts/sync-teepublic.ts --dry-run",
+    "sync:teepublic:json": "tsx scripts/sync-teepublic.ts --target=json"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",
