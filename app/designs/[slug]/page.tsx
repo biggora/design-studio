@@ -20,8 +20,9 @@ import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
-import ShopLinks from "@/app/components/ShopLinks";
 import ShareLinks from "@/app/components/ShareLinks";
+import { RedBubble } from "@/app/components/Icons/RedBubble";
+import { TeePublic } from "@/app/components/Icons/TeePublic";
 import { JsonLd } from "@/app/components/JsonLd";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -99,6 +100,11 @@ export default async function DesignDetails(
 
   const shareUrl = `https://${config.domain}${designPath(design)}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
+
+  const buyUrl = sanitizeUrl(
+    design.externalLink || getRedBubbleDesignPageLink(design.externalId),
+  );
+  const teePublicLink = getTeepublicLink(design);
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -213,34 +219,37 @@ export default async function DesignDetails(
                 </p>
               </div>
               <a
-                href={sanitizeUrl(design.externalLink)}
+                href={buyUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className={buttonVariants({ className: "w-full" })}
+                className={buttonVariants({ className: "w-full gap-2" })}
               >
-                Shop products with this design
+                <RedBubble size={20} />
+                Buy on Redbubble
+                <span aria-hidden="true">&#8599;</span>
               </a>
               <p className="text-sm text-muted-foreground mt-2 text-center">
                 Printed &amp; shipped by our partner — opens in a new tab
               </p>
-              <div className={`grid grid-cols-1 md:grid-cols-2`}>
-                <div className="flex justify-start items-center space-x-4 mt-4">
-                  <ShareLinks
-                    shareText={shareText}
-                    shareUrl={shareUrl}
-                    imageUrl={design.externalImageUrl}
-                  />
-                </div>
-                <div className="flex justify-end items-center space-x-4 mt-4">
-                  <ShopLinks
-                    title="Our Shops"
-                    styleTitle={" "}
-                    redBubble={getRedBubbleDesignPageLink(design.externalId)}
-                    teePublic={getTeepublicLink(design) ?? undefined}
-                  />
-                </div>
+              {teePublicLink && (
+                <a
+                  href={sanitizeUrl(teePublicLink)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <TeePublic size={20} />
+                  Buy on TeePublic
+                  <span aria-hidden="true">&#8599;</span>
+                </a>
+              )}
+              <div className="flex items-center space-x-4 mt-6">
+                <ShareLinks
+                  shareText={shareText}
+                  shareUrl={shareUrl}
+                  imageUrl={design.externalImageUrl}
+                />
               </div>
-              {/**/}
             </div>
           </div>
         </div>
