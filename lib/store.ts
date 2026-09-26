@@ -23,6 +23,9 @@ export interface CarouselSlide {
   image: string;
   title: string;
   description: string;
+  /** Call-to-action chip on the slide; defaults filled in by the home page. */
+  ctaLabel?: string;
+  ctaHref?: string;
 }
 
 export interface AboutConfig {

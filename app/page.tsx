@@ -13,18 +13,28 @@ const defaultCarouselItems: CarouselSlide[] = [
     image: "/images/slide_1.png",
     title: "Original Designs for Everyday Wear",
     description: "Original artwork for t-shirts, hoodies and more",
+    ctaLabel: "Browse designs",
+    ctaHref: "/designs",
   },
   {
     image: "/images/slide_2.png",
     title: "Bespoke Creations",
     description: "Tailored solutions for your unique vision",
+    ctaLabel: "Browse designs",
+    ctaHref: "/designs",
   },
   {
     image: "/images/slide_3.png",
     title: "Artistic Excellence",
     description: "Where creativity meets craftsmanship",
+    ctaLabel: "Browse designs",
+    ctaHref: "/designs",
   },
 ];
+
+// Every slide must route somewhere: the hero is the funnel's first screen.
+const DEFAULT_CTA_LABEL = "Browse designs";
+const DEFAULT_CTA_HREF = "/designs";
 
 function resolveCarouselItems(slides: SiteConfig["slides"]): CarouselSlide[] {
   const configured = (Array.isArray(slides) ? slides : []).filter(
@@ -34,7 +44,17 @@ function resolveCarouselItems(slides: SiteConfig["slides"]): CarouselSlide[] {
       slide.image.trim() !== "" &&
       typeof slide.title === "string" &&
       slide.title.trim() !== "",
-  );
+  ).map((slide) => ({
+    ...slide,
+    ctaLabel:
+      typeof slide.ctaLabel === "string" && slide.ctaLabel.trim() !== ""
+        ? slide.ctaLabel
+        : DEFAULT_CTA_LABEL,
+    ctaHref:
+      typeof slide.ctaHref === "string" && slide.ctaHref.trim() !== ""
+        ? slide.ctaHref
+        : DEFAULT_CTA_HREF,
+  }));
   return configured.length > 0 ? configured : defaultCarouselItems;
 }
 

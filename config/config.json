@@ -36,17 +36,23 @@
     {
       "image": "/images/slide_1.png",
       "title": "Original Designs for Everyday Wear",
-      "description": "Original artwork for t-shirts, hoodies and more"
+      "description": "Original artwork for t-shirts, hoodies and more",
+      "ctaLabel": "Browse designs",
+      "ctaHref": "/designs"
     },
     {
       "image": "/images/slide_2.png",
       "title": "Bespoke Creations",
-      "description": "Tailored solutions for your unique vision"
+      "description": "Tailored solutions for your unique vision",
+      "ctaLabel": "Browse designs",
+      "ctaHref": "/designs"
     },
     {
       "image": "/images/slide_3.png",
       "title": "Artistic Excellence",
-      "description": "Where creativity meets craftsmanship"
+      "description": "Where creativity meets craftsmanship",
+      "ctaLabel": "Browse designs",
+      "ctaHref": "/designs"
     }
   ],
   "about": {

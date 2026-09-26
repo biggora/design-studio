@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import Link from "next/link";
 import Slider from "react-slick";
 import Image from "next/image";
-import { Pause, Play } from "lucide-react";
+import { ArrowRight, Pause, Play } from "lucide-react";
+import { CarouselSlide } from "@/lib/store";
 
 const defaultSettings = {
   dots: true,
@@ -22,11 +31,7 @@ function subscribeToReducedMotion(onChange: () => void): () => void {
 }
 
 type CarouselProps = {
-  carouselItems: {
-    image: string;
-    title: string;
-    description: string;
-  }[];
+  carouselItems: CarouselSlide[];
   settings?: typeof defaultSettings;
 };
 
@@ -61,6 +66,21 @@ export function Carousel({
     }
   };
 
+  // The whole slide is a link; a swipe must not navigate. Browsers may still
+  // deliver a click after slick's drag handling, so a horizontal move larger
+  // than a tap cancels it.
+  const dragStartX = useRef<number | null>(null);
+  const onSlidePointerDown = (event: ReactPointerEvent<HTMLAnchorElement>) => {
+    dragStartX.current = event.clientX;
+  };
+  const onSlideClick = (event: ReactMouseEvent<HTMLAnchorElement>) => {
+    const startX = dragStartX.current;
+    dragStartX.current = null;
+    if (startX !== null && Math.abs(event.clientX - startX) > 10) {
+      event.preventDefault();
+    }
+  };
+
   return (
     <section className="relative w-full -mt-16">
       <Slider
@@ -69,22 +89,36 @@ export function Carousel({
       >
         {carouselItems.map((item, index) => (
           <div key={index} className="relative h-[60vh]">
-            <Image
-              src={item.image}
-              alt={item.title}
-              fill
-              priority={index === 0}
-              sizes="100vw"
-              style={{ objectFit: "cover" }}
-            />
-            <div className="absolute inset-0 bg-primary/60 flex flex-col justify-center items-center text-center p-4">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4 text-primary-foreground">
-                {item.title}
-              </h2>
-              <p className="text-xl md:text-2xl text-primary-foreground/95">
-                {item.description}
-              </p>
-            </div>
+            <Link
+              href={item.ctaHref ?? "/designs"}
+              aria-label={item.ctaLabel ?? "Browse designs"}
+              onPointerDown={onSlidePointerDown}
+              onClick={onSlideClick}
+              className="group absolute inset-0 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+            >
+              <Image
+                src={item.image}
+                alt={item.title}
+                fill
+                priority={index === 0}
+                sizes="100vw"
+                style={{ objectFit: "cover" }}
+              />
+              <div className="absolute inset-0 bg-primary/60 flex flex-col justify-center items-center text-center p-4">
+                <h2 className="text-3xl md:text-5xl font-bold mb-4 text-primary-foreground">
+                  {item.title}
+                </h2>
+                <p className="text-xl md:text-2xl text-primary-foreground/95">
+                  {item.description}
+                </p>
+                <span
+                  className="mt-6 inline-flex items-center gap-2 rounded-md bg-background px-6 py-2 text-base font-medium text-foreground transition-colors group-hover:bg-accent group-hover:text-accent-foreground"
+                >
+                  {item.ctaLabel ?? "Browse designs"}
+                  <ArrowRight size={18} aria-hidden="true" />
+                </span>
+              </div>
+            </Link>
           </div>
         ))}
       </Slider>
