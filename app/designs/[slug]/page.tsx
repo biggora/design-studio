@@ -3,7 +3,7 @@ import Link from "next/link";
 import { cache } from "react";
 import { getSiteConfig, getDesignById, getDesignBySlug } from "@/utils/database";
 import {
-  getPlaceholderImage,
+  getDesignDisplayImage,
   designCardHeight,
   designCardWidth,
   imageBlurPlaceholder,
@@ -53,6 +53,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const { design } = data;
+  const displayImage = getDesignDisplayImage(design).trim();
   const title = `${design.title} - ${config.name} Design`;
   const description = `Discover the unique ${design.title} design by ${config.name}. ${truncateText(design.description, 180)}`;
   return {
@@ -65,12 +66,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       type: "website",
       title,
       description,
-      images: [design.externalImageUrl],
+      images: [displayImage],
     },
     twitter: {
       title,
       description,
-      images: [design.externalImageUrl],
+      images: [displayImage],
     },
   };
 }
@@ -107,6 +108,7 @@ export default async function DesignDetails(
     design.externalLink || getRedBubbleDesignPageLink(design.externalId),
   );
   const teePublicLink = getTeepublicLink(design);
+  const displayImage = getDesignDisplayImage(design).trim();
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -138,7 +140,7 @@ export default async function DesignDetails(
     "@type": "CreativeWork",
     name: design.title,
     description: design.description,
-    image: design.externalImageUrl,
+    image: displayImage,
     url: shareUrl,
     ...(design.createdAt ? { dateCreated: design.createdAt } : {}),
     keywords: design.keywords,
@@ -160,7 +162,7 @@ export default async function DesignDetails(
               style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
             >
               <Image
-                src={design.externalImageUrl || getPlaceholderImage(900, 600)}
+                src={displayImage || "/images/no_image_available.svg"}
                 alt={design.title}
                 width={designCardWidth}
                 height={designCardHeight}
@@ -204,7 +206,7 @@ export default async function DesignDetails(
                 <span aria-hidden="true">&#8599;</span>
               </a>
               <p className="text-sm text-muted-foreground mt-2 text-center">
-                Printed &amp; shipped by our partner — opens in a new tab
+                Tees, stickers, mugs — printed &amp; shipped by our partner. Opens in a new tab
               </p>
               {teePublicLink && (
                 <a
@@ -222,7 +224,7 @@ export default async function DesignDetails(
                 <ShareLinks
                   shareText={shareText}
                   shareUrl={shareUrl}
-                  imageUrl={design.externalImageUrl}
+                  imageUrl={displayImage}
                 />
               </div>
             </div>

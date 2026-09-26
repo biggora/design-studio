@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
 import { designPath } from "@/lib/slug";
-import { imageBlurPlaceholder } from "@/lib/image";
+import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
 import { safeHexColor } from "@/lib/utils";
 
 type DesignCardProps = {
@@ -12,7 +12,7 @@ type DesignCardProps = {
 
 export function DesignCard({ design }: DesignCardProps) {
   const imageUrl =
-    design.externalImageUrl?.trim() || "/images/no_image_available.svg";
+    getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
 
   return (
     <Card key={design.id}>

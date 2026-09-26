@@ -1,5 +1,27 @@
+import { Design } from "@/types/design";
+
 export const designCardWidth = 600;
 export const designCardHeight = 400;
+
+/**
+ * Reads the Classic T-Shirt mockup URL the sync stores in `props.mockup_tshirt`
+ * (extracted from the design's marketplace page); null when absent or junk.
+ */
+export function getMockupUrl(design: Pick<Design, "props">): string | null {
+  const raw = (design.props as { mockup_tshirt?: unknown } | undefined)?.mockup_tshirt;
+  return typeof raw === "string" && raw.trim() !== "" ? raw : null;
+}
+
+/**
+ * The image the storefront shows for a design: the clean Classic T-Shirt
+ * mockup when the sync captured one (the flat artwork URL carries Redbubble's
+ * anti-hotlink watermark), otherwise the flat artwork.
+ */
+export function getDesignDisplayImage(
+  design: Pick<Design, "props" | "externalImageUrl">,
+): string {
+  return getMockupUrl(design) ?? design.externalImageUrl;
+}
 
 /**
  * Subtle Linen-Mist shimmer for next/image `placeholder="blur"` on remote
