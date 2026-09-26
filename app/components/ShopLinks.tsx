@@ -15,7 +15,7 @@ type ShopLinksProps = {
 const marketplaceLinks = [
   { key: "redbubble", label: "Buy on Redbubble", href: undefined as string | undefined, Icon: RedBubble },
   { key: "teePublic", label: "Buy on TeePublic", href: undefined as string | undefined, Icon: TeePublic },
-  { key: "tostaDora", label: "Buy on TostaDora", href: undefined as string | undefined, Icon: TostaDora },
+  { key: "tostaDora", label: "Buy on Tostadora", href: undefined as string | undefined, Icon: TostaDora },
 ] as const;
 
 export default function ShopLinks({

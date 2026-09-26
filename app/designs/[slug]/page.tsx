@@ -235,6 +235,7 @@ export default async function DesignDetails(
         <FeaturedDesigns
           title="More from this collection"
           designs={relatedDesigns}
+          showCollection={false}
         />
       </div>
     </>

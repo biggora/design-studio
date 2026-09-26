@@ -109,6 +109,14 @@ export default async function DesignFolio(
         collections={collections}
       />
 
+      {designs.length > 0 && (
+        <p className="text-sm text-muted-foreground mb-4">
+          {total} {total === 1 ? "design" : "designs"}
+          {searchQuery ? ` matching "${searchQuery}"` : ""}
+          {selectedCollection ? ` in "${selectedCollection}"` : ""}
+        </p>
+      )}
+
       {designs.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
           {designs.map((design: Design) => (

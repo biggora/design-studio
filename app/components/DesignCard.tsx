@@ -8,9 +8,11 @@ import { safeHexColor } from "@/lib/utils";
 
 type DesignCardProps = {
   design: Design;
+  /** Hide the collection row (e.g. inside a section already titled by that collection). */
+  showCollection?: boolean;
 };
 
-export function DesignCard({ design }: DesignCardProps) {
+export function DesignCard({ design, showCollection = true }: DesignCardProps) {
   const imageUrl =
     getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
 
@@ -45,7 +47,7 @@ export function DesignCard({ design }: DesignCardProps) {
           </Link>
         </h2>
         <p className="text-muted-foreground mb-4 line-clamp-3">{design.description}</p>
-        {design.collection && (
+        {showCollection && design.collection && (
           <p className="text-muted-foreground mb-2">
             Collection:&nbsp;
             <Link

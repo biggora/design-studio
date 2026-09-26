@@ -32,6 +32,22 @@ export default function Footer() {
             <ul className="text-sm">
               <li>
                 <Link
+                  href="/designs"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+                >
+                  Our Designs
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/about"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+                >
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/privacy-policy"
                   className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
                 >
