@@ -919,9 +919,13 @@ export async function writeDesignsToSupabase(
               props = { mockup_tshirt: data.mockupUrl };
               // New designs get the artist's own mockup color baked into the artwork image
               // right away, instead of shipping with the "white fills transparency" default.
+              // Built from the mockup URL's own image id, not the listing preview's — Redbubble
+              // stores several uploads per work, and the listing preview is sometimes a
+              // different, wrong-aspect upload (e.g. a tiled banner) rather than the tee artwork
+              // that the mockup URL always points at.
               const token = extractMockupToken(data.mockupUrl);
               if (token) {
-                externalImageUrl = buildBackgroundImageUrl(r.externalImageUrl, token);
+                externalImageUrl = buildBackgroundImageUrl(data.mockupUrl, token);
                 backgroundColor = tokenToHex(token);
               }
             } else {

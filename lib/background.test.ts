@@ -108,12 +108,37 @@ describe("tokenToHex", () => {
 });
 
 describe("applyBackground", () => {
-  it("resolves auto against the design's mockup and rewrites the image URL", () => {
+  it("prefers the mockup upload's own image id over the listing preview's for auto", () => {
+    // MOCKUP_URL's image id is "1.4567", distinct from the listing preview's "5909636501.6884" —
+    // Redbubble stores several uploads per work, and the listing preview is sometimes a
+    // different, wrong-aspect upload rather than the tee artwork the mockup URL points at.
     const design = {
       externalImageUrl: "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
       props: { mockup_tshirt: MOCKUP_URL },
     };
     expect(applyBackground(design, "auto")).toEqual({
+      externalImageUrl: "https://ih1.redbubble.net/image.1.4567/raf,750x,075,f,fafafa:ca443f4786.jpg",
+      backgroundColor: "#fafafa",
+    });
+  });
+
+  it("prefers the mockup upload's image id for a preset color too, not just auto", () => {
+    const design = {
+      externalImageUrl: "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
+      props: { mockup_tshirt: MOCKUP_URL },
+    };
+    expect(applyBackground(design, "black")).toEqual({
+      externalImageUrl: "https://ih1.redbubble.net/image.1.4567/raf,750x,075,f,101010:01c5ca27c6.jpg",
+      backgroundColor: "#101010",
+    });
+  });
+
+  it("falls back to externalImageUrl's image id when the design has no mockup URL", () => {
+    const design = {
+      externalImageUrl: "https://ih1.redbubble.net/image.5909636501.6884/flat,500x,075,f.u2.jpg",
+      props: {},
+    };
+    expect(applyBackground(design, "white")).toEqual({
       externalImageUrl:
         "https://ih1.redbubble.net/image.5909636501.6884/raf,750x,075,f,fafafa:ca443f4786.jpg",
       backgroundColor: "#fafafa",

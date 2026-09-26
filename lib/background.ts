@@ -61,15 +61,23 @@ export function applyBackground(
   design: Pick<Design, "externalImageUrl" | "props">,
   value: string,
 ): { externalImageUrl: string; backgroundColor: string } | null {
-  if (!design.externalImageUrl) return null;
-
   const token = resolveBackgroundToken(value, design);
   if (!token) return null;
+
+  // Redbubble stores several uploads per work (one per product type); the listing preview
+  // behind `externalImageUrl` is sometimes a different, wrong-aspect upload (e.g. a tiled
+  // banner) rather than the actual tee artwork. The Classic Tee mockup upload is always the
+  // correct portrait artwork, so prefer *its* image id as the base for every color — including
+  // presets/raw tokens, not just "auto" — falling back to `externalImageUrl` when no mockup URL
+  // is available.
+  const mockupUrl = (design.props as { mockup_tshirt?: string } | undefined)?.mockup_tshirt;
+  const sourceUrl =
+    mockupUrl && REDBUBBLE_IMAGE_URL_RE.test(mockupUrl) ? mockupUrl : design.externalImageUrl;
 
   // Checked directly against the URL shape (not by comparing the rebuilt URL to the stored
   // one) — a design that already has this exact background applied must still resolve, so the
   // caller (setDesignBackgrounds) can tell "already applied" apart from "not a Redbubble image".
-  if (!REDBUBBLE_IMAGE_URL_RE.test(design.externalImageUrl)) return null;
+  if (!sourceUrl || !REDBUBBLE_IMAGE_URL_RE.test(sourceUrl)) return null;
 
-  return { externalImageUrl: buildBackgroundImageUrl(design.externalImageUrl, token), backgroundColor: tokenToHex(token) };
+  return { externalImageUrl: buildBackgroundImageUrl(sourceUrl, token), backgroundColor: tokenToHex(token) };
 }
