@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SiteConfig } from "@/lib/store";
 import { parsePageParam } from "@/lib/utils";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 15;
 
 
 export async function generateMetadata(
@@ -107,7 +107,7 @@ export default async function DesignFolio(
       />
 
       {designs.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
           {designs.map((design: Design) => (
             <DesignCard key={design.id} design={design} />
           ))}

@@ -48,7 +48,7 @@ function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
                 return {single: () => Promise.resolve(designResponse)};
             }
             if (!hasCount) {
-                // related-designs lookup: eq("collection", ...).neq("id", ...).limit(3)
+                // related-designs lookup: eq("collection", ...).neq("id", ...).limit(5)
                 return {neq: () => ({limit: () => Promise.resolve(relatedResponse)})};
             }
             return builder;

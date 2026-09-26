@@ -50,3 +50,6 @@ next-env.d.ts
 
 # impeccable live-server runtime state
 /.impeccable/live/server.json
+
+# zcode session state
+/.zcode/

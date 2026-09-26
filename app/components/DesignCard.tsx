@@ -17,12 +17,12 @@ export function DesignCard({ design }: DesignCardProps) {
         href={`/designs/${design.id}`}
         className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
-        <div className="relative w-full aspect-[3/2] overflow-hidden bg-muted">
+        <div className="relative w-full aspect-square overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={design.title}
             fill
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+            sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1280px) 25vw, 20vw"
             className="object-cover"
           />
         </div>

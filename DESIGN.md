@@ -138,7 +138,7 @@ Sanctioned exceptions: Tailwind `green-100/green-800` and `red-100/red-800` for 
 
 A fixed dark header (64px tall, full width, z-10) with `pt-16` compensation on the content container; content sits in a centered `container` with responsive gutters (16px → 24px at `sm` → 32px at `lg`). The home hero is full-bleed: a 60vh carousel sliding under the header with a Loom Ink overlay at 60% opacity and centered display type. Autoplay respects `prefers-reduced-motion` (off by default for those visitors) and a visible play/pause toggle sits in the hero's bottom-right corner.
 
-Catalog grids flow 1 column → 2 at `sm` (640px) → 3 at `lg` (1024px) with 24px gaps; featured sections use 1 → 3 at `md`. The design-detail page splits into a 2-column card (image | 24px-padded content) at `md`. Vertical rhythm runs on 16/32/48px section spacing; the footer is a 3-column flex-wrap band. Content minimum height keeps the footer down-page (`calc(100vh − 160px)`).
+Catalog grids flow 1 column → 2 at `sm` (640px) → 3 at `md` (768px) → 4 at `lg` (1024px) → 5 at `xl` (1280px) with 24px gaps; featured and related sections share the same ladder and hold 5 items. The design-detail page splits into a 2-column card (image | 24px-padded content) at `md`. Vertical rhythm runs on 16/32/48px section spacing; the footer is a 3-column flex-wrap band. Content minimum height keeps the footer down-page (`calc(100vh − 160px)`).
 
 ## Elevation & Depth
 
@@ -153,7 +153,7 @@ Depth is tonal first: dark bands frame the light field, white cards lift off Lin
 
 ## Shapes
 
-Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media is cropped to a 3:2 ratio with `object-cover`. No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
+Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media is cropped to a square 1:1 ratio with `object-cover` (center crop — square marketplace artwork fits untouched, wider artwork loses its top and bottom). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
 
 ## Components
 
@@ -177,7 +177,7 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Shadow Strategy:** structural card shadow, constant (see Elevation & Depth)
 - **Border:** none — shadow and tonal contrast do the separation
 - **Internal Padding:** 16px; detail pages step to 24px
-- **Catalog card anatomy:** 3:2 image top, Title-weight name, Warp Grey description and collection line, Indigo Thread "View Design Details" anchored to the card bottom (`mt-auto`)
+- **Catalog card anatomy:** square 1:1 image top, Title-weight name (line-clamped to 2), Warp Grey description and collection line (clamped to 3), Indigo Thread "View Design Details" anchored to the card bottom (`mt-auto`)
 
 ### Inputs / Fields
 - **Style:** Card White background, 1px Warp Grey border, 6px radius, 8px/12–16px padding; select shares the treatment
@@ -200,7 +200,7 @@ Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist 
 - **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) or the primitives in `components/ui/`.
 - **Do** keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
 - **Do** give every interactive element a visible 2px Indigo Thread focus ring (`focus-visible`).
-- **Do** crop catalog media to 3:2 with `object-cover` and lazy-load below the fold.
+- **Do** crop catalog media to a square 1:1 with `object-cover` and lazy-load below the fold.
 - **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:

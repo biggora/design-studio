@@ -392,7 +392,7 @@ async function fetchRelatedByCollection(
         .select("*")
         .eq("collection", collection)
         .neq("id", id)
-        .limit(3);
+        .limit(5);
 
     if (relatedError) {
         console.error("Error fetching related designs:", relatedError);
@@ -408,7 +408,7 @@ async function fetchRelatedByCollectionMySQL(
     id: string,
 ): Promise<Design[]> {
     const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
-        "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 3",
+        "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 5",
         [collection, id],
     );
 

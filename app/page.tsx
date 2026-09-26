@@ -32,7 +32,7 @@ type FeaturedDesignsProps = {
 };
 
 async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
-  const { designs } = await fetchDesigns(1, "", "", 3);
+  const { designs } = await fetchDesigns(1, "", "", 5);
   const config: SiteConfig = await getSiteConfig();
 
   const featuredDesigns: Design[] = designs || [];

@@ -101,9 +101,9 @@
       "name": "Design Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Catalog card: white surface, structural shadow, 3:2 media crop, teal CTA pinned to the bottom.",
+      "description": "Catalog card: white surface, structural shadow, square 1:1 media crop, teal CTA pinned to the bottom.",
       "html": "<article class=\"ds-card\"><div class=\"ds-card-media\"></div><div class=\"ds-card-body\"><h3 class=\"ds-card-title\">Threaded Salmon</h3><p class=\"ds-card-meta\">Collection: <a class=\"ds-card-link\" href=\"#\">Quirky Type</a></p><a class=\"ds-card-link ds-card-cta\" href=\"#\">View Design Details</a></div></article>",
-      "css": ".ds-card { background: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; max-width: 360px; font-family: Inter, system-ui, sans-serif; } .ds-card-media { aspect-ratio: 3 / 2; background: #F3F4F6; } .ds-card-body { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; } .ds-card-title { font-size: 20px; font-weight: 600; color: #212A31; margin: 0 0 8px; } .ds-card-meta { font-size: 16px; color: #748D92; margin: 0 0 16px; } .ds-card-link { color: #124E66; text-decoration: none; } .ds-card-link:hover { text-decoration: underline; } .ds-card-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; border-radius: 2px; } .ds-card-cta { margin-top: auto; }"
+      "css": ".ds-card { background: #FFFFFF; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; max-width: 360px; font-family: Inter, system-ui, sans-serif; } .ds-card-media { aspect-ratio: 1 / 1; background: hsl(190 12% 90%); } .ds-card-body { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; } .ds-card-title { font-size: 20px; font-weight: 600; color: #212A31; margin: 0 0 8px; } .ds-card-meta { font-size: 16px; color: hsl(190 12% 34%); margin: 0 0 16px; } .ds-card-link { color: #124E66; text-decoration: none; } .ds-card-link:hover { text-decoration: underline; } .ds-card-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #124E66; border-radius: 2px; } .ds-card-cta { margin-top: auto; }"
     },
     {
       "name": "Header Navigation",
@@ -157,7 +157,7 @@
       "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping (bg-primary, text-accent, border-input, ring-ring) or the primitives in components/ui/.",
       "Do keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
       "Do give every interactive element a visible 2px Indigo Thread focus ring (focus-visible).",
-      "Do crop catalog media to 3:2 with object-cover and lazy-load below the fold.",
+      "Do crop catalog media to a square 1:1 with object-cover and lazy-load below the fold.",
       "Do treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values."
     ],
     "donts": [
