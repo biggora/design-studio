@@ -469,7 +469,8 @@ INSERT INTO studio (key, value) VALUES
 ('email', 'contact@example.com'),
 ('representation.redbubbleShopUrl', 'https://www.redbubble.com/people/your-shop/shop'),
 ('social.twitter', 'https://x.com/your-shop'),
-('social.instagram', 'https://instagram.com/your-shop');
+('social.instagram', 'https://instagram.com/your-shop'),
+('verification.impact', 'your-impact-verification-uuid');
 ```
 
 MySQL (`key` is a reserved word and must be backtick-quoted):
@@ -481,7 +482,8 @@ INSERT INTO studio (`key`, value) VALUES
 ('email', 'contact@example.com'),
 ('representation.redbubbleShopUrl', 'https://www.redbubble.com/people/your-shop/shop'),
 ('social.twitter', 'https://x.com/your-shop'),
-('social.instagram', 'https://instagram.com/your-shop');
+('social.instagram', 'https://instagram.com/your-shop'),
+('verification.impact', 'your-impact-verification-uuid');
 ```
 
 If a key is absent from the table, the matching default from `config/config.json` is used (see 4.2), so seeding every key is optional.

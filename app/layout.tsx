@@ -126,6 +126,14 @@ export default async function RootLayout({
           Skip to content
         </a>
         <JsonLd data={jsonLdData} />
+        {/* Impact (Redbubble affiliate) verification requires a `value` attribute,
+            which the Metadata API cannot emit; React hoists raw meta into <head>. */}
+        {newConfig?.verification?.impact ? (
+          <meta
+            name="impact-site-verification"
+            {...{ value: newConfig.verification.impact }}
+          />
+        ) : null}
         {isAllowedThemeUrl(themeLink) ? (
           <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
         ) : null}
