@@ -1,5 +1,6 @@
-import { getDesignById } from "@/utils/database";
+import { getDesignById, getSiteConfig } from "@/utils/database";
 import { isValidBackgroundValue } from "@/lib/background";
+import { getAffiliateOptions } from "@/lib/affiliate";
 import { jsonResponse, optionsResponse, toPublicPrint } from "@/lib/public-api";
 
 export async function GET(
@@ -19,11 +20,13 @@ export async function GET(
   }
 
   try {
-    const result = await getDesignById(id);
+    const [result, config] = await Promise.all([getDesignById(id), getSiteConfig()]);
     if (!result) {
       return jsonResponse(request, { error: "Not found" }, { status: 404 });
     }
-    return jsonResponse(request, { item: toPublicPrint(result.design, bg || undefined) });
+    return jsonResponse(request, {
+      item: toPublicPrint(result.design, bg || undefined, getAffiliateOptions(config)),
+    });
   } catch (err) {
     console.error("Error fetching print:", err);
     return jsonResponse(request, { error: "Internal server error" }, { status: 500 });

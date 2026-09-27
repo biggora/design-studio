@@ -62,6 +62,14 @@ export default function Footer() {
                   Terms of Service
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/disclosure"
+                  className="text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+                >
+                  Affiliate Disclosure
+                </Link>
+              </li>
             </ul>
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0 text-center md:text-right">

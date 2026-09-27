@@ -13,6 +13,10 @@ export interface VerificationProps {
   [key: string]: string;
 }
 
+export interface AffiliateProps {
+  [key: string]: string;
+}
+
 export interface AnalyticsProps {
   [key: string]: string;
 }
@@ -53,6 +57,7 @@ export interface SiteConfig {
   social: SocialMedia;
   representation: RepresentationProps;
   verification: VerificationProps;
+  affiliate: AffiliateProps;
   analytics: AnalyticsProps;
   favicon: string;
   themeLink: string;

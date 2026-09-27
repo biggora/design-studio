@@ -3,6 +3,11 @@ import { Design } from "@/types/design";
 import { applyBackground } from "@/lib/background";
 import { getMockupUrl } from "@/lib/image";
 import { getTeepublicLink } from "@/lib/utils";
+import {
+  AffiliateOptions,
+  applyRedbubbleAffiliate,
+  applyTeepublicReferral,
+} from "@/lib/affiliate";
 
 export type PublicPrint = {
   id: string;
@@ -20,7 +25,13 @@ export type PublicPrint = {
 // `bg` is an optional on-the-fly background override (see lib/background.ts) — when it
 // resolves for this design, imageUrl/backgroundColor reflect the requested background instead
 // of the stored ones; otherwise the design is returned unchanged.
-export function toPublicPrint(design: Design, bg?: string): PublicPrint {
+// `affiliate` wraps `link`/`teepublicLink` with the configured tracking
+// (Impact template / TeePublic ref_id) at response time; stored URLs stay canonical.
+export function toPublicPrint(
+  design: Design,
+  bg?: string,
+  affiliate: AffiliateOptions = {},
+): PublicPrint {
   const collection =
     design.collection && design.collection !== "no_collection" ? design.collection : null;
 
@@ -39,8 +50,11 @@ export function toPublicPrint(design: Design, bg?: string): PublicPrint {
     description: design.description,
     imageUrl: overridden?.externalImageUrl ?? design.externalImageUrl,
     mockupUrl: getMockupUrl(design),
-    link: design.externalLink,
-    teepublicLink: getTeepublicLink(design),
+    link: applyRedbubbleAffiliate(design.externalLink, affiliate.redbubbleTemplate || ""),
+    teepublicLink: applyTeepublicReferral(
+      getTeepublicLink(design),
+      affiliate.teepublicReferralId || "",
+    ),
     collection,
     keywords,
     backgroundColor: overridden?.backgroundColor ?? (design.backgroundColor || null),

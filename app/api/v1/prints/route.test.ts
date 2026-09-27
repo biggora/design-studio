@@ -5,12 +5,14 @@ const fetchDesignsMock = vi.fn();
 const fetchRandomDesignsMock = vi.fn();
 const getDesignByIdMock = vi.fn();
 const fetchCollectionsMock = vi.fn();
+const getSiteConfigMock = vi.fn();
 
 vi.mock("@/utils/database", () => ({
   fetchDesigns: fetchDesignsMock,
   fetchRandomDesigns: fetchRandomDesignsMock,
   getDesignById: getDesignByIdMock,
   fetchCollections: fetchCollectionsMock,
+  getSiteConfig: getSiteConfigMock,
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -35,6 +37,9 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  getSiteConfigMock.mockResolvedValue({
+    affiliate: { redbubbleTemplate: "", teepublicReferralId: "" },
+  });
 });
 
 describe("GET /api/v1/prints", () => {
@@ -91,6 +96,25 @@ describe("GET /api/v1/prints", () => {
     const response = await GET(request);
     expect(response.status).toBe(400);
     expect(fetchDesignsMock).not.toHaveBeenCalled();
+  });
+
+  it("wraps links with the affiliate tracking from the site config", async () => {
+    fetchDesignsMock.mockResolvedValue({ designs: [makeDesign()], total: 1 });
+    getSiteConfigMock.mockResolvedValue({
+      affiliate: {
+        redbubbleTemplate: "https://shop.pxf.io/c/1/2/3?u={url}",
+        teepublicReferralId: "1234",
+      },
+    });
+    const { GET } = await import("@/app/api/v1/prints/route");
+    const request = new Request("http://localhost/api/v1/prints");
+    const response = await GET(request);
+    const body = await response.json();
+
+    expect(body.items[0].link).toBe(
+      `https://shop.pxf.io/c/1/2/3?u=${encodeURIComponent("https://redbubble.com/i/d1")}`,
+    );
+    expect(body.items[0].teepublicLink).toBeNull();
   });
 
   it("returns 500 without leaking error details when fetchDesigns throws", async () => {

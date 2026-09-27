@@ -1,9 +1,5 @@
 "use client";
 
-import { RedBubble } from "@/app/components/Icons/RedBubble";
-import { TeePublic } from "@/app/components/Icons/TeePublic";
-import { TostaDora } from "@/app/components/Icons/TostaDora";
-
 type ShopLinksProps = {
   title: string;
   redBubble?: string;
@@ -12,10 +8,12 @@ type ShopLinksProps = {
   styleTitle?: string;
 };
 
+// Redbubble/TeePublic links may be affiliate links (sponsored), Tostadora has
+// no affiliate program — plain link.
 const marketplaceLinks = [
-  { key: "redbubble", label: "Buy on Redbubble", href: undefined as string | undefined, Icon: RedBubble },
-  { key: "teePublic", label: "Buy on TeePublic", href: undefined as string | undefined, Icon: TeePublic },
-  { key: "tostaDora", label: "Buy on Tostadora", href: undefined as string | undefined, Icon: TostaDora },
+  { key: "redbubble", label: "Buy on Redbubble", href: undefined as string | undefined, sponsored: true },
+  { key: "teePublic", label: "Buy on TeePublic", href: undefined as string | undefined, sponsored: true },
+  { key: "tostaDora", label: "Buy on Tostadora", href: undefined as string | undefined, sponsored: false },
 ] as const;
 
 export default function ShopLinks({
@@ -36,15 +34,14 @@ export default function ShopLinks({
         <h2 className={`${styleTitle} font-semibold text-foreground`}>{title}</h2>
       )}
       <div className="flex flex-wrap justify-start gap-3">
-        {configured.map(({ key, label, Icon }) => (
+        {configured.map(({ key, label, sponsored }) => (
           <a
             key={key}
             href={links[key]}
             target="_blank"
-            rel="noopener noreferrer"
+            rel={sponsored ? "sponsored noopener noreferrer" : "noopener noreferrer"}
             className="inline-flex items-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <Icon size={20} />
             {label}
             <span aria-hidden="true">&#8599;</span>
           </a>

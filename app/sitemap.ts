@@ -46,6 +46,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.5,
       changeFrequency: "monthly",
     },
+    {
+      url: `https://${newConfig.domain}/disclosure`,
+      priority: 0.5,
+      changeFrequency: "monthly",
+    },
   ];
   // Google's limit is 50,000 URLs per sitemap; fetchDesigns caps itemsPerPage
   // at 100 per call, so paginate until all designs are collected.

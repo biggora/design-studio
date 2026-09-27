@@ -1,5 +1,6 @@
-import { fetchDesigns } from "@/utils/database";
+import { fetchDesigns, getSiteConfig } from "@/utils/database";
 import { isValidBackgroundValue } from "@/lib/background";
+import { getAffiliateOptions } from "@/lib/affiliate";
 import {
   jsonResponse,
   optionsResponse,
@@ -22,9 +23,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const { designs, total } = await fetchDesigns(page, q, collection, limit, keywords);
+    const [{ designs, total }, config] = await Promise.all([
+      fetchDesigns(page, q, collection, limit, keywords),
+      getSiteConfig(),
+    ]);
+    const affiliate = getAffiliateOptions(config);
     return jsonResponse(request, {
-      items: designs.map(design => toPublicPrint(design, bg || undefined)),
+      items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate)),
       page,
       limit,
       total,

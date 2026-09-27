@@ -1,5 +1,6 @@
-import { fetchRandomDesigns } from "@/utils/database";
+import { fetchRandomDesigns, getSiteConfig } from "@/utils/database";
 import { isValidBackgroundValue } from "@/lib/background";
+import { getAffiliateOptions } from "@/lib/affiliate";
 import {
   jsonResponse,
   optionsResponse,
@@ -20,10 +21,14 @@ export async function GET(request: Request) {
   }
 
   try {
-    const designs = await fetchRandomDesigns(limit, collection || undefined, keywords);
+    const [designs, config] = await Promise.all([
+      fetchRandomDesigns(limit, collection || undefined, keywords),
+      getSiteConfig(),
+    ]);
+    const affiliate = getAffiliateOptions(config);
     return jsonResponse(
       request,
-      { items: designs.map(design => toPublicPrint(design, bg || undefined)) },
+      { items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate)) },
       { cache: "no-store" },
     );
   } catch (err) {

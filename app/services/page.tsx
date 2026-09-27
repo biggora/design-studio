@@ -94,7 +94,13 @@ export default async function Services() {
           <h2 className="text-2xl font-semibold mb-4">Where to Buy</h2>
           <p className="text-muted-foreground mb-4">
             Our designs are printed and shipped by our marketplace partners,
-            including Redbubble, TeePublic and Tostadora.
+            including Redbubble, TeePublic and Tostadora. Shop links may be
+            affiliate links for which we may earn a commission at no extra cost
+            to you — see our{" "}
+            <Link href="/disclosure" className="text-accent hover:underline">
+              affiliate disclosure
+            </Link>
+            .
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/designs" className="text-accent hover:underline">

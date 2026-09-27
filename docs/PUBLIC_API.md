@@ -19,6 +19,7 @@ The API allows any origin by default. To **restrict** which sites' browsers may 
 - **Specific origins**: set a comma-separated allowlist to restrict access; only an exact match (after trailing-slash stripping) between the request's `Origin` header and an allowlist entry gets `Access-Control-Allow-Origin` echoed back.
 - The response always includes `Vary: Origin`.
 - Changing this variable requires a redeploy/restart of the app for the new value to take effect (it's read from `process.env` at request time in a long-running/serverless process, but most hosts only pick up new env vars on a fresh deploy).
+- **Affiliate programs (Impact/Redbubble, TeePublic) require every domain that displays your affiliate links to be listed in the affiliate profile.** Restrict this allowlist to your real embed partners in production and register those domains in the Impact account's Media Properties.
 
 ---
 
@@ -151,12 +152,24 @@ When `bg` resolves to a usable token for a given print, `imageUrl` and `backgrou
 | `description` | string | Design description (may be an empty string). |
 | `imageUrl` | string | Full-artwork image URL, hosted on the Redbubble CDN. |
 | `mockupUrl` | string \| null | Classic T-Shirt mockup image URL (`props.mockup_tshirt`), or `null` if not available. |
-| `link` | string | Redbubble product page URL — point the referral/ad link here. |
+| `link` | string | Redbubble product page URL — point the referral/ad link here. See §4.1 for affiliate wrapping. |
+| `teepublicLink` | string \| null | TeePublic product page URL (`props.teepublicLink`, validated to `teepublic.com`), or `null` if the design has no TeePublic match. See §4.1 for referral wrapping. |
 | `collection` | string \| null | Collection title, or `null` when the design has no collection (or its collection is the internal `no_collection` placeholder). |
 | `keywords` | string[] | Tags/keywords, split on commas, trimmed, with empty entries removed. `[]` if there are none. |
 | `backgroundColor` | string \| null | Dominant background color (e.g. a hex string), or `null` if not set. |
 
 Internal-only fields (`imageName`, `shared`, `price`, `externalId`, etc.) are never included in `PublicPrint`.
+
+### 4.1 Affiliate wrapping
+
+Stored URLs are always canonical marketplace URLs. When affiliate tracking is configured via the `studio` table, `link` and `teepublicLink` are wrapped at response time:
+
+| `studio` key | Effect on the response |
+|---|---|
+| `affiliate.redbubbleTemplate` | Impact deep-link template with a `{url}` placeholder (copied verbatim from Impact's link builder, e.g. `https://shop.pxf.io/c/123/456/789?u={url}`); each `link` becomes the template with `{url}` replaced by the URL-encoded canonical Redbubble URL. |
+| `affiliate.teepublicReferralId` | TeePublic referral id; each `teepublicLink` gets `?ref_id=<id>` appended (an existing `ref_id` is replaced). |
+
+Both keys are no-ops while empty: responses then carry the plain canonical URLs. Note that the CDN cache (§3.1) means tracking changes can take up to ~5 minutes to reach all responses.
 
 ---
 
@@ -282,3 +295,14 @@ function PrintsWidget() {
 - **The other three endpoints are cached at the CDN for 5 minutes** (`s-maxage=300, stale-while-revalidate=600`), so newly synced designs, collection changes, or edits can take up to a few minutes to appear.
 - **Supabase random sampling reads up to 1000 design ids** before shuffling and picking a sample — `fetchRandomDesigns` selects only the `id` column with no explicit row limit, and Supabase/PostgREST caps unbounded selects at 1000 rows by default. On a catalog larger than 1000 designs, designs beyond that default page are not eligible for the random draw.
 - **Images are hosted on Redbubble's CDN**, not this deployment — `imageUrl`/`mockupUrl` point at `*.redbubble.com`/`*.redbubble.net`.
+
+---
+
+## 8. Affiliate compliance for embedders
+
+Every site that renders prints from this API and links to `link`/`teepublicLink` is displaying the artist's affiliate links. The marketplaces' affiliate terms (and the FTC) require:
+
+- **Disclose.** Display a clear affiliate disclosure on the page where the links are shown (visible without scrolling, near the links — not only in a footer/legal page). Embedding without disclosure is a terms violation once tracking is enabled.
+- **Register domains.** Every domain showing the links must be listed in the affiliate profile (Impact Media Properties for Redbubble). Keep this API's `PRINTS_API_ALLOWED_ORIGINS` allowlist aligned with those domains.
+- **Don't alter the links.** Use `link`/`teepublicLink` as returned (already wrapped with the configured tracking); appending your own parameters breaks attribution and violates the affiliate terms.
+- **Mark paid links.** Render the anchor with `rel="sponsored"` (see the examples in §6).

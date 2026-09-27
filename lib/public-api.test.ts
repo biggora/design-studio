@@ -45,6 +45,28 @@ describe("toPublicPrint", () => {
     expect(result.teepublicLink).toBe("https://www.teepublic.com/t-shirt/123-cat");
   });
 
+  it("wraps link and teepublicLink with affiliate tracking when configured", () => {
+    const result = toPublicPrint(makeDesign(), undefined, {
+      redbubbleTemplate: "https://shop.pxf.io/c/1/2/3?u={url}",
+      teepublicReferralId: "1234",
+    });
+    expect(result.link).toBe(
+      `https://shop.pxf.io/c/1/2/3?u=${encodeURIComponent("https://redbubble.com/i/d1")}`,
+    );
+    expect(result.teepublicLink).toBe(
+      "https://www.teepublic.com/t-shirt/123-cat?ref_id=1234",
+    );
+  });
+
+  it("leaves links canonical when affiliate options are empty", () => {
+    const result = toPublicPrint(makeDesign(), undefined, {
+      redbubbleTemplate: "",
+      teepublicReferralId: "",
+    });
+    expect(result.link).toBe("https://redbubble.com/i/d1");
+    expect(result.teepublicLink).toBe("https://www.teepublic.com/t-shirt/123-cat");
+  });
+
   it("returns null mockupUrl and teepublicLink when props is missing", () => {
     const result = toPublicPrint(makeDesign({ props: undefined }));
     expect(result.mockupUrl).toBeNull();

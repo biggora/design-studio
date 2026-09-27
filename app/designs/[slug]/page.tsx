@@ -20,11 +20,13 @@ import {
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
+import {
+  applyRedbubbleAffiliate,
+  applyTeepublicReferral,
+} from "@/lib/affiliate";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
-import { RedBubble } from "@/app/components/Icons/RedBubble";
-import { TeePublic } from "@/app/components/Icons/TeePublic";
 import { JsonLd } from "@/app/components/JsonLd";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -105,9 +107,15 @@ export default async function DesignDetails(
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
   const buyUrl = sanitizeUrl(
-    design.externalLink || getRedBubbleDesignPageLink(design.externalId),
+    applyRedbubbleAffiliate(
+      design.externalLink || getRedBubbleDesignPageLink(design.externalId),
+      config.affiliate.redbubbleTemplate,
+    ),
   );
-  const teePublicLink = getTeepublicLink(design);
+  const teePublicLink = applyTeepublicReferral(
+    getTeepublicLink(design),
+    config.affiliate.teepublicReferralId,
+  );
   const displayImage = getDesignDisplayImage(design).trim();
 
   const breadcrumbJsonLd = {
@@ -198,24 +206,29 @@ export default async function DesignDetails(
               <a
                 href={buyUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="sponsored noopener noreferrer"
                 className={buttonVariants({ className: "w-full gap-2" })}
               >
-                <RedBubble size={20} />
                 Buy on Redbubble
                 <span aria-hidden="true">&#8599;</span>
               </a>
               <p className="text-sm text-muted-foreground mt-2 text-center">
-                Tees, stickers, mugs — printed &amp; shipped by our partner. Opens in a new tab
+                Printed &amp; shipped by our marketplace partner. We may earn a
+                commission —{" "}
+                <Link
+                  href="/disclosure"
+                  className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  learn more
+                </Link>
               </p>
               {teePublicLink && (
                 <a
                   href={sanitizeUrl(teePublicLink)}
                   target="_blank"
-                  rel="noopener noreferrer"
+                  rel="sponsored noopener noreferrer"
                   className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <TeePublic size={20} />
                   Buy on TeePublic
                   <span aria-hidden="true">&#8599;</span>
                 </a>

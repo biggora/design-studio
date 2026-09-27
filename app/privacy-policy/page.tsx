@@ -110,6 +110,48 @@ export default async function PrivacyPolicy() {
               To develop new products, services, features, and functionality.
             </li>
           </ul>
+
+          <h2 className="text-2xl font-semibold mt-8 mb-4">
+            5. Analytics &amp; Cookies
+          </h2>
+          <p className="mb-4">
+            We use a small number of cookies and similar storage on your device:
+          </p>
+          <ul className="list-disc pl-6 mb-4">
+            <li>
+              <strong>Analytics (Google Analytics):</strong> loads only after
+              you accept analytics in our cookie banner. If you decline, no
+              analytics tools are loaded at all.
+            </li>
+            <li>
+              <strong>Your consent choice:</strong> stored locally in your
+              browser (localStorage) so we don&apos;t ask again; clear your
+              browser data for this site to change it.
+            </li>
+          </ul>
+          <p className="mb-4">
+            We do not use advertising or tracking cookies on this site.
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-8 mb-4">
+            6. Affiliate Links &amp; Third-Party Marketplaces
+          </h2>
+          <p className="mb-4">
+            This website links to third-party print-on-demand marketplaces
+            (such as Redbubble, TeePublic, and Tostadora) where our designs can
+            be purchased. Some of those links are affiliate links: if you buy
+            through them, we may earn a commission from the marketplace at no
+            additional cost to you. See our{" "}
+            <a href="/disclosure" className="text-accent hover:underline">
+              affiliate disclosure
+            </a>{" "}
+            for details.
+          </p>
+          <p className="mb-4">
+            Once you follow a link to a marketplace, that site&apos;s own
+            privacy policy and cookie practices apply — we have no control over,
+            and are not responsible for, their use of your information.
+          </p>
         </div>
       </div>
     </>
