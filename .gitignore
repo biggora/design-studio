@@ -39,7 +39,7 @@ next-env.d.ts
 /.env
 /.agents/
 /.claude/
-/docs/MY_*.md
+/docs/MY_*.*
 
 # redbubble sync JSON output / storage state
 /.cache/
