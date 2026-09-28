@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "codex-cli": {
+      "source": "biggora/claude-plugins-registry",
+      "sourceType": "github",
+      "skillPath": "src/skills/codex-cli/SKILL.md",
+      "computedHash": "3057f61168500fbbb62f275d6de4a5cf61c9da01457c7c70e72ad07766628c3b"
+    },
     "impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
