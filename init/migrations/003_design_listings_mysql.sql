@@ -1,13 +1,22 @@
--- MySQL 8: apply once, before deploying the ingest API.
+-- MySQL 8: rerunnable, including upgrades previously applied without a history table.
 ALTER TABLE designs
   MODIFY COLUMN `externalId` BIGINT NULL,
-  MODIFY COLUMN title VARCHAR(500) NOT NULL,
-  ADD COLUMN `sourceImageId` BIGINT NULL UNIQUE,
-  ADD COLUMN sha256 VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL UNIQUE,
-  ADD COLUMN source TEXT NULL,
-  ADD CONSTRAINT designs_sha256_check CHECK (sha256 REGEXP '^[0-9a-f]{64}$');
+  MODIFY COLUMN title VARCHAR(500) NOT NULL;
 
-CREATE TABLE design_listings (
+SET @has_col := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'designs' AND COLUMN_NAME = 'sourceImageId');
+SET @ddl := IF(@has_col = 0, 'ALTER TABLE designs ADD COLUMN `sourceImageId` BIGINT NULL UNIQUE', 'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_col := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'designs' AND COLUMN_NAME = 'sha256');
+SET @ddl := IF(@has_col = 0, 'ALTER TABLE designs ADD COLUMN sha256 VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL UNIQUE', 'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_col := (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'designs' AND COLUMN_NAME = 'source');
+SET @ddl := IF(@has_col = 0, 'ALTER TABLE designs ADD COLUMN source TEXT NULL', 'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @has_check := (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'designs' AND CONSTRAINT_NAME = 'designs_sha256_check');
+SET @ddl := IF(@has_check = 0, 'ALTER TABLE designs ADD CONSTRAINT designs_sha256_check CHECK (sha256 REGEXP ''^[0-9a-f]{64}$'')', 'SELECT 1');
+PREPARE stmt FROM @ddl; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS design_listings (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   `designId` CHAR(36) NOT NULL,
   platform VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt')),
