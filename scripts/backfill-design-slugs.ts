@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { closeDatabaseConnections, getMySQLPool } from "../utils/database";
 import { planSlugBackfill } from "../lib/slug";
 
-type Row = { id: string; externalId: number; title: string; slug: string | null };
+type Row = { id: string; externalId: number | null; title: string; slug: string | null };
 
 const PAGE_SIZE = 1000;
 

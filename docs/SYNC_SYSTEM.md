@@ -311,10 +311,12 @@ Run `npm run sync:redbubble:json` for the `json` target directly.
 
 ### 6.1 Insert/update logic in Supabase
 
+After migration 003, the following legacy scraper rules apply only to rows without ingest identities. API-linked designs are protected as described in §7.
+
 The `designs` table has two unique constraints — `externalId` and `title` (see `init/postgres_tables.sql`) — so a naive single-batch upsert can fail the whole run on one title collision. More importantly, **an existing row's curated content must never be touched by the sync** — only Redbubble-sourced fields may change, and only `collection` is one of them. The pipeline:
 
 1. Deduplicates the scraped batch by `externalId`, then by `title` — if two different `externalId`s scraped in the same run share a title, only the first is kept; the rest are skipped with a warning.
-2. Reads which of the batch's `externalId`s already exist in Supabase, in chunks of 100 (`.select("externalId, props").in("externalId", ids)` — `props` is read only to know whether `props.mockup_tshirt` needs backfilling, §3.5; no other curated column is ever read back), and separately checks `title` collisions against the DB in chunks of 25, via `.filter("title", "in", "(\"a\",\"b\")")` with each value double-quoted and internal `"`/`\` escaped (`.in()` quotes but does not escape embedded quotes, which breaks on titles like `24", 36" Print`).
+2. Reads matching `design_listings` identities, then checks which of the batch's `externalId`s already exist in Supabase, in chunks of 100 (`.select("externalId, props, source").in("externalId", ids)`), and separately checks title collisions against the DB in chunks of 25. `props` is read for mockup backfills, and `source` protects pod-studio rows. The title filter double-quotes and escapes each string so titles containing quotes remain valid PostgREST filters.
 
    If a chunk's read fails, that chunk's rows are added to `errors`, excluded from any write, and the next chunk is still processed.
 3. Classifies each remaining row:
@@ -368,3 +370,17 @@ ON DUPLICATE KEY UPDATE
   collection = VALUES(collection),
   `updatedAt` = NOW();
 ```
+
+## 7. Ingested designs and scraper precedence
+
+The authenticated [Ingest API](PUBLIC_API.md#ingest-api) records confirmed uploads from pod-uploader. Migration 003 adds source identities (`sha256`, `sourceImageId`, `source`) and first-class `design_listings`. It supports both database providers; the two scrapers still write only to Supabase.
+
+Redbubble checks `design_listings` by scraped work ID and `designs.source` alongside its legacy ID lookup. A Redbubble listing already recorded in the API, or a matching pod-studio design, is skipped before title matching or per-work enrichment. It is neither inserted again nor updated, and its collection memberships are left untouched. This deliberately conserves API-written/curated data; the scraper is permitted to backfill NULLs but currently leaves protected designs unchanged. Regular scraper-created rows retain the §6 behavior. A NULL externalId on a different design still owns its unique title, so it cannot accidentally be overwritten/duplicated by a scrape.
+
+TeePublic loads rows by stable UUID and excludes designs with an exact TeePublic `design_listings` entry before title matching. The writer rechecks both marketplace ID and design ID, including for dry runs, and never writes over a different existing `props.teepublicId`. Null Redbubble IDs cannot serve as row identity: claiming/matching and writes use the design UUID. API-written TeePublic links use the same props keys as legacy sync, preserving unrelated props.
+
+Both scrapers fail closed when the listing identity lookup fails: they report errors and avoid writes for the affected rows. Migration 003 grants anon only the safe listing link/identity columns, allowing the existing anonymous dry-run fallback while protecting account and metadata fields. Always apply the migration before running the updated scrapers.
+
+Their legacy updates also filter out `source='pod-studio'` at write time, covering a row adopted while a scrape was running; Redbubble excludes those rows again when resolving collection-link targets. A guarded no-op is not reported as an update.
+
+POST ingest adopts old Redbubble rows by externalId or TeePublic rows by props.teepublicId, fills source identity, and keeps existing curated catalog values. It mirrors canonical marketplace links so old pages/consumers still work, and invalidates the root layout using `revalidatePath("/", "layout")`. It does not execute either scraper. Tests use fixtures and disposable local databases; development never writes to the production database or scrapes live shops.

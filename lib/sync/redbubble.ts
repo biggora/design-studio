@@ -84,7 +84,7 @@ export type SyncResult = {
 // backfill, to read its current `props` (to know whether a mockup is already stored, and to
 // preserve any other keys already in it) — its full curated content is otherwise never read;
 // nothing but `collection`/`props`/`updatedAt` may be sent back on update.
-const EXISTENCE_CHECK_COLUMNS = "externalId, props";
+const EXISTENCE_CHECK_COLUMNS = "externalId, props, source";
 
 // Used once a design is known to exist/have just been written, to resolve its uuid `id`
 // for the design_collections write.
@@ -842,9 +842,20 @@ export async function writeDesignsToSupabase(
         const failedExternalIds = new Set<number>();
 
         const existingExternalIds = new Set<number>();
+        const apiExternalIds = new Set<number>();
         const existingRowByExternalId = new Map<number, { props: { mockup_tshirt?: string } | null }>();
         for (const rowChunk of chunk(batchRows, 100)) {
           const idChunk = rowChunk.map((r) => r.externalId);
+          const { data: listings, error: listingsError } = await supabase
+            .from("design_listings").select("platform, externalId").in("externalId", idChunk.map(String));
+          if (listingsError) {
+            errorMessages.push(listingsError.message);
+            idChunk.forEach((id) => failedExternalIds.add(id));
+            continue;
+          }
+          for (const listing of (listings as { platform: string; externalId: string }[] | null) || []) {
+            if (listing.platform === "redbubble") apiExternalIds.add(Number(listing.externalId));
+          }
           const { data, error } = await supabase
             .from("designs")
             .select(EXISTENCE_CHECK_COLUMNS)
@@ -855,16 +866,17 @@ export async function writeDesignsToSupabase(
             continue;
           }
           for (const row of (data as
-            | { externalId: number; props: { mockup_tshirt?: string } | null }[]
+            | { externalId: number; props: { mockup_tshirt?: string } | null; source?: string | null }[]
             | null) || []) {
             existingExternalIds.add(row.externalId);
+            if (row.source === "pod-studio") apiExternalIds.add(row.externalId);
             existingRowByExternalId.set(row.externalId, { props: row.props });
           }
         }
 
         // Smaller chunk size than the numeric-id lookup: quoted string values inflate the
         // PostgREST filter query string and risk hitting a 414/431 URL-length limit.
-        const titleOwnerInDb = new Map<string, number>();
+        const titleOwnerInDb = new Map<string, number | null>();
         for (const rowChunk of chunk(batchRows, 25)) {
           const titleChunk = rowChunk.map((r) => r.title);
           const { data, error } = await supabase
@@ -876,7 +888,7 @@ export async function writeDesignsToSupabase(
             rowChunk.forEach((r) => failedExternalIds.add(r.externalId));
             continue;
           }
-          for (const row of (data as { externalId: number; title: string }[] | null) || []) {
+          for (const row of (data as { externalId: number | null; title: string }[] | null) || []) {
             titleOwnerInDb.set(row.title, row.externalId);
           }
         }
@@ -894,6 +906,13 @@ export async function writeDesignsToSupabase(
 
         for (const r of batchRows) {
           if (failedExternalIds.has(r.externalId)) {
+            continue;
+          }
+          // Exact ingest identities take precedence over title matching. Leave both
+          // curated fields and collection memberships untouched; no product fetch.
+          if (apiExternalIds.has(r.externalId)) {
+            skipped++;
+            warnings.push(`Skipped API-linked Redbubble work ${r.externalId}`);
             continue;
           }
 
@@ -1111,11 +1130,12 @@ export async function writeDesignsToSupabase(
       const changes: { collection?: string; props?: object; updatedAt: string } = { updatedAt: nowIso };
       if (r.collection !== undefined) changes.collection = r.collection;
       if (r.props !== undefined) changes.props = r.props;
-      const { error } = await supabase.from("designs").update(changes).eq("externalId", r.externalId);
+      const { data, error } = await supabase.from("designs").update(changes).eq("externalId", r.externalId)
+        .or("source.is.null,source.neq.pod-studio").select("externalId");
       if (error) {
         errorsCount += 1;
         errorMessages.push(error.message);
-      } else {
+      } else if (data?.length) {
         updated += 1;
         successfulExternalIds.push(r.externalId);
       }
@@ -1165,7 +1185,7 @@ export async function writeDesignsToSupabase(
           const { data, error } = await supabase
             .from("designs")
             .select(DESIGN_ID_LOOKUP_COLUMNS)
-            .in("externalId", idChunk);
+            .in("externalId", idChunk).or("source.is.null,source.neq.pod-studio");
           if (error) {
             errorsCount += idChunk.length;
             errorMessages.push(error.message);

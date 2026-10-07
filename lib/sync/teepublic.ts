@@ -114,7 +114,8 @@ export function titleSimilarity(a: string, b: string): number {
 }
 
 export type DbDesignRow = {
-  externalId: number;
+  id?: string;
+  externalId: number | null;
   title: string;
   props: Record<string, unknown> | null;
 };
@@ -128,7 +129,7 @@ export type TeepublicMatch = {
 
 export type TeepublicAmbiguity = {
   teepublic: TeepublicDesign;
-  candidates: Array<{ externalId: number; title: string; score: number }>;
+  candidates: Array<{ externalId: number | null; title: string; score: number }>;
 };
 
 export type TeepublicMatchResult = {
@@ -153,7 +154,7 @@ export function matchTeepublicDesigns(
   const threshold = opts?.threshold ?? 0.8;
   const margin = opts?.margin ?? 0.1;
 
-  const claimed = new Set<number>();
+  const claimed = new Set<string | number | null>();
   const matched: TeepublicMatch[] = [];
   const ambiguous: TeepublicAmbiguity[] = [];
 
@@ -168,9 +169,9 @@ export function matchTeepublicDesigns(
   const remaining: TeepublicDesign[] = [];
   for (const t of tp) {
     const norm = normalizeTitle(t.title);
-    const candidates = (rowsByNormTitle.get(norm) || []).filter((r) => !claimed.has(r.externalId));
+    const candidates = (rowsByNormTitle.get(norm) || []).filter((r) => !claimed.has(r.id ?? r.externalId));
     if (candidates.length === 1) {
-      claimed.add(candidates[0].externalId);
+      claimed.add(candidates[0].id ?? candidates[0].externalId);
       matched.push({ row: candidates[0], teepublic: t, score: 1, method: "exact" });
     } else if (candidates.length > 1) {
       ambiguous.push({
@@ -187,7 +188,7 @@ export function matchTeepublicDesigns(
   for (const t of remaining) {
     let best = -1;
     for (const r of rows) {
-      if (claimed.has(r.externalId)) continue;
+      if (claimed.has(r.id ?? r.externalId)) continue;
       const score = titleSimilarity(t.title, r.title);
       if (score > best) best = score;
     }
@@ -200,7 +201,7 @@ export function matchTeepublicDesigns(
   const unmatched: TeepublicDesign[] = [];
   for (const t of order) {
     const scored = rows
-      .filter((r) => !claimed.has(r.externalId))
+      .filter((r) => !claimed.has(r.id ?? r.externalId))
       .map((r) => ({ row: r, score: titleSimilarity(t.title, r.title) }))
       .sort((a, b) => b.score - a.score);
 
@@ -225,7 +226,7 @@ export function matchTeepublicDesigns(
       continue;
     }
 
-    claimed.add(best.row.externalId);
+    claimed.add(best.row.id ?? best.row.externalId);
     matched.push({ row: best.row, teepublic: t, score: best.score, method: "fuzzy" });
   }
 
@@ -442,8 +443,8 @@ export async function loadDesignRows(supabase: SupabaseClient): Promise<DbDesign
   for (;;) {
     const { data, error } = await supabase
       .from("designs")
-      .select("externalId, title, props")
-      .order("externalId")
+      .select("id, externalId, title, props")
+      .order("id")
       .range(from, from + PAGE_SIZE - 1);
     if (error) {
       throw new Error(`Failed to page designs: ${error.message}`);
@@ -453,7 +454,16 @@ export async function loadDesignRows(supabase: SupabaseClient): Promise<DbDesign
     if (page.length < PAGE_SIZE) break;
     from += PAGE_SIZE;
   }
-  return rows;
+  const eligible: DbDesignRow[] = [];
+  for (let offset = 0; offset < rows.length; offset += PAGE_SIZE) {
+    const batch = rows.slice(offset, offset + PAGE_SIZE);
+    const { data, error } = await supabase.from("design_listings")
+      .select("designId, platform").in("designId", batch.map(row => row.id!));
+    if (error) throw new Error(`Failed to check API listings: ${error.message}`);
+    const linked = new Set((data || []).filter(row => row.platform === "teepublic").map(row => row.designId as string));
+    eligible.push(...batch.filter(row => !linked.has(row.id!)));
+  }
+  return eligible;
 }
 
 // Writes each matched design's TeePublic link into its existing row's `props`, preserving
@@ -465,7 +475,7 @@ export async function applyTeepublicLinks(
   updated: number;
   unchanged: number;
   errors: string[];
-  plan: Array<{ externalId: number; teepublic: string }>;
+  plan: Array<{ externalId: number | null; teepublic: string }>;
 }> {
   const dryRun = options.dryRun ?? false;
   const supabase = createClient(options.supabaseUrl, options.supabaseKey);
@@ -473,10 +483,26 @@ export async function applyTeepublicLinks(
   let updated = 0;
   let unchanged = 0;
   const errors: string[] = [];
-  const plan: Array<{ externalId: number; teepublic: string }> = [];
+  const plan: Array<{ externalId: number | null; teepublic: string }> = [];
 
   for (const m of matched) {
+    const { data: linked, error: linkedError } = await supabase.from("design_listings")
+      .select("designId, platform, externalId").in("platform", ["teepublic"])
+      .or(`externalId.eq.${JSON.stringify(m.teepublic.id)}${m.row.id ? `,designId.eq.${m.row.id}` : ""}`);
+    if (linkedError) {
+      errors.push(linkedError.message);
+      continue;
+    }
+    if (linked?.length) {
+      unchanged += 1;
+      continue;
+    }
     const existingProps = m.row.props ?? {};
+    // An exact legacy link must also win over a newly guessed title match.
+    if (existingProps.teepublicId && String(existingProps.teepublicId) !== m.teepublic.id) {
+      unchanged += 1;
+      continue;
+    }
     if (existingProps.teepublicLink === m.teepublic.url && existingProps.teepublicId === m.teepublic.id) {
       unchanged += 1;
       continue;
@@ -489,14 +515,17 @@ export async function applyTeepublicLinks(
       continue;
     }
 
-    const { error } = await supabase
+    const { data: written, error } = await supabase
       .from("designs")
       .update({ props, updatedAt: new Date().toISOString() })
-      .eq("externalId", m.row.externalId);
+      .eq(m.row.id ? "id" : "externalId", m.row.id ?? m.row.externalId)
+      .or("source.is.null,source.neq.pod-studio").select("id");
     if (error) {
       errors.push(error.message);
-    } else {
+    } else if (written?.length) {
       updated += 1;
+    } else {
+      unchanged += 1;
     }
   }
 

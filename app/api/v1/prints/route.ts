@@ -1,4 +1,4 @@
-import { fetchDesigns, getSiteConfig } from "@/utils/database";
+import { fetchDesigns, getSiteConfig, fetchPublicListings } from "@/utils/database";
 import { isValidBackgroundValue } from "@/lib/background";
 import { getAffiliateOptions } from "@/lib/affiliate";
 import {
@@ -28,8 +28,9 @@ export async function GET(request: Request) {
       getSiteConfig(),
     ]);
     const affiliate = getAffiliateOptions(config);
+    const listings = await fetchPublicListings(designs.map(design => design.id));
     return jsonResponse(request, {
-      items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate)),
+      items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate, listings[design.id] || [])),
       page,
       limit,
       total,

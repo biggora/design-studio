@@ -242,9 +242,10 @@ type Call =
 
 let calls: Call[] = [];
 let selectByIdResponses: MockResponse[] = [];
+let listingResponses: MockResponse[] = [];
 let selectByTitleResponses: MockResponse[] = [];
 let insertResponses: MockResponse[] = [];
-let updateResponses: { error: { message: string } | null }[] = [];
+let updateResponses: { error: { message: string } | null; data?: Row[] }[] = [];
 let upsertResponses: MockResponse[] = [];
 let collectionsUpsertResponses: MockResponse[] = [];
 let designIdLookupResponses: MockResponse[] = [];
@@ -290,8 +291,9 @@ vi.mock("@supabase/supabase-js", () => ({
       select: (cols?: string) => ({
         in: (col: string, vals: unknown[]) => {
           calls.push({ type: "select-in", table, col, vals });
+          if (table === "design_listings") return nextSelectResponse(listingResponses);
           if (table === "designs" && cols === "id, externalId") {
-            return nextIdLookupResponse(designIdLookupResponses, vals);
+            return { or: () => nextIdLookupResponse(designIdLookupResponses, vals) };
           }
           return nextSelectResponse(col === "externalId" ? selectByIdResponses : selectByTitleResponses);
         },
@@ -315,7 +317,7 @@ vi.mock("@supabase/supabase-js", () => ({
         eq: (col: string, val: unknown) => {
           calls.push({ type: "update", table, changes, filters: [{ col, val }] });
           const queued = updateResponses.shift();
-          return Promise.resolve(queued || { error: null });
+          return { or: () => ({ select: () => Promise.resolve(queued ? { data: [{ externalId: val }], ...queued } : { error: null, data: [{ externalId: val }] }) }) };
         },
       }),
       upsert: (rows: Row[], opts: Record<string, unknown>) => ({
@@ -487,6 +489,7 @@ describe("syncRedbubbleToSupabase", () => {
   beforeEach(() => {
     calls = [];
     selectByIdResponses = [];
+    listingResponses = [];
     selectByTitleResponses = [];
     insertResponses = [];
     updateResponses = [];
@@ -501,6 +504,42 @@ describe("syncRedbubbleToSupabase", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
+  });
+
+  it.each(["listing", "source"])("skips a work protected by API %s identity without enrichment or writes", async protection => {
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    const fetchMock = mockShop(shopPage, {});
+    vi.stubGlobal("fetch", fetchMock);
+    if (protection === "listing") listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
+    else selectByIdResponses = [{ data: [{ externalId: 11111111, source: "pod-studio", props: null }], error: null }];
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+    expect(result.skipped).toBe(1);
+    expect(insertCalls()).toEqual([]);
+    expect(updateCalls()).toEqual([]);
+    expect(calls.filter(call => call.table === "design_collections")).toEqual([]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("fails closed when API listing identities cannot be read", async () => {
+    const shopPage = nextDataHtml({ results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })], pagination: { totalPages: 1 } });
+    vi.stubGlobal("fetch", mockShop(shopPage, {}));
+    listingResponses = [{ data: null, error: { message: "listing read failed" } }];
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+    expect(result.errors).toBe(1);
+    expect(insertCalls()).toEqual([]);
+    expect(updateCalls()).toEqual([]);
+  });
+  it("does not count or relink a row adopted by ingest before the guarded update", async () => {
+    const shopPage = nextDataHtml({ results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })], pagination: { totalPages: 1 } });
+    vi.stubGlobal("fetch", mockShop(shopPage, {}));
+    selectByIdResponses = [{ data: [{ externalId: 11111111, props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" } }], error: null }];
+    updateResponses = [{ data: [], error: null }];
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+    expect(result.updated).toBe(0);
+    expect(calls.filter(call => call.table === "design_collections")).toEqual([]);
   });
 
   it("inserts a brand new design in the same format as existing production rows", async () => {
@@ -1069,7 +1108,7 @@ describe("syncRedbubbleToSupabase", () => {
       baseOptions({ shopUrl: SHOP_URL, maxPages: 2 }),
     );
 
-    expect(selectInCalls()).toHaveLength(2);
+    expect(selectInCalls().filter(call => call.table === "designs")).toHaveLength(2);
     const inserts = insertCalls();
     expect(inserts).toHaveLength(1);
     expect(inserts[0].rows).toHaveLength(5); // second id chunk (rows 100-104)

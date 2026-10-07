@@ -1,20 +1,44 @@
-create or replace function get_random_design()
-returns setof designs
-language sql
-as $$
-select * from designs
-order by random()
-    limit 1;
-$$;
+BEGIN;
 
-create or replace function get_random_designs()
-returns setof designs
-language sql
-as $$
-select * from designs
-order by random()
-    limit 3;
-$$;-- Invoker privileges, callable only by the service role. Raising an error rolls back
+ALTER TABLE public.designs ALTER COLUMN "externalId" DROP NOT NULL;
+ALTER TABLE public.designs ADD COLUMN IF NOT EXISTS "sourceImageId" BIGINT UNIQUE;
+ALTER TABLE public.designs ADD COLUMN IF NOT EXISTS sha256 TEXT UNIQUE CHECK (sha256 ~ '^[0-9a-f]{64}$');
+ALTER TABLE public.designs ADD COLUMN IF NOT EXISTS source TEXT;
+
+CREATE TABLE IF NOT EXISTS public.design_listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt')),
+  account TEXT NOT NULL,
+  "externalId" TEXT NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  tags JSONB,
+  "thumbnailUrl" TEXT,
+  "publishedAt" TIMESTAMPTZ,
+  extra JSONB,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (platform, "externalId"),
+  UNIQUE ("designId", platform, account)
+);
+
+ALTER TABLE public.design_listings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.design_listings FROM anon, authenticated;
+-- The public catalog and read-only scraper checks only need these safe columns.
+GRANT SELECT ("designId", platform, "externalId", url) ON public.design_listings TO anon, authenticated;
+GRANT ALL ON public.design_listings TO service_role;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT FROM pg_policies WHERE schemaname = 'public' AND tablename = 'design_listings' AND policyname = 'Public Read Listing Links') THEN
+    CREATE POLICY "Public Read Listing Links" ON public.design_listings FOR SELECT TO anon, authenticated USING (true);
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_policies WHERE schemaname = 'public' AND tablename = 'design_listings' AND policyname = 'Service Role Listings All') THEN
+    CREATE POLICY "Service Role Listings All" ON public.design_listings FOR ALL TO service_role USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+-- Invoker privileges, callable only by the service role. Raising an error rolls back
 -- every change, including a newly created or adopted design.
 CREATE OR REPLACE FUNCTION public.ingest_design_listing(payload JSONB, slug_base TEXT)
 RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
@@ -134,3 +158,4 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.ingest_design_listing(JSONB, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.ingest_design_listing(JSONB, TEXT) TO service_role;
+COMMIT;

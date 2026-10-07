@@ -6,6 +6,9 @@ import {SiteConfig} from "@/lib/store";
 import {mapDataToConfig} from "@/lib/config";
 import {ConfigProp} from "@/types/config";
 import {Design} from "@/types/design";
+import {designSlugBase} from "@/lib/slug";
+import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, ListingsError, ListingPlatform} from "@/lib/listings";
+import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/utils/listings-database";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -81,11 +84,11 @@ function normalizeCollection(value: unknown): string {
 export function mapRowToDesign(row: mysql.RowDataPacket): Design {
     return {
         id: row.id as string,
-        externalId: row.externalId as number,
+        externalId: (row.externalId as number | null) ?? null,
         title: row.title as string,
         slug: (row.slug as string | null) ?? null,
-        externalLink: row.externalLink as string,
-        externalImageUrl: row.externalImageUrl as string,
+        externalLink: (row.externalLink as string | null) ?? "",
+        externalImageUrl: (row.externalImageUrl as string | null) ?? "",
         category: row.category as string,
         collection: normalizeCollection(row.collection),
         imageName: row.imageName as string,
@@ -421,11 +424,11 @@ async function fetchLegacyCollections(provider: string): Promise<string[]> {
 function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
     return {
         id: item.id as string,
-        externalId: item.externalId as number,
+        externalId: (item.externalId as number | null) ?? null,
         title: item.title as string,
         slug: (item.slug as string | null) ?? null,
-        externalLink: item.externalLink as string,
-        externalImageUrl: item.externalImageUrl as string,
+        externalLink: (item.externalLink as string | null) ?? "",
+        externalImageUrl: (item.externalImageUrl as string | null) ?? "",
         category: item.category as string,
         collection: normalizeCollection(item.collection),
         imageName: item.imageName as string,
@@ -628,4 +631,69 @@ export async function fetchCollections(): Promise<string[]> {
         console.error("Error fetching collections table, falling back:", err);
         return fetchLegacyCollections(provider);
     }
+}
+
+export async function ingestListing(input: IngestInput): Promise<IngestResult> {
+    if (getProvider() === "mysql") return ingestListingMySQL(getMySQLPool(), input);
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new ListingsError(503, "NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY is required for listings ingest");
+    }
+    const {data, error} = await getSupabase().rpc("ingest_design_listing", {
+        payload: input,
+        slug_base: designSlugBase(input.design.title, input.design.sourceImageId),
+    });
+    if (error) {
+        if (error.code === "P0001" || error.code === "23505") {
+            let details: unknown = error.details;
+            try { details = JSON.parse(error.details); } catch { /* Postgres may return plain text. */ }
+            throw new ListingsError(409, "CONFLICT", error.message, undefined, details);
+        }
+        throw new Error("Failed to ingest listing", {cause: error});
+    }
+    return data as IngestResult;
+}
+
+export async function getDesignListings(lookup: ListingLookup): Promise<{design: IngestDesign; listings: DesignListing[]} | null> {
+    const field = "sha256" in lookup ? "sha256" : "sourceImageId";
+    const value = "sha256" in lookup ? lookup.sha256 : lookup.sourceImageId;
+    if (getProvider() === "supabase") {
+        if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+            throw new ListingsError(503, "NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY is required for listings lookup");
+        }
+        const client = getSupabase();
+        const {data: design, error} = await client.from("designs")
+            .select("id, slug, title, externalId, sha256, sourceImageId").eq(field, value).maybeSingle();
+        if (error) throw new Error("Failed to look up design", {cause: error});
+        if (!design) return null;
+        const {data: listings, error: listingError} = await client.from("design_listings")
+            .select("id, platform, account, externalId, url, title, tags, thumbnailUrl, publishedAt, extra")
+            .eq("designId", design.id as string).order("createdAt").order("id");
+        if (listingError) throw new Error("Failed to look up listings", {cause: listingError});
+        return {design: design as IngestDesign, listings: listings as DesignListing[]};
+    }
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(`SELECT * FROM designs WHERE ${field} = ?`, [value]);
+    if (!rows.length) return null;
+    const [listings] = await pool.query<mysql.RowDataPacket[]>("SELECT * FROM design_listings WHERE designId = ? ORDER BY createdAt, id", [rows[0].id]);
+    return {design: ingestDesignResponse(rows[0] as mysql.RowDataPacket & IngestDesign), listings: listings.map(mysqlListingResponse)};
+}
+
+// Project only public marketplace links; account, source identity and extra never leave
+// the authenticated lookup endpoint. Batch one query per API response, not per design.
+export async function fetchPublicListings(ids: string[]): Promise<Record<string, {platform: ListingPlatform; url: string}[]>> {
+    if (!ids.length) return {};
+    let rows: {designId: string; platform: ListingPlatform; url: string}[];
+    if (getProvider() === "supabase") {
+        const {data, error} = await getSupabase().from("design_listings")
+            .select("designId, platform, url").in("designId", ids).order("platform").order("url");
+        if (error) throw new Error("Failed to load public listing links", {cause: error});
+        rows = data as typeof rows;
+    } else {
+        const [data] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+            "SELECT designId, platform, url FROM design_listings WHERE designId IN (?) ORDER BY platform, url", [ids]);
+        rows = data as mysql.RowDataPacket[] & typeof rows;
+    }
+    const byDesign: Record<string, {platform: ListingPlatform; url: string}[]> = {};
+    for (const row of rows) (byDesign[row.designId] ??= []).push({platform: row.platform, url: row.url});
+    return byDesign;
 }

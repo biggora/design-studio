@@ -1,6 +1,6 @@
 export interface Design {
   id: string;
-  externalId: number;
+  externalId: number | null;
   title: string;
   slug?: string | null;
   externalLink: string;

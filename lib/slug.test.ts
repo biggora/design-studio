@@ -51,6 +51,9 @@ describe("uniqueSlug", () => {
 // planSlugBackfill
 
 describe("planSlugBackfill", () => {
+  it("uses the UUID for a non-Latin title without a Redbubble ID", () => {
+    expect(planSlugBackfill([{ id: "123e4567-e89b-12d3-a456-426614174000", externalId: null, title: "猫", slug: null }])).toEqual([{ id: "123e4567-e89b-12d3-a456-426614174000", slug: "design-123e4567-e89b-12d3-a456-426614174000" }]);
+  });
   it("reserves existing slugs and skips non-null rows", () => {
     const rows = [
       { id: "1", externalId: 1, title: "Design A", slug: "design-a" },

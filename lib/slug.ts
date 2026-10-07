@@ -44,7 +44,7 @@ export function uniqueSlug(base: string, taken: ReadonlySet<string>): string {
  * order, using the row's own title/externalId as the collision base.
  */
 export function planSlugBackfill(
-  rows: { id: string; externalId: number; title: string; slug: string | null }[],
+  rows: { id: string; externalId: number | null; title: string; slug: string | null }[],
 ): { id: string; slug: string }[] {
   const taken = new Set<string>();
   for (const row of rows) {
@@ -54,7 +54,7 @@ export function planSlugBackfill(
   const plan: { id: string; slug: string }[] = [];
   for (const row of rows) {
     if (row.slug) continue;
-    const base = designSlugBase(row.title, row.externalId);
+    const base = designSlugBase(row.title, row.externalId ?? row.id);
     const slug = uniqueSlug(base, taken);
     taken.add(slug);
     plan.push({ id: row.id, slug });

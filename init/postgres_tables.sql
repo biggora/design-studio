@@ -10,7 +10,10 @@ create table
 create table
     public.designs (
                        id uuid not null default gen_random_uuid (),
-                       "externalId" bigint not null,
+                       "externalId" bigint null,
+                       "sourceImageId" bigint null unique,
+                       sha256 text null unique check (sha256 ~ '^[0-9a-f]{64}$'),
+                       source text null,
                        title character varying not null,
                        slug character varying null,
                        description text not null,
@@ -67,4 +70,30 @@ CREATE POLICY "Public Read Design Collections" ON public.design_collections FOR 
 CREATE POLICY "Service Role Studio All" ON public.studio FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Service Role Designs All" ON public.designs FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Service Role Collections All" ON public.collections FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY "Service Role Design Collections All" ON public.design_collections FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Service Role Design Collections All" ON public.design_collections FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE TABLE IF NOT EXISTS public.design_listings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt')),
+  account TEXT NOT NULL,
+  "externalId" TEXT NOT NULL,
+  url TEXT NOT NULL,
+  title TEXT,
+  description TEXT,
+  tags JSONB,
+  "thumbnailUrl" TEXT,
+  "publishedAt" TIMESTAMPTZ,
+  extra JSONB,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (platform, "externalId"),
+  UNIQUE ("designId", platform, account)
+);
+
+ALTER TABLE public.design_listings ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.design_listings FROM anon, authenticated;
+GRANT SELECT ("designId", platform, "externalId", url) ON public.design_listings TO anon, authenticated;
+GRANT ALL ON public.design_listings TO service_role;
+
+CREATE POLICY "Service Role Listings All" ON public.design_listings FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY "Public Read Listing Links" ON public.design_listings FOR SELECT TO anon, authenticated USING (true);

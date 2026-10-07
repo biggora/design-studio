@@ -37,6 +37,18 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 }
 
 describe("toPublicPrint", () => {
+  it("projects only platform/URL listing data and applies the existing affiliate rules", () => {
+    const print = toPublicPrint(makeDesign(), undefined, { redbubbleTemplate: "https://shop.pxf.io/c/1/2/3?u={url}", teepublicReferralId: "42" }, [
+      { platform: "redbubble", url: "https://redbubble.com/shop/ap/123" },
+      { platform: "teepublic", url: "https://teepublic.com/t-shirt/123-cat" },
+      { platform: "spreadshirt", url: "https://spreadshirt.com/cat" },
+    ]);
+    expect(print.listings).toEqual([
+      { platform: "redbubble", url: "https://shop.pxf.io/c/1/2/3?u=https%3A%2F%2Fredbubble.com%2Fshop%2Fap%2F123" },
+      { platform: "teepublic", url: "https://teepublic.com/t-shirt/123-cat?ref_id=42" },
+      { platform: "spreadshirt", url: "https://spreadshirt.com/cat" },
+    ]);
+  });
   it("maps imageUrl, link and mockupUrl from props.mockup_tshirt", () => {
     const result = toPublicPrint(makeDesign());
     expect(result.imageUrl).toBe("https://redbubble.com/image.jpg");

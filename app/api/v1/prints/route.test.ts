@@ -13,6 +13,7 @@ vi.mock("@/utils/database", () => ({
   getDesignById: getDesignByIdMock,
   fetchCollections: fetchCollectionsMock,
   getSiteConfig: getSiteConfigMock,
+  fetchPublicListings: vi.fn(async () => ({})),
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -43,6 +44,13 @@ beforeEach(() => {
 });
 
 describe("GET /api/v1/prints", () => {
+  it("includes a design without Redbubble and keeps its legacy link empty", async () => {
+    fetchDesignsMock.mockResolvedValue({ designs: [makeDesign({ externalId: null, externalLink: "", externalImageUrl: "", props: { teepublicLink: "https://teepublic.com/t-shirt/123-cat" } })], total: 1 });
+    const { GET } = await import("@/app/api/v1/prints/route");
+    const response = await GET(new Request("http://localhost/api/v1/prints"));
+    expect(response.status).toBe(200);
+    expect((await response.json()).items[0]).toMatchObject({ link: "", teepublicLink: "https://teepublic.com/t-shirt/123-cat", listings: [] });
+  });
   it("passes clamped page/limit/q/collection to fetchDesigns and returns PublicPrint items", async () => {
     fetchDesignsMock.mockResolvedValue({ designs: [makeDesign()], total: 1 });
     const { GET } = await import("@/app/api/v1/prints/route");

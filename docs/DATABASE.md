@@ -61,7 +61,10 @@ Stores design cards, links to the original images, categories, collections, and 
 ```sql
 CREATE TABLE public.designs (
     id UUID NOT NULL DEFAULT gen_random_uuid(),
-    "externalId" BIGINT NOT NULL,
+    "externalId" BIGINT NULL,
+    "sourceImageId" BIGINT NULL UNIQUE,
+    sha256 TEXT NULL UNIQUE CHECK (sha256 ~ '^[0-9a-f]{64}$'),
+    source TEXT NULL,
     title CHARACTER VARYING NOT NULL,
     slug CHARACTER VARYING NULL,
     description TEXT NOT NULL,
@@ -88,8 +91,11 @@ CREATE TABLE public.designs (
 ```sql
 CREATE TABLE designs (
   id CHAR(36) NOT NULL DEFAULT (UUID()),
-  `externalId` BIGINT NOT NULL,
-  title VARCHAR(255) NOT NULL,
+  `externalId` BIGINT NULL,
+  `sourceImageId` BIGINT NULL UNIQUE,
+  sha256 VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL UNIQUE CHECK (sha256 REGEXP '^[0-9a-f]{64}$'),
+  source TEXT,
+  title VARCHAR(500) NOT NULL,
   slug VARCHAR(255),
   description TEXT NOT NULL,
   keywords TEXT NOT NULL,
@@ -115,8 +121,11 @@ CREATE TABLE designs (
 | Field | PostgreSQL type | MySQL type | Constraints | Purpose |
 |---|---|---|---|---|
 | `id` | `UUID` | `CHAR(36)` | PRIMARY KEY, DEFAULT UUID | Internal unique record identifier. |
-| `externalId` | `BIGINT` | `BIGINT` | UNIQUE, NOT NULL | Unique numeric artwork ID on Redbubble (e.g. `156782390`). Used for deduplication during synchronization. |
-| `title` | `VARCHAR` | `VARCHAR(255)` | UNIQUE, NOT NULL | Design title (e.g. *"Cosmic Cat Embroidery"*). |
+| `externalId` | `BIGINT` | `BIGINT` | UNIQUE, NULL | Legacy Redbubble work ID. NULL for designs published only on other marketplaces. |
+| `sourceImageId` | `BIGINT` | `BIGINT` | UNIQUE, NULL | Positive pod-studio image ID; ingest accepts JavaScript safe integers. |
+| `sha256` | `TEXT` | `VARCHAR(64)` | UNIQUE, NULL, lowercase hex (64 chars) | Hash of the uploaded print file, used for cross-platform identity. |
+| `source` | `TEXT` | `TEXT` | NULL | Origin, e.g. `pod-studio` for uploader-ingested designs. |
+| `title` | `VARCHAR` | `VARCHAR(500)` | UNIQUE, NOT NULL | Design title (e.g. *"Cosmic Cat Embroidery"*). |
 | `slug` | `VARCHAR` | `VARCHAR(255)` | UNIQUE, NULL | URL slug for `/designs/<slug>`, derived from `title` (`lib/slug.ts`). Assigned once on insert by the sync and never rewritten; `NULL` until backfilled, in which case the page falls back to the UUID. |
 | `description` | `TEXT` | `TEXT` | NOT NULL | Full text description used on the card and in SEO tags. |
 | `keywords` | `TEXT` | `TEXT` | NOT NULL | Comma-separated keyword list for search optimization. |
@@ -253,6 +262,7 @@ For deployments that already have `studio` and `designs` provisioned, apply the 
 - `init/migrations/001_collections_postgres.sql` — run once in the Supabase SQL editor (or via `psql`). Uses `CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`, and guards each `CREATE POLICY` with a `pg_policies` existence check, so it is safe to re-run.
 - `init/migrations/001_collections_mysql.sql` — run once via the `mysql` client. Uses `CREATE TABLE IF NOT EXISTS`.
 - `init/migrations/002_design_slugs_postgres.sql` / `002_design_slugs_mysql.sql` — add the nullable unique `designs.slug` column and `designs_slug_key` constraint. Idempotent (guarded by column/constraint existence checks).
+- `init/migrations/003_design_listings_postgres.sql` / `003_design_listings_mysql.sql` — add ingest identities and `design_listings`, allow NULL Redbubble IDs, and widen MySQL design titles to 500 characters. The PostgreSQL migration also installs the transactional ingest RPC and column grants/RLS. PostgreSQL is rerunnable; MySQL is a one-time ALTER migration. Apply 002 first, then 003 before deploying this API or running the updated scrapers. Fresh installs use the full table/function scripts instead.
 
 The full `init/postgres_tables.sql` / `init/mysql_tables.sql` scripts remain the source of truth for fresh installs; the migration scripts only backfill existing databases.
 
@@ -261,6 +271,32 @@ The full `init/postgres_tables.sql` / `init/mysql_tables.sql` scripts remain the
 ---
 
 ## 3. Stored Functions and Procedures
+
+### Ingest storage and transaction
+
+`design_listings` stores one published listing per design/platform/account, with a global marketplace-ID identity:
+
+| Column | PostgreSQL | MySQL | Notes |
+|---|---|---|---|
+| `id` | UUID | CHAR(36) | Primary key, generated UUID |
+| `designId` | UUID | CHAR(36) | FK → designs.id, ON DELETE CASCADE |
+| `platform` | TEXT | VARCHAR(20) | CHECK: redbubble, teepublic, spreadshirt |
+| `account` | TEXT | VARCHAR(100) | Required; case-sensitive in MySQL |
+| `externalId` | TEXT | VARCHAR(200) | Required marketplace ID |
+| `url` | TEXT | TEXT | Required canonical marketplace URL |
+| `title`, `description` | TEXT | VARCHAR(500), TEXT | Nullable per-platform content |
+| `tags`, `extra` | JSONB | JSON | Nullable tag array / platform data object |
+| `thumbnailUrl` | TEXT | TEXT | Nullable thumbnail; retained as listing data |
+| `publishedAt` | TIMESTAMPTZ | DATETIME(3) | Defaults to now through ingest; UTC |
+| `createdAt`, `updatedAt` | TIMESTAMPTZ | DATETIME(3) | Required timestamps |
+
+Unique constraints: `(platform, externalId)` and `(designId, platform, account)`. There is no title-based cross-platform adoption. Existing curated design fields, including empty strings and default background colors, remain unchanged; only NULL values are filled. Descriptions/keywords on new designs default to empty strings when omitted.
+
+The listings table has RLS enabled. `anon`/`authenticated` can SELECT only `designId`, `platform`, `externalId`, and `url`, the public link projection and safe marketplace identity used by scraper deduplication. They cannot read `account`, tags, descriptions, timestamps, thumbnails, or `extra`, and cannot write. Explicit column grants prevent `SELECT *` from exposing private listing metadata. The service role has full access; `ingest_design_listing` is SECURITY INVOKER and EXECUTE is revoked from PUBLIC/anon/authenticated.
+
+All app calls go through `utils/database.ts`: `ingestListing`, `getDesignListings`, and `fetchPublicListings` implement both providers. Supabase POST runs one RPC transaction, using short table locks to serialize identity checks, slug allocation, and catalog writes. Any conflict raises an exception and rolls back the entire operation. MySQL uses a SERIALIZABLE transaction on one pooled connection and rolls back on errors; a concurrent deadlock returns 409 so the client can retry. No new database connection secret is needed. Supabase ingest and private lookup require `SUPABASE_SERVICE_ROLE_KEY`; MySQL uses the existing server credentials.
+
+Non-Redbubble designs stay in catalog, random, detail, and sitemap queries. The facade normalizes NULL legacy URLs to empty strings; the storefront uses its existing local image placeholder and hides the Redbubble purchase link. `thumbnailUrl` is stored in the listing rather than silently copied into the curated design image: the current image host allowlist is unchanged. Null-ID slug backfills fall back to the design UUID; ingest uses the source image ID with the same slug helper. See the [Ingest API](PUBLIC_API.md#ingest-api) for the HTTP contract.
 
 For selecting random designs (e.g. for a promo block or dynamic recommendations), optimized database functions are provided in the init scripts.
 

@@ -1,4 +1,4 @@
-import { getDesignById, getSiteConfig } from "@/utils/database";
+import { getDesignById, getSiteConfig, fetchPublicListings } from "@/utils/database";
 import { isValidBackgroundValue } from "@/lib/background";
 import { getAffiliateOptions } from "@/lib/affiliate";
 import { jsonResponse, optionsResponse, toPublicPrint } from "@/lib/public-api";
@@ -24,8 +24,9 @@ export async function GET(
     if (!result) {
       return jsonResponse(request, { error: "Not found" }, { status: 404 });
     }
+    const listings = await fetchPublicListings([result.design.id]);
     return jsonResponse(request, {
-      item: toPublicPrint(result.design, bg || undefined, getAffiliateOptions(config)),
+      item: toPublicPrint(result.design, bg || undefined, getAffiliateOptions(config), listings[result.design.id] || []),
     });
   } catch (err) {
     console.error("Error fetching print:", err);

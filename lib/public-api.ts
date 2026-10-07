@@ -3,6 +3,7 @@ import { Design } from "@/types/design";
 import { applyBackground } from "@/lib/background";
 import { getMockupUrl } from "@/lib/image";
 import { getTeepublicLink } from "@/lib/utils";
+import { ListingPlatform } from "@/lib/listings";
 import {
   AffiliateOptions,
   applyRedbubbleAffiliate,
@@ -20,6 +21,7 @@ export type PublicPrint = {
   collection: string | null;
   keywords: string[];
   backgroundColor: string | null;
+  listings?: { platform: ListingPlatform; url: string }[];
 };
 
 // `bg` is an optional on-the-fly background override (see lib/background.ts) — when it
@@ -31,6 +33,7 @@ export function toPublicPrint(
   design: Design,
   bg?: string,
   affiliate: AffiliateOptions = {},
+  listings?: { platform: ListingPlatform; url: string }[],
 ): PublicPrint {
   const collection =
     design.collection && design.collection !== "no_collection" ? design.collection : null;
@@ -58,6 +61,14 @@ export function toPublicPrint(
     collection,
     keywords,
     backgroundColor: overridden?.backgroundColor ?? (design.backgroundColor || null),
+    ...(listings ? { listings: listings.map(listing => ({
+      platform: listing.platform,
+      url: listing.platform === "redbubble"
+        ? applyRedbubbleAffiliate(listing.url, affiliate.redbubbleTemplate || "")
+        : listing.platform === "teepublic"
+          ? applyTeepublicReferral(listing.url, affiliate.teepublicReferralId || "")!
+          : listing.url,
+    })) } : {}),
   };
 }
 

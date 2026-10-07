@@ -542,16 +542,18 @@ describe("fetchTeepublicFeedDesigns", () => {
 type Row = Record<string, unknown>;
 
 let updateCalls: { changes: Row; filters: { col: string; val: unknown }[] }[] = [];
-let updateResponses: { error: { message: string } | null }[] = [];
+let updateResponses: { error: { message: string } | null; data?: Row[] }[] = [];
+let listingResponses: { data: Row[] | null; error: { message: string } | null }[] = [];
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: vi.fn(() => ({
     from: () => ({
+      select: () => ({ in: () => ({ or: () => Promise.resolve(listingResponses.shift() ?? { data: [], error: null }) }) }),
       update: (changes: Row) => ({
         eq: (col: string, val: unknown) => {
           updateCalls.push({ changes, filters: [{ col, val }] });
           const queued = updateResponses.shift();
-          return Promise.resolve(queued || { error: null });
+          return { or: () => ({ select: () => Promise.resolve(queued ? { data: [{ id: "saved" }], ...queued } : { error: null, data: [{ id: "saved" }] }) }) };
         },
       }),
     }),
@@ -577,6 +579,37 @@ describe("applyTeepublicLinks", () => {
   beforeEach(() => {
     updateCalls = [];
     updateResponses = [];
+    listingResponses = [];
+  });
+
+  it("skips a design or external ID already protected by a TeePublic listing", async () => {
+    listingResponses = [{ data: [{ designId: "api-design", platform: "teepublic", externalId: "111" }], error: null }];
+    const result = await applyTeepublicLinks([match(row(5, "Design A"), "111", "Design A", "https://www.teepublic.com/t-shirt/111-design-a")], { supabaseUrl: "https://fake.supabase.co", supabaseKey: "fake-key" });
+    expect(result.unchanged).toBe(1);
+    expect(updateCalls).toEqual([]);
+  });
+  it("preserves an exact legacy link when another scraped title matches", async () => {
+    const result = await applyTeepublicLinks([match(row(5, "Design A", { teepublicId: "222", teepublicLink: "https://teepublic.com/t-shirt/222-a" }), "111", "Design A", "https://www.teepublic.com/t-shirt/111-design-a")], { supabaseUrl: "https://fake.supabase.co", supabaseKey: "fake-key" });
+    expect(result.unchanged).toBe(1);
+    expect(updateCalls).toEqual([]);
+  });
+  it("does not write when the listing check fails", async () => {
+    listingResponses = [{ data: null, error: { message: "listing read failed" } }];
+    const result = await applyTeepublicLinks([match(row(5, "Design A"), "111", "Design A", "https://www.teepublic.com/t-shirt/111-design-a")], { supabaseUrl: "https://fake.supabase.co", supabaseKey: "fake-key" });
+    expect(result.errors).toEqual(["listing read failed"]);
+    expect(updateCalls).toEqual([]);
+  });
+
+  it("uses the UUID to update a design without a Redbubble ID", async () => {
+    const result = await applyTeepublicLinks([match({ id: "uuid", externalId: null, title: "Design A", props: null }, "111", "Design A", "https://www.teepublic.com/t-shirt/111-design-a")], { supabaseUrl: "https://fake.supabase.co", supabaseKey: "fake-key" });
+    expect(result.updated).toBe(1);
+    expect(updateCalls[0].filters).toEqual([{ col: "id", val: "uuid" }]);
+  });
+  it("counts a guarded update rejected after ingest adoption as unchanged", async () => {
+    updateResponses = [{ data: [], error: null }];
+    const result = await applyTeepublicLinks([match(row(5, "Design A"), "111", "Design A", "https://www.teepublic.com/t-shirt/111-design-a")], { supabaseUrl: "https://fake.supabase.co", supabaseKey: "fake-key" });
+    expect(result.updated).toBe(0);
+    expect(result.unchanged).toBe(1);
   });
 
   it("preserves existing props keys (e.g. mockup_tshirt) when writing the TeePublic link", async () => {

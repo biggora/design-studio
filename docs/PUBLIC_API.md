@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-`/api/v1/*` is a public, unauthenticated, read-only JSON API that exposes the synced design catalog so **another website** can fetch prints from the browser and render them as referral/ad blocks that link straight to the artist's Redbubble listing. It has no write operations, no auth, and returns only a curated subset of each design's fields (see §4).
+`/api/v1/prints*` and `/api/v1/collections` are public, unauthenticated, read-only JSON endpoints for embedding the design catalog on other websites. They return a curated subset of each design's fields (see §4). `/api/v1/listings` is a separate authenticated ingest/lookup API for pod-uploader, described below.
 
 ---
 
@@ -152,8 +152,9 @@ When `bg` resolves to a usable token for a given print, `imageUrl` and `backgrou
 | `description` | string | Design description (may be an empty string). |
 | `imageUrl` | string | Full-artwork image URL, hosted on the Redbubble CDN. |
 | `mockupUrl` | string \| null | Classic T-Shirt mockup image URL (`props.mockup_tshirt`), or `null` if not available. |
-| `link` | string | Redbubble product page URL — point the referral/ad link here. See §4.1 for affiliate wrapping. |
+| `link` | string | Redbubble product page URL, or `""` when no Redbubble listing exists. Use `teepublicLink` or `listings` when empty. Existing Redbubble links keep the same affiliate wrapping. |
 | `teepublicLink` | string \| null | TeePublic product page URL (`props.teepublicLink`, validated to `teepublic.com`), or `null` if the design has no TeePublic match. See §4.1 for referral wrapping. |
+| `listings` | `{ platform, url }[]` | Additive link projection from ingested marketplace listings; `[]` for designs with only scraper/legacy data. Redbubble/TeePublic URLs use the same affiliate wrappers as the legacy fields. Account names and other listing metadata are omitted. |
 | `collection` | string \| null | Collection title, or `null` when the design has no collection (or its collection is the internal `no_collection` placeholder). |
 | `keywords` | string[] | Tags/keywords, split on commas, trimmed, with empty entries removed. `[]` if there are none. |
 | `backgroundColor` | string \| null | Dominant background color (e.g. a hex string), or `null` if not set. |
@@ -306,3 +307,119 @@ Every site that renders prints from this API and links to `link`/`teepublicLink`
 - **Register domains.** Every domain showing the links must be listed in the affiliate profile (Impact Media Properties for Redbubble). Keep this API's `PRINTS_API_ALLOWED_ORIGINS` allowlist aligned with those domains.
 - **Don't alter the links.** Use `link`/`teepublicLink` as returned (already wrapped with the configured tracking); appending your own parameters breaks attribution and violates the affiliate terms.
 - **Mark paid links.** Render the anchor with `rel="sponsored"` (see the examples in §6).
+
+## Ingest API
+
+Base URL: your Design Studio deployment, e.g. `http://localhost:3000` locally or `https://your-domain.com` in production. Set `LISTINGS_API_TOKEN` on the server and client; Supabase deployments also need the existing `SUPABASE_SERVICE_ROLE_KEY`. This token is independent of `SYNC_SECRET`. Both methods accept only `Authorization: Bearer <token>`; no query token or `x-sync-secret` fallback. Responses always use `Cache-Control: no-store`; the public API's cross-origin GET policy does not apply to this private CLI endpoint.
+
+Apply migration 003 before deployment (see [DATABASE.md](DATABASE.md)). No migration is applied automatically by the route.
+
+### POST /api/v1/listings
+
+Call only after a marketplace publish is confirmed. The JSON body has exactly two objects, `design` and `listing`. Unknown fields at those levels are rejected; `extra` permits arbitrary JSON platform data. Optional fields may be omitted, but cannot be null. Required strings are non-empty.
+
+| Field | Required | Validation |
+|---|---|---|
+| `design.sourceImageId` | yes | Positive safe integer |
+| `design.sha256` | yes | 64 hex characters, saved lowercase |
+| `design.title` | yes | ≤ 500 characters |
+| `design.description` | no | ≤ 5000 characters |
+| `design.tags` | no | ≤ 100 strings, each non-empty and ≤ 100 characters |
+| `design.backgroundColor` | no | #rgb or #rrggbb |
+| `listing.platform` | yes | redbubble, teepublic, spreadshirt |
+| `listing.account` | yes | ≤ 100 characters |
+| `listing.externalId` | yes | ≤ 200 characters; digits for Redbubble/TeePublic; Redbubble must fit a JavaScript safe integer |
+| `listing.url` | yes | http(s), ≤ 2000 characters, platform's .com domain or subdomain, no credentials |
+| `listing.title`, `listing.description` | no | ≤ 500 / 5000 characters |
+| `listing.tags` | no | Same limits as design.tags |
+| `listing.thumbnailUrl` | no | http(s) URL, ≤ 2000 characters, no credentials |
+| `listing.publishedAt` | no | ISO-8601 timestamp with timezone; defaults to now on creation |
+| `listing.extra` | no | JSON object, serialized UTF-8 size ≤ 16 KiB |
+
+The optional `extra.mockupTshirt`, when used for the legacy Redbubble image mirror, must be an HTTPS URL on a Redbubble image host supported by the existing image allowlist. Other thumbnail hosts are stored in the listing without adding them to that allowlist.
+
+Example: create a Redbubble listing, then add TeePublic for the same source design:
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/listings \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design","tags":["astronaut art","space explorer"],"backgroundColor":"#ffffff"},"listing":{"platform":"redbubble","account":"redbubble:shop-a","externalId":"184507566","url":"https://www.redbubble.com/shop/ap/184507566","publishedAt":"2026-10-07T08:10:00Z"}}'
+
+curl -s -X POST http://localhost:3000/api/v1/listings \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design"},"listing":{"platform":"teepublic","account":"teepublic:main","externalId":"99914330","url":"https://www.teepublic.com/t-shirt/99914330-look-past-the-stars-astronaut-design"}}'
+```
+
+Response:
+
+```json
+{
+  "design": {
+    "id": "c4e49734-7bb5-46f4-86c8-7ec6a587c128",
+    "slug": "look-past-the-stars-astronaut-design",
+    "title": "Look Past the Stars Astronaut Design",
+    "externalId": 184507566,
+    "sha256": "f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971",
+    "sourceImageId": 299
+  },
+  "listing": {
+    "id": "fe5b49a4-f3fb-4bd0-8a3e-a73364c99f70",
+    "platform": "teepublic",
+    "account": "teepublic:main",
+    "externalId": "99914330",
+    "url": "https://www.teepublic.com/t-shirt/99914330-look-past-the-stars-astronaut-design",
+    "title": null,
+    "tags": null,
+    "thumbnailUrl": null,
+    "publishedAt": "2026-10-07T08:11:00Z",
+    "extra": null
+  },
+  "created": { "design": false, "listing": true }
+}
+```
+
+New listing: **201**, even when attaching it to an existing design. Same listing repeat: **200**, updates the supplied fields and preserves omitted metadata (including publishedAt). Identity lookup uses hash, then sourceImageId; if absent, Redbubble externalId or legacy props.teepublicId can adopt a scraper row. It never joins designs by title or silently renames a title conflict. A known source ID/hash cannot be replaced with a different identity. Existing catalog values are only filled when NULL. The explicit marketplace mirrors update canonical legacy links and preserve other props; `extra.mockupTshirt` fills an empty Redbubble mockup prop. Multiple accounts per platform are allowed; the first legacy Redbubble ID stays stable and the legacy link reflects the latest ingested Redbubble listing. All changes occur in one transaction and successful POSTs revalidate the root layout, as the background mutation endpoint does.
+
+### GET /api/v1/listings
+
+Provide exactly one `sha256` or `sourceImageId` query parameter. Hash matching is case-insensitive at validation and lowercase in storage. Unknown/repeated parameters or both identities are rejected. Returns **200** `{ "design": <same design shape>, "listings": [<same listing shape>, ...] }`, or **404** if absent. Listings are ordered by creation time, then ID.
+
+```bash
+curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/listings?sha256=f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971'
+curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/listings?sourceImageId=299'
+```
+
+Errors retain the existing string-valued `error`, with additive machine-readable fields:
+
+```json
+{"error":"sha256 and sourceImageId identify different designs","code":"CONFLICT","details":{"sha256DesignId":"...","sourceImageIdDesignId":"..."}}
+```
+
+| Status | code | Meaning |
+|---|---|---|
+| 400 | VALIDATION | Invalid JSON, unknown field, malformed/oversized value or query |
+| 401 | UNAUTHORIZED | Missing or wrong bearer token |
+| 404 | NOT_FOUND | GET design identity not found |
+| 409 | CONFLICT | Inconsistent source identities, unique title, listing owned by another design, or another externalId for the same design/platform/account; transaction rolled back |
+| 503 | NOT_CONFIGURED | LISTINGS_API_TOKEN unset; or Supabase service-role key missing |
+| 500 | INTERNAL | Database/runtime failure; internal details are not returned |
+
+Validation errors also include `field`; conflicts may include `details`. Redbubble IDs and source image IDs are limited to the JavaScript safe integer range because existing catalog readers return numbers. Store hashes/source IDs in the private client workflow; the public print DTO omits them. A non-Redbubble design remains visible with `link: ""`, its other marketplace links and the existing image placeholder until it has a supported design image.
+
+### Local verification
+
+Unit tests run through the existing Vitest setup. Transaction tests are explicitly enabled with `LISTINGS_TEST_DATABASES=1` and use only fixed disposable local targets, never deployment environment credentials:
+
+```bash
+docker run -d --name design-studio-listings-postgres -e POSTGRES_PASSWORD=listings-test -e POSTGRES_DB=listings_test postgres:17
+docker run -d --name design-studio-listings-mysql -e MYSQL_ROOT_PASSWORD=listings-test -e MYSQL_DATABASE=listings_test -p 127.0.0.1:33316:3306 mysql:8.4
+# Wait until both databases accept connections.
+LISTINGS_TEST_DATABASES=1 npm test -- --exclude '**/.claude/**'
+npx tsc --noEmit
+npm run lint -- --ignore-pattern '.claude/**' --ignore-pattern '.agents/**'
+docker rm -f design-studio-listings-postgres design-studio-listings-mysql
+```
+
+PowerShell: set `$env:LISTINGS_TEST_DATABASES = '1'` before the test command. The integration setup replaces the test schemas in those containers; do not put real data in them. It exercises migration upgrades, rollback, identities, mirrors, RLS/grants, nullable Redbubble IDs, multiple accounts, and both database providers. Scraper tests use static fixtures and mocked clients; they make no live marketplace requests.

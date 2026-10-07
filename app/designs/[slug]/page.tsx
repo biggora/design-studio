@@ -55,7 +55,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const { design } = data;
-  const displayImage = getDesignDisplayImage(design).trim();
+  const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
   const title = `${design.title} - ${config.name} Design`;
   const description = `Discover the unique ${design.title} design by ${config.name}. ${truncateText(design.description, 180)}`;
   return {
@@ -108,7 +108,7 @@ export default async function DesignDetails(
 
   const buyUrl = sanitizeUrl(
     applyRedbubbleAffiliate(
-      design.externalLink || getRedBubbleDesignPageLink(design.externalId),
+      design.externalLink || (design.externalId !== null ? getRedBubbleDesignPageLink(design.externalId) : ""),
       config.affiliate.redbubbleTemplate,
     ),
   );
@@ -116,7 +116,7 @@ export default async function DesignDetails(
     getTeepublicLink(design),
     config.affiliate.teepublicReferralId,
   );
-  const displayImage = getDesignDisplayImage(design).trim();
+  const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -203,15 +203,17 @@ export default async function DesignDetails(
                   Created on: {formatDate(design.createdAt)}
                 </p>
               </div>
-              <a
-                href={buyUrl}
-                target="_blank"
-                rel="sponsored noopener noreferrer"
-                className={buttonVariants({ className: "w-full gap-2" })}
-              >
-                Buy on Redbubble
-                <span aria-hidden="true">&#8599;</span>
-              </a>
+              {buyUrl !== "#" && (
+                <a
+                  href={buyUrl}
+                  target="_blank"
+                  rel="sponsored noopener noreferrer"
+                  className={buttonVariants({ className: "w-full gap-2" })}
+                >
+                  Buy on Redbubble
+                  <span aria-hidden="true">&#8599;</span>
+                </a>
+              )}
               <p className="text-sm text-muted-foreground mt-2 text-center">
                 Printed &amp; shipped by our marketplace partner. We may earn a
                 commission —{" "}
