@@ -97,3 +97,38 @@ GRANT ALL ON public.design_listings TO service_role;
 
 CREATE POLICY "Service Role Listings All" ON public.design_listings FOR ALL TO service_role USING (true) WITH CHECK (true);
 CREATE POLICY "Public Read Listing Links" ON public.design_listings FOR SELECT TO anon, authenticated USING (true);
+
+CREATE TABLE IF NOT EXISTS public.design_social_posts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
+  channel TEXT NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  account TEXT NOT NULL CHECK (char_length(account) <= 100),
+  variant TEXT NOT NULL CHECK (char_length(variant) <= 50),
+  "externalId" TEXT NOT NULL CHECK (char_length("externalId") <= 200),
+  url TEXT NOT NULL CHECK (char_length(url) <= 2000),
+  "linkUrl" TEXT,
+  title TEXT CHECK (char_length(title) <= 500),
+  caption TEXT CHECK (char_length(caption) <= 5000),
+  hashtags JSONB,
+  "imageUrl" TEXT,
+  board TEXT CHECK (char_length(board) <= 200),
+  status TEXT NOT NULL CHECK (status IN ('published', 'removed')),
+  "publishedAt" TIMESTAMPTZ NOT NULL,
+  "removedAt" TIMESTAMPTZ,
+  extra JSONB,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "updatedAt" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT design_social_posts_removed_check CHECK (status <> 'removed' OR "removedAt" IS NOT NULL),
+  UNIQUE (channel, "externalId"),
+  UNIQUE ("designId", channel, account, variant)
+);
+CREATE INDEX IF NOT EXISTS design_social_posts_designid_idx ON public.design_social_posts ("designId");
+CREATE INDEX IF NOT EXISTS design_social_posts_channel_publishedat_idx ON public.design_social_posts (channel, "publishedAt");
+CREATE INDEX IF NOT EXISTS design_social_posts_account_publishedat_idx ON public.design_social_posts (account, "publishedAt");
+CREATE INDEX IF NOT EXISTS design_social_posts_status_idx ON public.design_social_posts (status);
+
+ALTER TABLE public.design_social_posts ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.design_social_posts FROM anon, authenticated;
+GRANT ALL ON public.design_social_posts TO service_role;
+
+CREATE POLICY "Service Role Social Posts All" ON public.design_social_posts FOR ALL TO service_role USING (true) WITH CHECK (true);

@@ -9,6 +9,8 @@ import {Design} from "@/types/design";
 import {designSlugBase} from "@/lib/slug";
 import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, ListingsError, ListingPlatform} from "@/lib/listings";
 import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/utils/listings-database";
+import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
+import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -651,6 +653,51 @@ export async function ingestListing(input: IngestInput): Promise<IngestResult> {
         throw new Error("Failed to ingest listing", {cause: error});
     }
     return data as IngestResult;
+}
+
+async function socialRpc<T>(name: string, args: Record<string, unknown>): Promise<T> {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new ListingsError(503, "NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY is required for social posts");
+    }
+    const {data, error} = await getSupabase().rpc(name, args);
+    if (error) {
+        if (error.code === "P0002") throw new ListingsError(404, "NOT_FOUND", "Design not found", "design");
+        if (error.code === "P0001" || error.code === "23505") {
+            let details: unknown = error.details;
+            try { details = JSON.parse(error.details); } catch { /* Postgres may return plain text. */ }
+            throw new ListingsError(409, "CONFLICT", error.message, undefined, details);
+        }
+        throw new Error(`Failed to run ${name}`, {cause: error});
+    }
+    return data as T;
+}
+
+// Postgres returns timestamptz as offset strings; normalize to the same ISO form as MySQL.
+function normalizeSocialPost(post: SocialPost): SocialPost {
+    const iso = (value: string) => new Date(value).toISOString();
+    return {...post, publishedAt: iso(post.publishedAt), removedAt: post.removedAt ? iso(post.removedAt) : null,
+        createdAt: iso(post.createdAt), updatedAt: iso(post.updatedAt)};
+}
+
+export async function upsertSocialPost(input: SocialPostIngestInput): Promise<SocialPostIngestResult> {
+    if (getProvider() === "mysql") return upsertSocialPostMySQL(getMySQLPool(), input);
+    const result = await socialRpc<SocialPostIngestResult>("upsert_design_social_post", {payload: input});
+    return {...result, post: normalizeSocialPost(result.post)};
+}
+
+export async function listSocialPosts(filters: SocialPostFilters): Promise<SocialPostList> {
+    if (getProvider() === "mysql") return listSocialPostsMySQL(getMySQLPool(), filters);
+    const result = await socialRpc<{data: SocialPostList["data"]; total: number}>("list_design_social_posts", {filters});
+    return {
+        data: result.data.map(item => ({...item, post: normalizeSocialPost(item.post)})),
+        pagination: {page: filters.page, limit: filters.limit, total: Number(result.total)},
+    };
+}
+
+export async function summarizeSocialPosts(filters: SocialSummaryFilters): Promise<SocialSummaryRow[]> {
+    if (getProvider() === "mysql") return summarizeSocialPostsMySQL(getMySQLPool(), filters);
+    const result = await socialRpc<{data: SocialSummaryRow[]}>("summarize_design_social_posts", {filters});
+    return result.data.map(row => ({...row, count: Number(row.count)}));
 }
 
 export async function getDesignListings(lookup: ListingLookup): Promise<{design: IngestDesign; listings: DesignListing[]} | null> {

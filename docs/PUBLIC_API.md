@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-`/api/v1/prints*` and `/api/v1/collections` are public, unauthenticated, read-only JSON endpoints for embedding the design catalog on other websites. They return a curated subset of each design's fields (see §4). `/api/v1/listings` is a separate authenticated ingest/lookup API for pod-uploader, described below.
+`/api/v1/prints*` and `/api/v1/collections` are public, unauthenticated, read-only JSON endpoints for embedding the design catalog on other websites. They return a curated subset of each design's fields (see §4). `/api/v1/listings` is a separate authenticated ingest/lookup API for pod-uploader, described below. `/api/v1/social-posts*` is a second authenticated API for recording social posts, described under "Social posts ingest".
 
 ---
 
@@ -408,9 +408,217 @@ Errors retain the existing string-valued `error`, with additive machine-readable
 
 Validation errors also include `field`; conflicts may include `details`. Redbubble IDs and source image IDs are limited to the JavaScript safe integer range because existing catalog readers return numbers. Store hashes/source IDs in the private client workflow; the public print DTO omits them. A non-Redbubble design remains visible with `link: ""`, its other marketplace links and the existing image placeholder until it has a supported design image.
 
+### Social posts ingest
+
+`/api/v1/social-posts` is a private API, not part of the public embed API. pod-uploader calls it to record the final facts about a social post for a design: the post is `published`, or later `removed`. The design must already exist (create it first with `POST /api/v1/listings`); this API never creates or changes designs.
+
+Authentication and caching match the listings API: `Authorization: Bearer $LISTINGS_API_TOKEN` only, `401 UNAUTHORIZED` for a missing or wrong token, `503 NOT_CONFIGURED` when `LISTINGS_API_TOKEN` is unset, and `Cache-Control: no-store` on every response. Apply migration 004 (after 003) before deployment; see [DATABASE.md](DATABASE.md) §2.7. Supabase deployments also need `SUPABASE_SERVICE_ROLE_KEY`, otherwise requests fail with `503 NOT_CONFIGURED`.
+
+Endpoints:
+
+- `POST /api/v1/social-posts` creates or updates a post.
+- `GET /api/v1/social-posts` lists posts.
+- `GET /api/v1/social-posts/summary` counts posts per channel, account and status.
+
+#### POST /api/v1/social-posts
+
+The JSON body has exactly two objects, `design` and `post`. Unknown fields at any level are rejected. Optional fields may be omitted but cannot be `null`. Strings are stored as sent (not trimmed), but a blank string is invalid.
+
+| Field | Required | Validation |
+|---|---|---|
+| `design.sha256` | one of the two | 64 hex characters, case-insensitive, saved lowercase |
+| `design.sourceImageId` | one of the two | Positive safe integer |
+| `post.channel` | yes | `pinterest`, `bluesky`, `mastodon`, `instagram`, `threads`, `reddit`, `tiktok`, `youtube`, `x`, `linkedin` |
+| `post.account` | yes | Non-empty, ≤ 100 characters |
+| `post.variant` | yes | Non-empty, ≤ 50 characters. Tells apart several posts of one design on the same account, e.g. different images |
+| `post.externalId` | yes | Non-empty, ≤ 200 characters. The channel's own post ID |
+| `post.url` | yes | http(s), ≤ 2000 characters, no credentials; host must match the channel (table below) |
+| `post.status` | yes | `published` or `removed` |
+| `post.publishedAt` | yes | ISO-8601 timestamp with timezone. The API returns it as UTC with milliseconds (`...000Z`) |
+| `post.removedAt` | required if `removed`; rejected if `published` | ISO-8601 timestamp with timezone |
+| `post.linkUrl` | no | http(s) URL, ≤ 2000 characters, no credentials. Where the post points, e.g. the shop page. No domain check |
+| `post.title` | no | Non-empty, ≤ 500 characters |
+| `post.caption` | no | Non-empty, ≤ 5000 characters |
+| `post.hashtags` | no | Array of ≤ 50 strings, each non-empty and ≤ 100 characters |
+| `post.imageUrl` | no | http(s) URL, ≤ 2000 characters, no credentials. No domain check |
+| `post.board` | no | Non-empty, ≤ 200 characters (e.g. a Pinterest board) |
+| `post.extra` | no | JSON object (not an array), serialized UTF-8 size ≤ 16 KiB |
+
+Provide `design.sha256`, `design.sourceImageId`, or both.
+
+`post.url` must be on the channel's domain or a subdomain of it:
+
+| Channel | Allowed hosts |
+|---|---|
+| `pinterest` | `pinterest.<tld>` or `pinterest.co.<cc>` / `pinterest.com.<cc>`, with optional subdomains (`www.pinterest.com`, `pinterest.de`, `pinterest.co.uk`, `pinterest.com.au`). Look-alikes such as `pinterest.evil.com` or `notpinterest.com` are rejected |
+| `bluesky` | `bsky.app` |
+| `mastodon` | any host (instances are self-hosted) |
+| `instagram` | `instagram.com` |
+| `threads` | `threads.net`, `threads.com` |
+| `reddit` | `reddit.com` |
+| `tiktok` | `tiktok.com` |
+| `youtube` | `youtube.com`, `youtu.be` |
+| `x` | `x.com`, `twitter.com` |
+| `linkedin` | `linkedin.com` |
+
+Design lookup: `sha256` first, then `sourceImageId`. If neither matches a design, the API returns `404`. If both are given and identify different designs, it returns `409`.
+
+Upsert rules. A post is identified by `(channel, externalId)`.
+
+- A new post returns **201** with `created: true`. A repeat of the same `(channel, externalId)` returns **200** with `created: false`.
+- On a repeat, the required fields (`account`, `variant`, `url`, `status`, `publishedAt`) are overwritten. Optional fields that are omitted keep their stored values; supplied ones replace them.
+- Sending `status: "published"` clears `removedAt`.
+- A `removed` post can be updated again (for example, to correct `removedAt`) as long as it stays `removed`.
+- `removed` to `published` returns `409`. Publish a new post instead.
+- A post that already belongs to another design returns `409`. Posts are never relinked.
+- A design can have only one post per `(channel, account, variant)`. A different `externalId` for the same design, channel, account and variant returns `409`.
+- The whole request runs in one transaction. Nothing is written on an error, and the site is not revalidated.
+
+Example: record a published Pinterest pin.
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/social-posts \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","sourceImageId":299},"post":{"channel":"pinterest","account":"pinterest:shop-a","variant":"main","externalId":"1234567890","url":"https://www.pinterest.com/pin/1234567890/","status":"published","publishedAt":"2026-10-10T09:15:00Z","board":"Space Shirts","title":"Look Past the Stars","hashtags":["astronaut","space"]}}'
+```
+
+Response, **201**:
+
+```json
+{
+  "design": {
+    "id": "c4e49734-7bb5-46f4-86c8-7ec6a587c128",
+    "slug": "look-past-the-stars-astronaut-design",
+    "title": "Look Past the Stars Astronaut Design",
+    "sha256": "f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971",
+    "sourceImageId": 299
+  },
+  "post": {
+    "id": "5d1f6f0e-3c0a-4a52-9b0b-8f7f0f3e2c11",
+    "designId": "c4e49734-7bb5-46f4-86c8-7ec6a587c128",
+    "channel": "pinterest",
+    "account": "pinterest:shop-a",
+    "variant": "main",
+    "externalId": "1234567890",
+    "url": "https://www.pinterest.com/pin/1234567890/",
+    "linkUrl": null,
+    "title": "Look Past the Stars",
+    "caption": null,
+    "hashtags": ["astronaut", "space"],
+    "imageUrl": null,
+    "board": "Space Shirts",
+    "status": "published",
+    "publishedAt": "2026-10-10T09:15:00.000Z",
+    "removedAt": null,
+    "extra": null,
+    "createdAt": "2026-10-10T09:16:02.417Z",
+    "updatedAt": "2026-10-10T09:16:02.417Z"
+  },
+  "created": true
+}
+```
+
+Omitted optional fields come back as `null`. `design.slug`, `design.sha256` and `design.sourceImageId` are `null` when the design has none.
+
+Example: the pin was taken down. Send the required fields again with `status: "removed"` and `removedAt`. Omitted optional fields (board, title, hashtags) are kept.
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/social-posts \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971"},"post":{"channel":"pinterest","account":"pinterest:shop-a","variant":"main","externalId":"1234567890","url":"https://www.pinterest.com/pin/1234567890/","status":"removed","publishedAt":"2026-10-10T09:15:00Z","removedAt":"2026-10-12T14:00:00Z"}}'
+```
+
+This returns **200** with `created: false`, `post.status: "removed"`, `post.removedAt: "2026-10-12T14:00:00.000Z"`, and a newer `post.updatedAt`.
+
+#### GET /api/v1/social-posts
+
+Lists posts, newest `publishedAt` first (ties broken by post `id`, descending). All filters are optional and combine with AND. Unknown or repeated query parameters are rejected with `400`.
+
+| Param | Type | Default | Validation |
+|---|---|---|---|
+| `sha256` | string | none | 64 hex characters, case-insensitive. Not combinable with `sourceImageId` |
+| `sourceImageId` | integer | none | Positive integer. Not combinable with `sha256` |
+| `channel` | string | none | One of the channels above |
+| `account` | string | none | ≤ 100 characters; exact match |
+| `status` | string | none | `published` or `removed` |
+| `since` | timestamp | none | ISO-8601 with timezone; `publishedAt >= since` |
+| `until` | timestamp | none | ISO-8601 with timezone; `publishedAt <= until`. `since` must not be after `until` |
+| `q` | string | none | Trimmed, 1-200 characters. Case-insensitive substring match on post title, post caption or design title |
+| `page` | integer | `1` | ≥ 1 |
+| `limit` | integer | `50` | 1-200 |
+
+A `sha256` or `sourceImageId` that matches no design returns an empty list, not `404`.
+
+Because `+` in a query string means a space, URL-encode it as `%2B` in timezone offsets (`2026-10-01T00:00:00%2B02:00`). `Z` needs no encoding.
+
+```bash
+curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/social-posts?channel=pinterest&since=2026-10-01T00:00:00Z&limit=50'
+```
+
+Response, **200**:
+
+```json
+{
+  "data": [
+    {
+      "post": { "id": "5d1f6f0e-3c0a-4a52-9b0b-8f7f0f3e2c11", "designId": "c4e49734-7bb5-46f4-86c8-7ec6a587c128", "channel": "pinterest", "...": "same shape as post in the POST response" },
+      "design": {
+        "id": "c4e49734-7bb5-46f4-86c8-7ec6a587c128",
+        "slug": "look-past-the-stars-astronaut-design",
+        "title": "Look Past the Stars Astronaut Design"
+      }
+    }
+  ],
+  "pagination": { "page": 1, "limit": 50, "total": 1 }
+}
+```
+
+`total` counts all matching posts, not only the current page. Request the next page with `page=2` until `page * limit >= total`.
+
+#### GET /api/v1/social-posts/summary
+
+Counts posts per channel, account and status. Accepts only `since` and `until` (same rules as above, applied to `publishedAt`). Combinations with no posts are omitted. Rows are sorted by channel, account, status.
+
+```bash
+curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/social-posts/summary?since=2026-10-01T00:00:00Z'
+```
+
+Response, **200**:
+
+```json
+{
+  "data": [
+    { "channel": "pinterest", "account": "pinterest:shop-a", "status": "published", "count": 41 },
+    { "channel": "pinterest", "account": "pinterest:shop-a", "status": "removed", "count": 2 }
+  ]
+}
+```
+
+#### Social posts errors
+
+Errors use the same envelope as the listings API: a string `error` plus `code`, and `field` or `details` when they apply.
+
+```json
+{"error":"Expected one of: pinterest, bluesky, mastodon, instagram, threads, reddit, tiktok, youtube, x, linkedin","code":"VALIDATION","field":"post.channel"}
+{"error":"Removed post cannot be published again","code":"CONFLICT","details":{"postId":"5d1f6f0e-3c0a-4a52-9b0b-8f7f0f3e2c11"}}
+```
+
+| Status | code | Meaning |
+|---|---|---|
+| 400 | VALIDATION | Invalid JSON; unknown field or query parameter; duplicate query parameter; a malformed, oversized or `null` value; `url` host not on the channel's domain; `removedAt` missing for `removed` or sent with `published`; both `sha256` and `sourceImageId` in a GET |
+| 401 | UNAUTHORIZED | Missing or wrong bearer token |
+| 404 | NOT_FOUND | POST: no design matches `sha256` / `sourceImageId` (`field: "design"`) |
+| 409 | CONFLICT | `sha256` and `sourceImageId` identify different designs; post belongs to another design; `removed` to `published`; different `externalId` for the same design, channel, account and variant; concurrent ingest collision (retry) |
+| 503 | NOT_CONFIGURED | `LISTINGS_API_TOKEN` unset; or `SUPABASE_SERVICE_ROLE_KEY` missing on Supabase |
+| 500 | INTERNAL | Database or runtime failure; details are not returned |
+
+The exact `error` text and `details` of a 409 can differ between PostgreSQL and MySQL (for example, the message for a unique-index collision). Branch on `code` and the status, not on the message.
+
 ### Local verification
 
-Unit tests run through the existing Vitest setup. Transaction tests are explicitly enabled with `LISTINGS_TEST_DATABASES=1` and use only fixed disposable local targets, never deployment environment credentials:
+Unit tests run through the existing Vitest setup. Transaction tests (listings and social posts, `utils/listings-database.test.ts` and `utils/social-posts-database.test.ts`) are explicitly enabled with `LISTINGS_TEST_DATABASES=1` and use only fixed disposable local targets, never deployment environment credentials:
 
 ```bash
 docker run -d --name design-studio-listings-postgres -e POSTGRES_PASSWORD=listings-test -e POSTGRES_DB=listings_test postgres:17

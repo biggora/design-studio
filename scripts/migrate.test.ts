@@ -54,7 +54,7 @@ describe.skipIf(!enabled).each(["postgres", "mysql"] as const)("migration runner
         title VARCHAR NOT NULL UNIQUE, description TEXT, keywords TEXT, "backgroundColor" TEXT NOT NULL DEFAULT '#FFFFFF',
         props JSON, "externalLink" TEXT, "updatedAt" TIMESTAMP);`);
     } else {
-      await sql(`DROP TABLE IF EXISTS schema_migrations, design_listings, design_collections, collections, designs, probe;
+      await sql(`DROP TABLE IF EXISTS schema_migrations, design_social_posts, design_listings, design_collections, collections, designs, probe;
         CREATE TABLE designs (id CHAR(36) PRIMARY KEY DEFAULT (UUID()), externalId BIGINT NOT NULL UNIQUE,
         title VARCHAR(255) NOT NULL UNIQUE);`);
     }
@@ -71,7 +71,7 @@ describe.skipIf(!enabled).each(["postgres", "mysql"] as const)("migration runner
     const output = vi.spyOn(console, "log");
     try {
       await migrate(directory, env);
-      expect((await history()).map(name => name.slice(0, 3))).toEqual(["001", "002", "003"]);
+      expect((await history()).map(name => name.slice(0, 3))).toEqual(["001", "002", "003", "004"]);
       await sql("ALTER TABLE designs RENAME COLUMN slug TO slug_saved");
       // If any old SQL file ran again it would recreate slug.
       await migrate(directory, env);
@@ -79,9 +79,9 @@ describe.skipIf(!enabled).each(["postgres", "mysql"] as const)("migration runner
         ? await sql("SELECT count(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='designs' AND column_name='slug'")
         : JSON.parse(await sql("SELECT count(*) AS n FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='designs' AND column_name='slug'"))[0].n;
       expect(Number(column)).toBe(0);
-      writeFileSync(join(directory, `004_probe_${provider}.sql`), "CREATE TABLE probe (id INTEGER PRIMARY KEY);");
+      writeFileSync(join(directory, `005_probe_${provider}.sql`), "CREATE TABLE probe (id INTEGER PRIMARY KEY);");
       await migrate(directory, env);
-      expect(await history()).toHaveLength(4);
+      expect(await history()).toHaveLength(5);
       await sql("INSERT INTO probe (id) VALUES (1)");
     } finally { output.mockRestore(); }
   }, 60000);
@@ -90,14 +90,14 @@ describe.skipIf(!enabled).each(["postgres", "mysql"] as const)("migration runner
     await migrate(directory, env);
     await sql(provider === "postgres" ? "DROP SCHEMA design_studio_migrations CASCADE" : "DROP TABLE schema_migrations");
     await migrate(directory, env);
-    expect(await history()).toHaveLength(3);
+    expect(await history()).toHaveLength(4);
   }, 60000);
 
   it("stops at a failed file, leaves it unrecorded, and does not run later files", async () => {
-    writeFileSync(join(directory, `004_failed_${provider}.sql`), "CREATE TABLE probe (id INTEGER); SELECT * FROM missing_migration_table;");
-    writeFileSync(join(directory, `005_later_${provider}.sql`), "CREATE TABLE later_probe (id INTEGER);");
+    writeFileSync(join(directory, `005_failed_${provider}.sql`), "CREATE TABLE probe (id INTEGER); SELECT * FROM missing_migration_table;");
+    writeFileSync(join(directory, `006_later_${provider}.sql`), "CREATE TABLE later_probe (id INTEGER);");
     await expect(migrate(directory, env)).rejects.toThrow();
-    expect(await history()).toHaveLength(3);
+    expect(await history()).toHaveLength(4);
     const count = provider === "postgres"
       ? await sql("SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name IN ('probe','later_probe')")
       : JSON.parse(await sql("SELECT count(*) AS n FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='later_probe'"))[0].n;
@@ -108,7 +108,7 @@ describe.skipIf(!enabled).each(["postgres", "mysql"] as const)("migration runner
     await migrate(directory, env);
     writeFileSync(join(directory, `001_collections_${provider}.sql`), "SELECT 1;");
     await expect(migrate(directory, env)).rejects.toThrow();
-    expect(await history()).toHaveLength(3);
+    expect(await history()).toHaveLength(4);
   }, 60000);
 
   it("refuses to run while another session holds the migration lock", async () => {

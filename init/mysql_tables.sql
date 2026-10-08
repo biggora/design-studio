@@ -71,3 +71,32 @@ CREATE TABLE design_listings (
   UNIQUE KEY design_listings_platform_externalid_key (platform, `externalId`),
   UNIQUE KEY design_listings_design_platform_account_key (`designId`, platform, account)
 );
+CREATE TABLE design_social_posts (
+  id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+  `designId` CHAR(36) NOT NULL,
+  channel VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  account VARCHAR(100) COLLATE utf8mb4_bin NOT NULL,
+  variant VARCHAR(50) COLLATE utf8mb4_bin NOT NULL,
+  `externalId` VARCHAR(200) COLLATE utf8mb4_bin NOT NULL,
+  url TEXT NOT NULL CHECK (CHAR_LENGTH(url) <= 2000),
+  `linkUrl` TEXT,
+  title VARCHAR(500),
+  caption TEXT CHECK (CHAR_LENGTH(caption) <= 5000),
+  hashtags JSON,
+  `imageUrl` TEXT,
+  board VARCHAR(200),
+  status VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (status IN ('published', 'removed')),
+  `publishedAt` DATETIME(3) NOT NULL,
+  `removedAt` DATETIME(3),
+  extra JSON,
+  `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updatedAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT design_social_posts_removed_check CHECK (status <> 'removed' OR `removedAt` IS NOT NULL),
+  CONSTRAINT design_social_posts_design_fk FOREIGN KEY (`designId`) REFERENCES designs(id) ON DELETE CASCADE,
+  UNIQUE KEY design_social_posts_channel_externalid_key (channel, `externalId`),
+  UNIQUE KEY design_social_posts_design_channel_account_variant_key (`designId`, channel, account, variant),
+  KEY design_social_posts_designid_idx (`designId`),
+  KEY design_social_posts_channel_publishedat_idx (channel, `publishedAt`),
+  KEY design_social_posts_account_publishedat_idx (account, `publishedAt`),
+  KEY design_social_posts_status_idx (status)
+);

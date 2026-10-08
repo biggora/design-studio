@@ -81,11 +81,11 @@ export function authorizeListingsRequest(request: Request): NextResponse | null 
   return null;
 }
 
-function invalid(field: string, message: string): never {
+export function invalid(field: string, message: string): never {
   throw new ListingsError(400, "VALIDATION", message, field);
 }
 
-function strictObject(value: unknown, field: string, keys: string[]): Record<string, unknown> {
+export function strictObject(value: unknown, field: string, keys: string[]): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) invalid(field, "Expected an object");
   const object = value as Record<string, unknown>;
   for (const key of Object.keys(object)) {
@@ -94,7 +94,7 @@ function strictObject(value: unknown, field: string, keys: string[]): Record<str
   return object;
 }
 
-function text(value: unknown, field: string, max: number): string {
+export function text(value: unknown, field: string, max: number): string {
   if (typeof value !== "string" || !value.trim() || value.length > max) {
     invalid(field, `Expected a non-empty string of at most ${max} characters`);
   }
@@ -106,7 +106,7 @@ function tags(value: unknown, field: string): string[] {
   return value.map((tag, index) => text(tag, `${field}.${index}`, 100));
 }
 
-function httpUrl(value: unknown, field: string): string {
+export function httpUrl(value: unknown, field: string): string {
   const raw = text(value, field, 2000);
   try {
     const parsed = new URL(raw);
@@ -115,6 +115,13 @@ function httpUrl(value: unknown, field: string): string {
     }
   } catch { invalid(field, "Expected an http(s) URL"); }
   return raw;
+}
+
+export function isoTimestamp(value: unknown, field: string): string {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) || !Number.isFinite(Date.parse(value))) invalid(field, "Expected an ISO-8601 timestamp with timezone");
+  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
+  if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) invalid(field, "Invalid calendar date");
+  return new Date(value).toISOString();
 }
 
 function hash(value: unknown): string {
@@ -166,12 +173,7 @@ export function parseIngestInput(value: unknown): IngestInput {
   }
   if (l.tags !== undefined) listing.tags = tags(l.tags, "listing.tags");
   if (l.thumbnailUrl !== undefined) listing.thumbnailUrl = httpUrl(l.thumbnailUrl, "listing.thumbnailUrl");
-  if (l.publishedAt !== undefined) {
-    if (typeof l.publishedAt !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(l.publishedAt) || !Number.isFinite(Date.parse(l.publishedAt))) invalid("listing.publishedAt", "Expected an ISO-8601 timestamp with timezone");
-    const [year, month, day] = l.publishedAt.slice(0, 10).split("-").map(Number);
-    if (day > new Date(Date.UTC(year, month, 0)).getUTCDate()) invalid("listing.publishedAt", "Invalid calendar date");
-    listing.publishedAt = new Date(l.publishedAt).toISOString();
-  }
+  if (l.publishedAt !== undefined) listing.publishedAt = isoTimestamp(l.publishedAt, "listing.publishedAt");
   if (l.extra !== undefined) {
     if (!l.extra || typeof l.extra !== "object" || Array.isArray(l.extra)) invalid("listing.extra", "Expected an object");
     if (Buffer.byteLength(JSON.stringify(l.extra), "utf8") > 16 * 1024) invalid("listing.extra", "extra exceeds 16 KiB");
