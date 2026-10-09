@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "fs";
+import { join } from "path";
 import { Design } from "@/types/design";
 import {
   FEED_DESCRIPTION_MAX,
@@ -66,11 +68,13 @@ describe("collectionSlugFor", () => {
 });
 
 /** Extracts every URL Pinterest could act on: <link> contents, url="…" and href="…"
- * attributes. The xmlns:media namespace identifier is deliberately not a URL. */
+ * attributes. The xmlns:media namespace identifier is deliberately not a URL, and
+ * relative hrefs (the same-origin stylesheet) cannot leave the domain. */
 function feedReferenceUrls(xml: string): string[] {
   const urls: string[] = [];
   for (const match of xml.matchAll(/<link>([^<]+)<\/link>|(?:href|url)="([^"]+)"/g)) {
-    urls.push(match[1] || match[2]);
+    const value = match[1] || match[2];
+    if (value.startsWith("http")) urls.push(value);
   }
   return urls;
 }
@@ -204,6 +208,9 @@ describe("buildCollectionFeedXml", () => {
     });
 
     expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(xml).toContain(
+      `<?xml-stylesheet type="text/xsl" href="/feeds/pinterest.xsl"?>`,
+    );
     expect(xml).toContain('<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">');
     expect(xml).toContain("<title>ThreadQuirk – Bugs, Tests &amp; Hallucinations</title>");
     expect(xml).toContain(`<link>https://${DOMAIN}/designs?collection=Bugs%2C%20Tests%20%26%20Hallucinations</link>`);
@@ -260,13 +267,23 @@ describe("buildFeedIndexXml", () => {
       ],
     });
     expect(xml).toContain("<title>ThreadQuirk – Pinterest feed index</title>");
+    expect(xml).toContain(
+      `<?xml-stylesheet type="text/xsl" href="/feeds/pinterest.xsl"?>`,
+    );
     expect(xml).toContain(`<link>https://${DOMAIN}/feeds/pinterest/cats.xml</link>`);
     expect(xml).toContain(`Pinterest board: Cats`);
     expect(xml).toContain(`42 designs`);
     expect(xml).toContain(`100 designs`);
     const urls = feedReferenceUrls(xml);
+    expect(urls.length).toBeGreaterThan(0);
     for (const url of urls) {
       expect(new URL(url).hostname).toBe(DOMAIN);
     }
+  });
+});
+
+describe("feed stylesheet", () => {
+  it("exists in public/ where the xml-stylesheet PI points", () => {
+    expect(existsSync(join(process.cwd(), "public", "feeds", "pinterest.xsl"))).toBe(true);
   });
 });

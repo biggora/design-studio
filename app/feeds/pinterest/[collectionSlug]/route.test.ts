@@ -69,7 +69,7 @@ describe("/feeds/pinterest/[collectionSlug].xml", () => {
 
     const response = await callRoute("bugs-tests-and-hallucinations");
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/rss+xml; charset=utf-8");
+    expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
     expect(fetchCollectionFeedDesigns).toHaveBeenCalledWith("Bugs, Tests and Hallucinations", 100);
 
@@ -90,9 +90,12 @@ describe("/feeds/pinterest/[collectionSlug].xml", () => {
     expect(xml).toContain("<pubDate>Tue, 06 Oct 2026 07:00:00 GMT</pubDate>");
 
     // Every URL Pinterest could act on anywhere in the feed is on the claimed domain.
+    // Relative hrefs (the same-origin stylesheet) cannot leave the domain.
     const urls = [
       ...xml.matchAll(/<link>([^<]+)<\/link>|(?:href|url)="([^"]+)"/g),
-    ].map(match => match[1] || match[2]);
+    ]
+      .map(match => match[1] || match[2])
+      .filter(value => value.startsWith("http"));
     expect(urls.length).toBeGreaterThan(0);
     for (const url of urls) {
       expect(new URL(url).hostname).toBe("threadquirk.test");

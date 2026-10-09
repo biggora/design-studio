@@ -73,7 +73,7 @@ next itself; **no new dependency**.
 
 - `GET /feeds/pinterest/{collectionSlug}.xml` — RSS 2.0
   (`xmlns:media="http://search.yahoo.com/mrss/"`,
-  `Content-Type: application/rss+xml; charset=utf-8`), one item per eligible
+  `Content-Type: text/xml; charset=utf-8`), one item per eligible
   design, newest first, at most the 100 most recent
   (`FEED_MAX_ITEMS` in `lib/pinterest-feed.ts`).
   `Cache-Control: public, s-maxage=3600, stale-while-revalidate` (Pinterest
@@ -137,6 +137,12 @@ the Redbubble sync — and fall back to the legacy `designs.collection` labels
 (with empty descriptions) on installs without those tables. The channel
 `<link>` is the site's collection page (`/designs?collection={title}`).
 
+**Browser preview.** Both feeds carry a `<?xml-stylesheet?>` processing
+instruction pointing at `public/feeds/pinterest.xsl`, so opening a feed URL in
+a browser renders a human-readable page (site tokens, pin thumbnails, item
+links) instead of raw XML. Feed readers and Pinterest ignore it and parse the
+XML itself.
+
 ### 1.4 Feed index `GET /feeds/pinterest.xml`
 
 A small RSS document listing every collection feed: item `<title>` is
@@ -192,7 +198,11 @@ live, so the doc never drifts from the database.
 
 ## 4. Rules the implementation enforces (Pinterest compliance)
 
-- **RSS 2.0, served as XML** — `application/rss+xml; charset=utf-8`; no Atom.
+- **RSS 2.0, served as XML** — `text/xml; charset=utf-8`; no Atom. (Deliberate
+  deviation from Pinterest's `application/rss+xml` example: Chrome skips
+  `<?xml-stylesheet?>` for feed content types and shows raw XML, so the feeds
+  are served as generic XML to keep the browser preview working. RSS readers
+  and Pinterest accept either.)
 - **Every URL on the claimed domain**: channel link, item links, guids, the
   `media:content` URL — all `https://{domain}/…`. Descriptions are stripped of
   URLs. There is a unit test that fails if any other host appears in the feed.
@@ -216,6 +226,7 @@ live, so the doc never drifts from the database.
 | `app/p/[slug]/page.tsx` | The landing page (server component, no new client JS). |
 | `app/p/[slug]/pin.jpg/route.ts` | Pin image route (fetch → compose → JPEG). |
 | `app/feeds/pinterest/[collectionSlug]/route.ts` | Per-collection RSS feed (the `.xml` URL rides on a rewrite). |
+| `public/feeds/pinterest.xsl` | Browser styling for feed previews (via `<?xml-stylesheet?>`). |
 | `app/feeds/pinterest.xml/route.ts` | Index of all feeds. |
 | `lib/pinterest-feed.ts` | Slug derivation, version hashes, RSS builders (pure, unit-tested). |
 | `lib/pin-image.tsx` | Pin composition (`next/og` + `sharp`). |

@@ -31,7 +31,7 @@ describe("/feeds/pinterest.xml index", () => {
     const { GET } = await import("@/app/feeds/pinterest.xml/route");
     const response = await GET();
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("application/rss+xml; charset=utf-8");
+    expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
 
     const xml = await response.text();
@@ -51,7 +51,9 @@ describe("/feeds/pinterest.xml index", () => {
 
     const urls = [
       ...xml.matchAll(/<link>([^<]+)<\/link>|(?:href|url)="([^"]+)"/g),
-    ].map(match => match[1] || match[2]);
+    ]
+      .map(match => match[1] || match[2])
+      .filter(value => value.startsWith("http"));
     expect(urls.length).toBeGreaterThan(0);
     for (const url of urls) {
       expect(new URL(url).hostname).toBe("threadquirk.test");

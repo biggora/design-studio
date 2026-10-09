@@ -53,7 +53,7 @@ export async function GET(
   });
   return new NextResponse(xml, {
     headers: {
-      "Content-Type": "application/rss+xml; charset=utf-8",
+      "Content-Type": "text/xml; charset=utf-8",
       "Cache-Control": FEED_CACHE_CONTROL,
     },
   });

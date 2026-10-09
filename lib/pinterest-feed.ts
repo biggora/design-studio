@@ -17,6 +17,10 @@ import { generateSlug } from "@/lib/utils";
 export const PIN_WIDTH = 1000;
 export const PIN_HEIGHT = 1500;
 
+/** Browser styling for feed previews; feed readers ignore it and parse the XML. */
+export const FEED_STYLESHEET = "/feeds/pinterest.xsl";
+const STYLESHEET_PI = `<?xml-stylesheet type="text/xsl" href="${FEED_STYLESHEET}"?>`;
+
 /** Pinterest auto-publishes at most 200 pins/day per feed; 100 keeps each feed inside one day's budget. */
 export const FEED_MAX_ITEMS = 100;
 export const FEED_TITLE_MAX = 100;
@@ -148,6 +152,7 @@ export function buildCollectionFeedXml({
     .map(design => buildFeedItem(domain, { design, listingPublishedAt: earliestListingAt[design.id] }));
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
+    STYLESHEET_PI,
     '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">',
     "  <channel>",
     `    <title>${escapeXml(`${siteName} – ${collection.title}`)}</title>`,
@@ -194,6 +199,7 @@ export function buildFeedIndexXml({
   );
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
+    STYLESHEET_PI,
     '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">',
     "  <channel>",
     `    <title>${escapeXml(`${siteName} – Pinterest feed index`)}</title>`,

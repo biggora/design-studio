@@ -76,6 +76,10 @@ export async function GET(
       headers: {
         "Content-Type": "image/jpeg",
         "Cache-Control": PIN_CACHE_CONTROL,
+        // The feed's XSL preview loads pins from an XSLT-generated document,
+        // which Chromium treats as an opaque-origin initiator: without CORS the
+        // response is subject to ORB and the thumbnail is blocked.
+        "Access-Control-Allow-Origin": "*",
       },
     });
   } catch (err) {
