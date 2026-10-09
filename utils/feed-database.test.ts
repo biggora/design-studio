@@ -27,6 +27,7 @@ function makeBuilder(table: string) {
         eq: (...args: unknown[]) => { record(table, "eq", args); return builder; },
         not: (...args: unknown[]) => { record(table, "not", args); return builder; },
         neq: (...args: unknown[]) => { record(table, "neq", args); return builder; },
+        or: (...args: unknown[]) => { record(table, "or", args); return builder; },
         in: (...args: unknown[]) => { record(table, "in", args); return builder; },
         order: (...args: unknown[]) => { record(table, "order", args); return builder; },
         range: (...args: unknown[]) => { record(table, "range", args); return resolveTable(table); },
@@ -166,6 +167,28 @@ describe("fetchCollectionFeedDesigns", () => {
         expect(designs.map(design => design.id)).toEqual(["teepublic-only", "redbubble"]);
     });
 
+    it("mockup-only rows (empty externalImageUrl) stay eligible — pod-studio rows carry only the mockup", async () => {
+        responses = {
+            designs: {data: [
+                supabaseRow({id: "mockup-only", externalImageUrl: "", props: {
+                    mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg",
+                }}),
+                supabaseRow({id: "no-image-at-all", externalImageUrl: "", props: {}}),
+            ], error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        expect(designs.map(design => design.id)).toEqual(["mockup-only"]);
+        // The image filter is expressed as one PostgREST or-filter over the artwork URL
+        // and the mockup prop.
+        const orStep = steps.designs.filter(step => step.method === "or")[0];
+        expect(String(orStep.args[0])).toContain("externalImageUrl.neq.");
+        expect(String(orStep.args[0])).toContain("props->>mockup_tshirt.not.is.null");
+    });
+
     it("excludes designs already pinned through the API (published pinterest post)", async () => {
         responses = {
             designs: {data: [
@@ -268,6 +291,7 @@ describe("fetchCollectionFeedDesigns", () => {
 
         const [sql, params] = mysqlQuery.mock.calls[0];
         expect(String(sql)).toContain("JOIN collections c ON c.id = dc.collectionId");
+        expect(String(sql)).toContain("JSON_EXTRACT(d.props, '$.mockup_tshirt')");
         expect(String(sql)).toContain("NOT EXISTS");
         expect(String(sql)).toContain("design_social_posts");
         expect(params[0]).toBe("Space");

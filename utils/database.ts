@@ -737,8 +737,9 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))")
                 .eq("design_collections.collections.title", collectionTitle)
-                .not("externalImageUrl", "is", null)
-                .neq("externalImageUrl", "")
+                // Display image = mockup prop or the artwork URL (getDesignDisplayImage);
+                // pod-studio rows often carry only the mockup.
+                .or("externalImageUrl.neq.,props->>mockup_tshirt.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -750,8 +751,7 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*")
                 .eq("collection", collectionTitle)
-                .not("externalImageUrl", "is", null)
-                .neq("externalImageUrl", "")
+                .or("externalImageUrl.neq.,props->>mockup_tshirt.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -781,7 +781,7 @@ export async function fetchCollectionFeedDesigns(
             `SELECT d.* FROM designs d
              WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND COALESCE(d.externalImageUrl, '') <> ''
+               AND (COALESCE(d.externalImageUrl, '') <> '' OR JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,

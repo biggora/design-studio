@@ -511,21 +511,54 @@ describe("syncRedbubbleToSupabase", () => {
     vi.restoreAllMocks();
   });
 
-  it.each(["listing", "source"])("skips a work protected by API %s identity without enrichment or writes", async protection => {
+  it.each(["listing", "source"])("syncs the collection of a work protected by API %s identity, without enrichment or curated writes", async protection => {
     const shopPage = nextDataHtml({
       results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
       pagination: { totalPages: 1 },
     });
     const fetchMock = mockShop(shopPage, {});
     vi.stubGlobal("fetch", fetchMock);
-    if (protection === "listing") listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
-    else selectByIdResponses = [{ data: [{ externalId: 11111111, source: "pod-studio", props: null }], error: null }];
+    if (protection === "listing") {
+      listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
+      selectByIdResponses = [{ data: [{ externalId: 11111111, props: null }], error: null }];
+    } else {
+      selectByIdResponses = [{ data: [{ externalId: 11111111, source: "pod-studio", props: null }], error: null }];
+    }
+
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    // Collection membership syncs (complete crawl with nothing to crawl → the
+    // no_collection sentinel), but the row is never enriched or inserted and gets no
+    // mockup backfill; the crawl found no collections, so no links are written either.
+    expect(result.updated).toBe(1);
+    expect(result.skipped).toBe(0);
+    expect(insertCalls()).toEqual([]);
+    const updates = forTable(updateCalls(), "designs");
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "updatedAt"]);
+    expect(updates[0].changes.collection).toBe("no_collection");
+    expect(updates[0].changes.props).toBeUndefined();
+    expect(forTable(upsertCalls(), "design_collections")).toEqual([]);
+    expect(forTable(deleteCalls(), "design_collections")).toEqual([]);
+    // Only the shop listing page was fetched — no /shop/ap product fetch for the work.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("API listing identity without a design row: still never inserted", async () => {
+    const shopPage = nextDataHtml({
+      results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })],
+      pagination: { totalPages: 1 },
+    });
+    vi.stubGlobal("fetch", mockShop(shopPage, {}));
+    listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
+    selectByIdResponses = [{ data: [], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
     expect(result.skipped).toBe(1);
+    expect(result.warnings.some((w) => /Skipped API-linked Redbubble work 11111111: no design row to update/.test(w))).toBe(true);
     expect(insertCalls()).toEqual([]);
     expect(updateCalls()).toEqual([]);
-    expect(calls.filter(call => call.table === "design_collections")).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("fails closed when API listing identities cannot be read", async () => {
@@ -537,7 +570,7 @@ describe("syncRedbubbleToSupabase", () => {
     expect(insertCalls()).toEqual([]);
     expect(updateCalls()).toEqual([]);
   });
-  it("does not count or relink a row adopted by ingest before the guarded update", async () => {
+  it("does not count or relink a row whose update matched no rows (adopted mid-run)", async () => {
     const shopPage = nextDataHtml({ results: [rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: "https://www.redbubble.com/shop/ap/11111111", imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" })], pagination: { totalPages: 1 } });
     vi.stubGlobal("fetch", mockShop(shopPage, {}));
     selectByIdResponses = [{ data: [{ externalId: 11111111, props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" } }], error: null }];
@@ -1711,6 +1744,121 @@ describe("syncRedbubbleToSupabase — collections", () => {
     for (const deleteIndex of linkDeleteIndexes) {
       expect(deleteIndex).toBeGreaterThan(linkUpsertIndex);
     }
+  });
+
+  it("API row: gets collection and design_collections links from a complete crawl, curated fields untouched", async () => {
+    const fetchMock = mockShopWithCollections();
+    vi.stubGlobal("fetch", fetchMock);
+    selectByIdResponses = [
+      {
+        data: [
+          existingRow({ externalId: 11111111, source: "pod-studio", props: null }),
+          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null }),
+        ],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    // Collection + updatedAt only — even though props.mockup_tshirt is missing and the
+    // scrape's title/description differ, nothing else is written and neither work is
+    // product-fetched or re-inserted.
+    const updates = forTable(updateCalls(), "designs");
+    expect(updates).toHaveLength(2);
+    for (const update of updates) {
+      expect(Object.keys(update.changes).sort()).toEqual(["collection", "updatedAt"]);
+    }
+    // Primary collection comes from crawl membership order: Design A → Cats, Design B
+    // (not on the Cats page) → Dogs.
+    expect(updates.map((u) => u.changes.collection)).toEqual(["Cats", "Dogs"]);
+    expect(fetchMock.mock.calls.every(([u]) => !String(u).includes("/shop/ap/"))).toBe(true);
+    expect(insertCalls()).toEqual([]);
+
+    // Links: each design's scraped memberships are inserted (Design A: Cats + Dogs,
+    // Design B: Dogs).
+    expect(result.updated).toBe(2);
+    expect(result.collections.links).toBe(3);
+    const linkUpserts = forTable(upsertCalls(), "design_collections");
+    expect(linkUpserts).toHaveLength(1);
+    expect(linkUpserts[0].rows).toEqual([
+      { designId: "design-id-11111111", collectionId: "col-id-100" },
+      { designId: "design-id-11111111", collectionId: "col-id-200" },
+      { designId: "design-id-22222222", collectionId: "col-id-200" },
+    ]);
+  });
+
+  it("API row: stale-link removal follows the complete-crawl rules (stale Cats link deleted, after the upsert)", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+    selectByIdResponses = [
+      {
+        data: [
+          existingRow({ externalId: 11111111, source: "pod-studio", props: null }),
+          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null }),
+        ],
+        error: null,
+      },
+    ];
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    // Design B's scraped memberships no longer include Cats: its stale Cats link is
+    // deleted by the per-collection pass, scoped to that design, after the upsert.
+    const deletes = forTable(deleteCalls(), "design_collections");
+    expect(deletes).toHaveLength(2);
+    const catsStaleDelete = deletes.find((c) =>
+      c.filters.some((f) => f.op === "eq" && f.col === "collectionId" && f.val === "col-id-100"),
+    );
+    expect(catsStaleDelete).toBeDefined();
+    const scopedIds = catsStaleDelete?.filters.find((f) => f.op === "in");
+    expect(scopedIds?.val).toEqual(["design-id-22222222"]);
+    // …and the not-in pass removes links to collections absent from this run's fetch,
+    // scoped to the API rows' uuids.
+    const staleDeletes = deletes.filter((c) => c.filters.some((f) => f.op === "not-in"));
+    expect(staleDeletes).toHaveLength(1);
+    const inFilter = staleDeletes[0].filters.find((f) => f.op === "in");
+    expect(inFilter?.val).toEqual(["design-id-11111111", "design-id-22222222"]);
+    const linkUpsertIndex = calls.findIndex((c) => c.type === "upsert" && c.table === "design_collections");
+    for (const deleteCall of deletes) {
+      const deleteIndex = calls.indexOf(deleteCall);
+      expect(deleteIndex).toBeGreaterThan(linkUpsertIndex);
+    }
+  });
+
+  it("API row: a failed link upsert issues no stale-link deletes (upsert-before-delete)", async () => {
+    vi.stubGlobal("fetch", mockShopWithCollections());
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111, source: "pod-studio", props: null })], error: null }];
+    designCollectionsUpsertResponses = [{ data: null, error: { message: "link upsert failed" } }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(forTable(upsertCalls(), "design_collections")).toHaveLength(1);
+    expect(forTable(deleteCalls(), "design_collections")).toHaveLength(0);
+    expect(result.errorMessages).toContain("link upsert failed");
+  });
+
+  it("API row: collectionsComplete=false skips the row entirely (no collection write, no mockup backfill, no links)", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) {
+        throw new Error("network error fetching Cats collection");
+      }
+      const base = mockShopWithCollections();
+      return base(u);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    selectByIdResponses = [
+      { data: [existingRow({ externalId: 11111111, source: "pod-studio", props: null }), existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null })], error: null },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(result.skipped).toBe(2);
+    expect(result.warnings.some((w) => /Skipped API-linked Redbubble work 11111111: collections crawl incomplete/.test(w))).toBe(true);
+    expect(updateCalls()).toEqual([]);
+    expect(insertCalls()).toEqual([]);
+    expect(forTable(upsertCalls(), "design_collections")).toEqual([]);
+    expect(forTable(deleteCalls(), "design_collections")).toEqual([]);
   });
 });
 
