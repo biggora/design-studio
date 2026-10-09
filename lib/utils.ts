@@ -31,6 +31,20 @@ export function truncateText(text: string | null | undefined, maxLength: number)
   return text.slice(0, Math.max(0, maxLength)) + '...';
 }
 
+/**
+ * Caps text at `maxLength` characters (ellipsis included), cutting at the last
+ * word boundary so meta text never ends mid-word.
+ */
+export function truncateAtWord(text: string | null | undefined, maxLength: number): string {
+  const clean = (text ?? '').replace(/\s+/g, ' ').trim();
+  if (clean.length <= maxLength) return clean;
+  const room = Math.max(0, maxLength - 1);
+  const window = clean.slice(0, room + 1);
+  const lastSpace = window.lastIndexOf(' ');
+  const cut = lastSpace > 0 ? window.slice(0, lastSpace) : clean.slice(0, room);
+  return cut.replace(/[\s.,;:!?-]+$/, '') + '…';
+}
+
 export function generateSlug(text: string): string {
   if (!text) return '';
   return text

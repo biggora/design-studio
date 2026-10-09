@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { 
   formatDate,
   truncateText,
+  truncateAtWord,
   generateSlug,
   calculateReadingTime,
   getRedBubbleDesignPageLink,
@@ -205,5 +206,22 @@ describe('parsePageParam', () => {
 
   it('parses zero-padded digit strings', () => {
     expect(parsePageParam('007')).toBe(7);
+  });
+});
+
+describe('truncateAtWord', () => {
+  it('returns short text untouched and collapses whitespace', () => {
+    expect(truncateAtWord('  hello   world ', 20)).toBe('hello world');
+  });
+  it('handles empty input', () => {
+    expect(truncateAtWord(null, 10)).toBe('');
+  });
+  it('cuts at a word boundary within the limit, ellipsis included', () => {
+    const out = truncateAtWord('The quick brown fox jumps over the lazy dog', 20);
+    expect(out).toBe('The quick brown fox…');
+    expect(out.length).toBeLessThanOrEqual(20);
+  });
+  it('hard-cuts a single long word', () => {
+    expect(truncateAtWord('abcdefghijklmnop', 6)).toBe('abcde…');
   });
 });

@@ -155,9 +155,9 @@ export async function generateMetadata(
 Note the two SEO guards: `?search=…` result pages are marked `noindex, follow`, and the canonical URL is normalized (search dropped, `page` kept only when > 1).
 
 #### Single design page (`app/designs/[slug]/page.tsx`):
-- Builds a precise `title` combining the work's name and the brand (`${design.title} - ${config.name} Design`).
-- Generates a `description` truncated to 180 characters (`truncateText`).
-- Uses the design preview image as `og:image` / `twitter:image`, with `alternates.canonical` on the `designPath(design)` URL (`lib/slug.ts`) — the slug when set, else the UUID.
+- Builds a precise `title` combining the work's name and the brand (`${design.title} - ${config.name}`).
+- Generates a `description` (`${design.title} by ${config.name}. …`) capped at 155 characters at a word boundary (`truncateAtWord`).
+- Social cards are generated, not hotlinked: `app/designs/[slug]/opengraph-image.tsx` (and `twitter-image.tsx`) render a 1200×630 PNG with `next/og` — brand, collection chip, title, short description, a "Shop now" pill and the T-shirt mockup in a rounded card (`lib/og.tsx`, Inter fonts committed in `assets/fonts/`, logo from `assets/logo-og.png` — a 600×600 copy of `public/logo.png`; regenerate it when the logo changes). The mockup is fetched server-side (allow-listed hosts, png/jpeg only, 4 s timeout); if that fails the right panel shows the site logo instead, and an unknown slug gets the site brand card. `app/opengraph-image.tsx` is the default brand card for pages without their own image. The metadata therefore omits `images`. `alternates.canonical` points at the `designPath(design)` URL (`lib/slug.ts`) — the slug when set, else the UUID.
 - Missing records return `title: "Design Not Found"` with `robots: { index: false }` before the page itself calls `notFound()`.
 
 #### Root layout (`app/layout.tsx`):

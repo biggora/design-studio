@@ -15,7 +15,7 @@ import {
   safeHexColor,
   getTeepublicLink,
   sanitizeUrl,
-  truncateText,
+  truncateAtWord,
 } from "@/lib/utils";
 import { Metadata } from "next";
 import { SiteConfig } from "@/lib/store";
@@ -56,9 +56,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const { design } = data;
-  const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
-  const title = `${design.title} - ${config.name} Design`;
-  const description = `Discover the unique ${design.title} design by ${config.name}. ${truncateText(design.description, 180)}`;
+  const title = `${design.title} - ${config.name}`;
+  // og:image / twitter:image come from the opengraph-image file convention next to this page.
+  const description = truncateAtWord(`${design.title} by ${config.name}. ${design.description}`, 155);
   return {
     title,
     description,
@@ -69,12 +69,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
       type: "website",
       title,
       description,
-      images: [displayImage],
     },
     twitter: {
+      card: "summary_large_image",
       title,
       description,
-      images: [displayImage],
     },
   };
 }

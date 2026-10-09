@@ -78,7 +78,6 @@ async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
   const title = `${config.name} - ${config.intro}`;
-  const images = [config.siteLogo, config.siteBanner].filter(Boolean);
 
   return {
     title,
@@ -90,12 +89,10 @@ export async function generateMetadata(): Promise<Metadata> {
       type: "website",
       title,
       description: config.description,
-      images,
     },
     twitter: {
       title,
       description: config.description,
-      images,
     },
   };
 }

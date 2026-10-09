@@ -68,5 +68,10 @@ describe("non-Redbubble design page", () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ slug: "space-cat" }) });
     expect(metadata.alternates?.canonical).toBe("/designs/space-cat");
     expect(metadata.title).toContain("Space cat");
+    expect(String(metadata.title).length).toBeLessThanOrEqual(60);
+    expect(metadata.description?.length).toBeLessThanOrEqual(160);
+    expect(metadata.openGraph).not.toHaveProperty("images");
+    expect(metadata.twitter).not.toHaveProperty("images");
+    expect(metadata.twitter).toMatchObject({ card: "summary_large_image" });
   });
 });
