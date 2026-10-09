@@ -626,6 +626,7 @@ INSERT INTO studio (key, value) VALUES
 ('social.twitter', 'https://x.com/your-shop'),
 ('social.instagram', 'https://instagram.com/your-shop'),
 ('verification.impact', 'your-impact-verification-uuid'),
+('verification.pinterest', 'your-pinterest-p-domain-verify-token'),
 ('affiliate.redbubbleTemplate', 'https://shop.pxf.io/c/123/456/789?u={url}'),
 ('affiliate.teepublicReferralId', 'your-teepublic-referral-id');
 ```
@@ -641,8 +642,9 @@ INSERT INTO studio (`key`, value) VALUES
 ('social.twitter', 'https://x.com/your-shop'),
 ('social.instagram', 'https://instagram.com/your-shop'),
 ('verification.impact', 'your-impact-verification-uuid'),
+('verification.pinterest', 'your-pinterest-p-domain-verify-token'),
 ('affiliate.redbubbleTemplate', 'https://shop.pxf.io/c/123/456/789?u={url}'),
 ('affiliate.teepublicReferralId', 'your-teepublic-referral-id');
 ```
 
-If a key is absent from the table, the matching default from `config/config.json` is used (see 4.2), so seeding every key is optional. The two `affiliate.*` keys are optional affiliate tracking: `affiliate.redbubbleTemplate` is the Impact deep-link template (with a `{url}` placeholder) copied from Impact's link builder once the site is approved into the Redbubble affiliate program, and `affiliate.teepublicReferralId` is the TeePublic referral id. Both stay empty until obtained; while empty, all outbound links are canonical and untracked.
+`verification.pinterest` is the `content` of Pinterest's `<meta name="p:domain_verify">` tag and `verification.impact` the Impact site-verification value; both are optional and the tag is omitted while the key is empty or absent. If a key is absent from the table, the matching default from `config/config.json` is used (see 4.2), so seeding every key is optional. The two `affiliate.*` keys are optional affiliate tracking: `affiliate.redbubbleTemplate` is the Impact deep-link template (with a `{url}` placeholder) copied from Impact's link builder once the site is approved into the Redbubble affiliate program, and `affiliate.teepublicReferralId` is the TeePublic referral id. Both stay empty until obtained; while empty, all outbound links are canonical and untracked.

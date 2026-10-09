@@ -9,6 +9,13 @@ const impactRow = {
   createdAt: '',
 };
 
+const pinterestRow = {
+  id: 3,
+  key: 'verification.pinterest',
+  value: '1dcacb7952a8ea373524e2c90ad901a8',
+  createdAt: '',
+};
+
 const affiliateTemplateRow = {
   id: 2,
   key: 'affiliate.redbubbleTemplate',
@@ -20,6 +27,13 @@ describe('mapDataToConfig', () => {
   it('expands dot-notation studio keys into nested config values', () => {
     const config = mapDataToConfig([impactRow]);
     expect(config.verification.impact).toBe('impact-verification-uuid');
+  });
+
+  it('expands the Pinterest verification key and defaults it to empty', () => {
+    expect(baseConfig.verification.pinterest).toBe('');
+    expect(mapDataToConfig([pinterestRow]).verification.pinterest).toBe(
+      '1dcacb7952a8ea373524e2c90ad901a8',
+    );
   });
 
   it('expands affiliate dot-notation keys into the affiliate block', () => {
