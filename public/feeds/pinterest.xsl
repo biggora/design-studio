@@ -114,9 +114,10 @@
   <xsl:template match="item">
     <div class="card item">
       <xsl:if test="media:content/@url">
-        <!-- crossorigin: XSLT-rendered pages are opaque-origin to Chromium, so a
-             plain <img> would be ORB-blocked; a CORS request loads fine. -->
-        <img src="{media:content/@url}" alt="{title}" crossorigin="anonymous"/>
+        <!-- Resolve the pin URL to a host-relative path: the feed carries
+             absolute production URLs (Pinterest requires them), but the preview
+             must load thumbnails against whatever host serves the page. -->
+        <img src="{concat('/', substring-after(substring(media:content/@url, 9), '/'))}" alt="{title}" crossorigin="anonymous"/>
       </xsl:if>
       <div>
         <h2><a href="{link}"><xsl:value-of select="title"/></a></h2>
