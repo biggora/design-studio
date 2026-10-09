@@ -73,7 +73,7 @@ function supabaseRow(overrides: Record<string, unknown>): Record<string, unknown
         createdAt: "2026-10-07T08:10:00.000Z",
         updatedAt: "2026-10-08T09:00:00.000Z",
         shared: false,
-        props: {},
+        props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" },
         ...overrides,
     };
 }
@@ -152,9 +152,10 @@ describe("fetchCollectionFeedDesigns", () => {
     it("drops designs without any marketplace link, and teepublic-only designs stay eligible", async () => {
         responses = {
             designs: {data: [
-                supabaseRow({id: "no-link", externalLink: "", externalId: null, props: {}}),
+                supabaseRow({id: "no-link", externalLink: "", externalId: null, props: {mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg"}}),
                 supabaseRow({id: "teepublic-only", externalLink: "", externalId: null, props: {
                     teepublicLink: "https://www.teepublic.com/t-shirt/1-x",
+                    mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg",
                 }}),
                 supabaseRow({id: "redbubble"}),
             ], error: null},
@@ -167,12 +168,11 @@ describe("fetchCollectionFeedDesigns", () => {
         expect(designs.map(design => design.id)).toEqual(["teepublic-only", "redbubble"]);
     });
 
-    it("mockup-only rows (empty externalImageUrl) stay eligible — pod-studio rows carry only the mockup", async () => {
+    it("mockup rule: only rows with props.mockup_tshirt are eligible — artwork-only and imageless rows are dropped", async () => {
         responses = {
             designs: {data: [
-                supabaseRow({id: "mockup-only", externalImageUrl: "", props: {
-                    mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg",
-                }}),
+                supabaseRow({id: "mockup-only", externalImageUrl: ""}),
+                supabaseRow({id: "artwork-only", props: {}}),
                 supabaseRow({id: "no-image-at-all", externalImageUrl: "", props: {}}),
             ], error: null},
             design_social_posts: {data: [], error: null},
@@ -182,11 +182,9 @@ describe("fetchCollectionFeedDesigns", () => {
         const {fetchCollectionFeedDesigns} = await importFacade();
         const {designs} = await fetchCollectionFeedDesigns("Space", 100);
         expect(designs.map(design => design.id)).toEqual(["mockup-only"]);
-        // The image filter is expressed as one PostgREST or-filter over the artwork URL
-        // and the mockup prop.
+        // The mockup requirement is one PostgREST or/is-null filter over the prop.
         const orStep = steps.designs.filter(step => step.method === "or")[0];
-        expect(String(orStep.args[0])).toContain("externalImageUrl.neq.");
-        expect(String(orStep.args[0])).toContain("props->>mockup_tshirt.not.is.null");
+        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null");
     });
 
     it("excludes designs already pinned through the API (published pinterest post)", async () => {
@@ -279,7 +277,7 @@ describe("fetchCollectionFeedDesigns", () => {
                 backgroundColor: "#FFFFFF",
                 createdAt: new Date("2026-10-07T08:10:00Z"),
                 updatedAt: null,
-                props: {},
+                props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" },
             }], []];
         });
 

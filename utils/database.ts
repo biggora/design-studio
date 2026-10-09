@@ -12,7 +12,7 @@ import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
-import {getDesignDisplayImage} from "@/lib/image";
+import {getMockupUrl} from "@/lib/image";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -703,7 +703,8 @@ function isoTime(value: unknown): string {
 }
 
 /** Designs for one collection's Pinterest feed, newest first, already filtered and capped:
- * must have a display image and a marketplace link, and must not already be pinned
+ * must have a Classic T-Shirt mockup (`props.mockup_tshirt` — pins render the mockup,
+ * not the flat artwork) and a marketplace link, and must not already be pinned
  * through the API (a `design_social_posts` row with channel 'pinterest', status
  * 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
  * `earliestListingAt` maps design id → the earliest design_listings.publishedAt, used
@@ -714,14 +715,14 @@ export async function fetchCollectionFeedDesigns(
     limit: number,
 ): Promise<FeedDesigns> {
     const safeLimit = Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 100));
-    // Over-fetch so post-JSON checks (TeePublic link in props, display image) can
+    // Over-fetch so post-JSON checks (TeePublic link in props) can
     // only shrink the result, not displace older eligible designs.
     const fetchLimit = Math.min(safeLimit * 3, 300);
 
     const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
         const unique = new Map(rows.map(design => [design.id, design]));
         const designs = [...unique.values()]
-            .filter(design => hasMarketplaceLink(design) && getDesignDisplayImage(design).trim() !== "")
+            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null)
             .slice(0, safeLimit);
         return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
     };
@@ -737,9 +738,9 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))")
                 .eq("design_collections.collections.title", collectionTitle)
-                // Display image = mockup prop or the artwork URL (getDesignDisplayImage);
-                // pod-studio rows often carry only the mockup.
-                .or("externalImageUrl.neq.,props->>mockup_tshirt.not.is.null")
+                // Feed pins render the Classic T-Shirt mockup, so only rows that have
+                // one (props.mockup_tshirt) are eligible.
+                .or("props->>mockup_tshirt.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -751,7 +752,7 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*")
                 .eq("collection", collectionTitle)
-                .or("externalImageUrl.neq.,props->>mockup_tshirt.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -781,7 +782,7 @@ export async function fetchCollectionFeedDesigns(
             `SELECT d.* FROM designs d
              WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND (COALESCE(d.externalImageUrl, '') <> '' OR JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL)
+               AND JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,

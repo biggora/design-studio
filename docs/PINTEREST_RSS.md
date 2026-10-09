@@ -107,7 +107,9 @@ next itself; **no new dependency**.
 **Item eligibility** (enforced in `fetchCollectionFeedDesigns`,
 `utils/database.ts`):
 
-- the design has a display image (`mockup_tshirt` or `externalImageUrl`);
+- the design has a Classic T-Shirt mockup (`props.mockup_tshirt`) — pins render
+  the mockup, and designs with only the flat artwork (which carries Redbubble's
+  anti-hotlink watermark) are skipped;
 - the design has a marketplace link (Redbubble `externalLink`/`externalId`, or
   a validated `props.teepublicLink`) — the same rule the landing page's 404
   uses;
