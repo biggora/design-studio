@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="556" height="556" viewBox="0 0 556 556">
+<title>Векторная реконструкция геометрического изображения</title>
+<rect width="556" height="556" fill="#efc654"/>
+<path d="M0 0H264V98H0Z" fill="#42969c"/>
+<path d="M97 0Q150 38 176 98" fill="none" stroke="#c0e0da" stroke-width="3"/>
+<path d="M264 0L264 98M264 18L244 0" fill="none" stroke="#e2dfb1" stroke-width="4"/>
+<path d="M0 181H170V556H0Z" fill="#eb9465"/>
+<path d="M0 415L142 556H0Z" fill="#cd3977"/>
+<path d="M170 181H266V556H170Z" fill="#44969c"/>
+<path d="M266 480H353Q407 480 445 458L541 556H266Z" fill="#42969c"/>
+<!-- Broad teal geometric D-shaped ribbon -->
+<path d="M0 98H350C453 98 536 182 536 281C536 392 456 482 350 482H170V181H0Z" fill="#42969c" stroke="#d3dfca" stroke-width="4" stroke-linejoin="round"/>
+<!-- Inner yellow negative space -->
+<path d="M266 182H350C406 182 450 227 450 281C450 348 405 401 350 401H266Z" fill="#efc654" stroke="#d5dfc9" stroke-width="4"/>
+<!-- Fine structural seams -->
+<path d="M170 182V556M170 482H351M266 482V556M0 181H170M0 416L141 556" fill="none" stroke="#c7dbd1" stroke-width="3"/>
+</svg>
