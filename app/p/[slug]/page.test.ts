@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { ReactElement } from "react";
 import { Design } from "@/types/design";
+import BuyLink, { BuyLinkProps } from "@/app/components/BuyLink";
 
 const getSiteConfig = vi.fn();
 const getDesignBySlug = vi.fn();
@@ -68,6 +70,25 @@ async function renderMetadata(slug: string) {
   return generateMetadata({ params: Promise.resolve({ slug }) });
 }
 
+// Collects the BuyLink client islands in a page element's tree, in render order.
+async function renderBuyLinks(slug: string): Promise<ReactElement<BuyLinkProps>[]> {
+  const { default: PinLandingPage } = await import("@/app/p/[slug]/page");
+  const element = await PinLandingPage({ params: Promise.resolve({ slug }) });
+  const found: ReactElement<BuyLinkProps>[] = [];
+  const visit = (child: unknown) => {
+    if (Array.isArray(child)) {
+      child.forEach(visit);
+      return;
+    }
+    if (!child || typeof child !== "object") return;
+    const el = child as { type?: unknown; props?: { children?: unknown } };
+    if (el.type === BuyLink) found.push(child as ReactElement<BuyLinkProps>);
+    if (el.props && typeof el.props === "object") visit(el.props.children);
+  };
+  visit(element);
+  return found;
+}
+
 beforeEach(() => {
   getSiteConfig.mockReset().mockResolvedValue(config);
   getDesignBySlug.mockReset();
@@ -111,6 +132,28 @@ describe("/p/[slug] landing page", () => {
     );
     expect((html.match(/rel="sponsored noopener noreferrer"/g) || []).length).toBe(2);
     expect((html.match(/target="_blank"/g) || []).length).toBe(2);
+  });
+
+  it("wires both buy buttons with their GA4 buy_click parameters", async () => {
+    const design = makeDesign({
+      props: { teepublicLink: "https://www.teepublic.com/t-shirt/99914330-look-past-the-stars" },
+    });
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+
+    const buyLinks = await renderBuyLinks(design.slug as string);
+    expect(buyLinks).toHaveLength(2);
+    expect(buyLinks[0].props).toMatchObject({
+      platform: "redbubble",
+      designSlug: design.slug,
+      pageType: "landing",
+      position: "primary",
+    });
+    expect(buyLinks[1].props).toMatchObject({
+      platform: "teepublic",
+      designSlug: design.slug,
+      pageType: "landing",
+      position: "secondary",
+    });
   });
 
   it("links the disclosure line to /disclosure and the design page", async () => {
@@ -179,6 +222,24 @@ describe("/p/[slug] landing page", () => {
     // …and the redbubble button is absent entirely.
     expect(html).not.toContain("Buy on Redbubble");
     expect(html).not.toContain("pxf.example");
+  });
+
+  it("keeps GA4 parameters correct when TeePublic is the primary button", async () => {
+    const design: Design = makeDesign({
+      externalLink: "",
+      externalId: null,
+      props: { teepublicLink: "https://www.teepublic.com/t-shirt/99914330-look-past-the-stars" },
+    });
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+
+    const buyLinks = await renderBuyLinks(design.slug as string);
+    expect(buyLinks).toHaveLength(1);
+    expect(buyLinks[0].props).toMatchObject({
+      platform: "teepublic",
+      designSlug: design.slug,
+      pageType: "landing",
+      position: "primary",
+    });
   });
 
   it("404s when the design has no marketplace link at all", async () => {

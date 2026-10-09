@@ -28,6 +28,7 @@ import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { JsonLd } from "@/app/components/JsonLd";
+import BuyLink from "@/app/components/BuyLink";
 import { buttonVariants } from "@/components/ui/button";
 
 type Props = {
@@ -204,15 +205,17 @@ export default async function DesignDetails(
                 </p>
               </div>
               {buyUrl !== "#" && (
-                <a
+                <BuyLink
                   href={buyUrl}
-                  target="_blank"
-                  rel="sponsored noopener noreferrer"
+                  platform="redbubble"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="primary"
                   className={buttonVariants({ className: "w-full gap-2" })}
                 >
                   Buy on Redbubble
                   <span aria-hidden="true">&#8599;</span>
-                </a>
+                </BuyLink>
               )}
               <p className="text-sm text-muted-foreground mt-2 text-center">
                 Printed &amp; shipped by our marketplace partner. We may earn a
@@ -225,15 +228,17 @@ export default async function DesignDetails(
                 </Link>
               </p>
               {teePublicLink && (
-                <a
+                <BuyLink
                   href={sanitizeUrl(teePublicLink)}
-                  target="_blank"
-                  rel="sponsored noopener noreferrer"
+                  platform="teepublic"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="secondary"
                   className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Buy on TeePublic
                   <span aria-hidden="true">&#8599;</span>
-                </a>
+                </BuyLink>
               )}
               <div className="flex items-center space-x-4 mt-6">
                 <ShareLinks

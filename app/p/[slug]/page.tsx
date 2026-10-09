@@ -17,6 +17,7 @@ import { applyRedbubbleAffiliate, applyTeepublicReferral } from "@/lib/affiliate
 import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import { pinImageUrl } from "@/lib/pinterest-feed";
 import { SiteConfig } from "@/lib/store";
+import BuyLink from "@/app/components/BuyLink";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
@@ -130,25 +131,29 @@ export default async function PinLandingPage(props: Props) {
         <h1 className="mt-4 line-clamp-2 text-center text-sm font-semibold leading-tight text-foreground sm:text-md">
           {design.title}
         </h1>
-        <a
+        <BuyLink
           href={primary.href}
-          target="_blank"
-          rel="sponsored noopener noreferrer"
+          platform={hasRedbubble ? "redbubble" : "teepublic"}
+          designSlug={design.slug || design.id}
+          pageType="landing"
+          position="primary"
           className={buttonVariants({ className: "mt-4 w-full gap-2" })}
         >
           {primary.label}
           <span aria-hidden="true">&#8599;</span>
-        </a>
+        </BuyLink>
         {secondary && (
-          <a
+          <BuyLink
             href={secondary.href}
-            target="_blank"
-            rel="sponsored noopener noreferrer"
+            platform="teepublic"
+            designSlug={design.slug || design.id}
+            pageType="landing"
+            position="secondary"
             className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {secondary.label}
             <span aria-hidden="true">&#8599;</span>
-          </a>
+          </BuyLink>
         )}
         <p className="mt-3 text-center text-sm text-muted-foreground">
           Printed &amp; shipped by our marketplace partner. We may earn a commission —{" "}
