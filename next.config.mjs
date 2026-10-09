@@ -22,6 +22,18 @@ const nextConfig = {
       },
     ],
   },
+  // Pinterest feeds live at /feeds/pinterest/<collection-slug>.xml, but the
+  // App Router only treats [param] as dynamic when it spans a whole segment,
+  // so the handler sits at /feeds/pinterest/<collection-slug> and this rewrite
+  // strips the extension.
+  async rewrites() {
+    return [
+      {
+        source: "/feeds/pinterest/:collectionSlug.xml",
+        destination: "/feeds/pinterest/:collectionSlug",
+      },
+    ];
+  },
   async headers() {
     return [
       {

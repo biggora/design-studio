@@ -22,7 +22,8 @@
     "designs:background:dry": "tsx scripts/set-background.ts --dry-run",
     "sync:teepublic": "tsx scripts/sync-teepublic.ts",
     "sync:teepublic:dry": "tsx scripts/sync-teepublic.ts --dry-run",
-    "sync:teepublic:json": "tsx scripts/sync-teepublic.ts --target=json"
+    "sync:teepublic:json": "tsx scripts/sync-teepublic.ts --target=json",
+    "feeds:list": "tsx scripts/list-pinterest-feeds.ts"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",

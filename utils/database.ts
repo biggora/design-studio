@@ -11,6 +11,8 @@ import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, L
 import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/utils/listings-database";
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
+import {hasMarketplaceLink} from "@/lib/utils";
+import {getDesignDisplayImage} from "@/lib/image";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -633,6 +635,234 @@ export async function fetchCollections(): Promise<string[]> {
         console.error("Error fetching collections table, falling back:", err);
         return fetchLegacyCollections(provider);
     }
+}
+
+export type FeedCollection = { title: string; description: string };
+export type FeedDesigns = { designs: Design[]; earliestListingAt: Record<string, string> };
+
+/** Collections with their descriptions, for the Pinterest feed index. Legacy installs
+ * without the `collections` tables fall back to the `designs.collection` labels with an
+ * empty description. Titles are deduped like fetchCollections does. */
+export async function fetchFeedCollections(): Promise<FeedCollection[]> {
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const {data, error} = await supabaseClient
+            .from("collections")
+            .select("title, description")
+            .order("title");
+
+        if (error || !data || !data.length) {
+            if (error) console.error("Error fetching feed collections:", error);
+            const legacy = await fetchLegacyCollections(provider);
+            return legacy.map(title => ({title, description: ""}));
+        }
+
+        return dedupeFeedCollections(data.map(row => ({
+            title: row.title as string,
+            description: (row.description as string | null) ?? "",
+        })));
+    }
+
+    try {
+        const pool = getMySQLPool();
+        const [rows] = await pool.query<mysql.RowDataPacket[]>(
+            "SELECT title, description FROM collections ORDER BY title",
+        );
+
+        if (!rows.length) {
+            const legacy = await fetchLegacyCollections(provider);
+            return legacy.map(title => ({title, description: ""}));
+        }
+
+        return dedupeFeedCollections(rows.map(row => ({
+            title: row.title as string,
+            description: (row.description as string | null) ?? "",
+        })));
+    } catch (err) {
+        console.error("Error fetching feed collections table, falling back:", err);
+        const legacy = await fetchLegacyCollections(provider);
+        return legacy.map(title => ({title, description: ""}));
+    }
+}
+
+function dedupeFeedCollections(collections: FeedCollection[]): FeedCollection[] {
+    const byTitle = new Map<string, FeedCollection>();
+    for (const collection of collections) {
+        if (collection.title && !byTitle.has(collection.title)) {
+            byTitle.set(collection.title, collection);
+        }
+    }
+    return [...byTitle.values()];
+}
+
+// MySQL DATETIME comes back TZ-less through dateStrings; the rest of the codebase
+// (utils/social-posts-database.ts) reads it as UTC, so the feed does too.
+function isoTime(value: unknown): string {
+    return new Date(`${String(value).replace(" ", "T")}Z`).toISOString();
+}
+
+/** Designs for one collection's Pinterest feed, newest first, already filtered and capped:
+ * must have a display image and a marketplace link, and must not already be pinned
+ * through the API (a `design_social_posts` row with channel 'pinterest', status
+ * 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
+ * `earliestListingAt` maps design id → the earliest design_listings.publishedAt, used
+ * as the feed's pubDate. There is no hidden/trashed column in the schema (the `shared`
+ * flag is vestigial and always false), so removal state is exactly the social-post row. */
+export async function fetchCollectionFeedDesigns(
+    collectionTitle: string,
+    limit: number,
+): Promise<FeedDesigns> {
+    const safeLimit = Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 100));
+    // Over-fetch so post-JSON checks (TeePublic link in props, display image) can
+    // only shrink the result, not displace older eligible designs.
+    const fetchLimit = Math.min(safeLimit * 3, 300);
+
+    const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
+        const unique = new Map(rows.map(design => [design.id, design]));
+        const designs = [...unique.values()]
+            .filter(design => hasMarketplaceLink(design) && getDesignDisplayImage(design).trim() !== "")
+            .slice(0, safeLimit);
+        return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
+    };
+
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+
+        type FeedQueryResult = {data: Record<string, unknown>[] | null; error: {message: string} | null};
+
+        const runJoinQuery = async (): Promise<FeedQueryResult> => {
+            const {data, error} = await supabaseClient
+                .from("designs")
+                .select("*, design_collections!inner(collections!inner(title))")
+                .eq("design_collections.collections.title", collectionTitle)
+                .not("externalImageUrl", "is", null)
+                .neq("externalImageUrl", "")
+                .order("createdAt", {ascending: false})
+                .order("id", {ascending: false})
+                .range(0, fetchLimit - 1);
+            return {data: (data ?? null) as Record<string, unknown>[] | null, error};
+        };
+
+        const runLegacyQuery = async (): Promise<FeedQueryResult> => {
+            const {data, error} = await supabaseClient
+                .from("designs")
+                .select("*")
+                .eq("collection", collectionTitle)
+                .not("externalImageUrl", "is", null)
+                .neq("externalImageUrl", "")
+                .order("createdAt", {ascending: false})
+                .order("id", {ascending: false})
+                .range(0, fetchLimit - 1);
+            return {data: (data ?? null) as Record<string, unknown>[] | null, error};
+        };
+
+        const joinResponse = await runJoinQuery();
+        // Fall back to the legacy single-collection filter if the join errors
+        // (tables not migrated yet) or matches nothing.
+        const response = joinResponse.error || !joinResponse.data?.length
+            ? await runLegacyQuery()
+            : joinResponse;
+        if (response.error) {
+            console.error("Error fetching feed designs:", response.error);
+            return {designs: [], earliestListingAt: {}};
+        }
+
+        let designs: Design[] = (response.data ?? []).map(mapSupabaseRowToDesign);
+        designs = await excludeApiPinnedDesigns(supabaseClient, designs);
+        return finalize(designs);
+    }
+
+    const pool = getMySQLPool();
+
+    const runMySQLQuery = async (excludePinned: boolean) => {
+        const [rows] = await pool.query<mysql.RowDataPacket[]>(
+            `SELECT d.* FROM designs d
+             WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
+                           WHERE dc.designId = d.id AND c.title = ?)
+               AND COALESCE(d.externalImageUrl, '') <> ''
+               ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
+                                  WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
+             ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
+            [collectionTitle, fetchLimit],
+        );
+        return rows.map(mapRowToDesign);
+    };
+
+    let designs: Design[];
+    try {
+        designs = await runMySQLQuery(true);
+    } catch (err) {
+        // A pre-migration-004 install has no design_social_posts table; fail open
+        // (feed without the already-pinned exclusion) rather than serving no feed.
+        console.error("Error fetching feed designs with social-post exclusion, retrying without it:", err);
+        try {
+            designs = await runMySQLQuery(false);
+        } catch (retryErr) {
+            console.error("Error fetching feed designs:", retryErr);
+            return {designs: [], earliestListingAt: {}};
+        }
+    }
+    return finalize(designs);
+}
+
+// Supabase keeps the exclusion out-of-band (private table, separate query). A read
+// failure here (e.g. anon key without service role) is logged and the feed continues
+// without the exclusion — a broken feed would stop auto-publish entirely.
+async function excludeApiPinnedDesigns(
+    supabaseClient: ReturnType<typeof createClient>,
+    designs: Design[],
+): Promise<Design[]> {
+    if (!designs.length) return designs;
+    const ids = designs.map(design => design.id);
+    const {data, error} = await supabaseClient
+        .from("design_social_posts")
+        .select("designId")
+        .in("designId", ids)
+        .eq("channel", "pinterest")
+        .eq("status", "published");
+    if (error) {
+        console.error("Error fetching pinterest social posts for feed exclusion:", error);
+        return designs;
+    }
+    const pinned = new Set((data || []).map(row => row.designId as string));
+    return pinned.size ? designs.filter(design => !pinned.has(design.id)) : designs;
+}
+
+async function fetchEarliestListingAt(designs: Design[]): Promise<Record<string, string>> {
+    if (!designs.length) return {};
+    const ids = designs.map(design => design.id);
+    const earliest: Record<string, string> = {};
+    if (getProvider() === "supabase") {
+        const {data, error} = await getSupabase().from("design_listings")
+            .select("designId, publishedAt").in("designId", ids);
+        if (error) {
+            console.error("Error fetching listing dates for feed:", error);
+            return {};
+        }
+        for (const row of data || []) {
+            const designId = row.designId as string;
+            const publishedAt = row.publishedAt as string | null;
+            if (!publishedAt) continue;
+            if (!earliest[designId] || publishedAt < earliest[designId]) {
+                earliest[designId] = publishedAt;
+            }
+        }
+        return earliest;
+    }
+    try {
+        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+            "SELECT designId, MIN(publishedAt) AS earliest FROM design_listings WHERE designId IN (?) GROUP BY designId",
+            [ids],
+        );
+        for (const row of rows) {
+            if (row.earliest) earliest[row.designId as string] = isoTime(row.earliest);
+        }
+    } catch (err) {
+        console.error("Error fetching listing dates for feed:", err);
+    }
+    return earliest;
 }
 
 export async function ingestListing(input: IngestInput): Promise<IngestResult> {

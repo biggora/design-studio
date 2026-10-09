@@ -85,6 +85,20 @@ export function getTeepublicLink(design: Pick<Design, "props">): string | null {
   return null;
 }
 
+/** True when the design has at least one place to buy it: a Redbubble listing
+ * (stored link or legacy external id) or a validated TeePublic link. Used by
+ * the /p landing page (404 rule) and the Pinterest feed (item eligibility) so
+ * both agree on "has a marketplace link". */
+export function hasMarketplaceLink(
+  design: Pick<Design, "externalLink" | "externalId" | "props">,
+): boolean {
+  return (
+    design.externalLink.trim() !== "" ||
+    design.externalId !== null ||
+    getTeepublicLink(design) !== null
+  );
+}
+
 export function sanitizeUrl(url?: string | null): string {
   if (!url) return "#";
   const trimmed = url.trim();
