@@ -113,7 +113,7 @@ export default async function PinLandingPage(props: Props) {
     <main className="container mx-auto px-4 pb-8 pt-6">
       <div className="mx-auto w-full max-w-md">
         <div
-          className="relative mx-auto h-[430px] w-full max-w-[322px] overflow-hidden rounded-lg shadow-md"
+          className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
         >
           <Image
@@ -123,11 +123,11 @@ export default async function PinLandingPage(props: Props) {
             priority
             placeholder="blur"
             blurDataURL={imageBlurPlaceholder}
-            sizes="322px"
+            sizes="(max-width: 640px) 100vw, 576px"
             className="object-contain"
           />
         </div>
-        <h1 className="mt-4 line-clamp-2 text-center text-xl font-semibold leading-tight text-foreground">
+        <h1 className="mt-4 line-clamp-2 text-center text-sm font-semibold leading-tight text-foreground sm:text-md">
           {design.title}
         </h1>
         <a

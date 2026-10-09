@@ -293,7 +293,7 @@ vi.mock("@supabase/supabase-js", () => ({
           calls.push({ type: "select-in", table, col, vals });
           if (table === "design_listings") return nextSelectResponse(listingResponses);
           if (table === "designs" && cols === "id, externalId") {
-            return { or: () => nextIdLookupResponse(designIdLookupResponses, vals) };
+            return nextIdLookupResponse(designIdLookupResponses, vals);
           }
           return nextSelectResponse(col === "externalId" ? selectByIdResponses : selectByTitleResponses);
         },
@@ -316,8 +316,13 @@ vi.mock("@supabase/supabase-js", () => ({
       update: (changes: Row) => ({
         eq: (col: string, val: unknown) => {
           calls.push({ type: "update", table, changes, filters: [{ col, val }] });
-          const queued = updateResponses.shift();
-          return { or: () => ({ select: () => Promise.resolve(queued ? { data: [{ externalId: val }], ...queued } : { error: null, data: [{ externalId: val }] }) }) };
+          // The source awaits `.select()` directly for collection-only updates and
+          // through `.or(...)` for props backfills (the pod-studio write guard).
+          const run = () => {
+            const queued = updateResponses.shift();
+            return Promise.resolve(queued ? { data: [{ externalId: val }], ...queued } : { error: null, data: [{ externalId: val }] });
+          };
+          return { select: run, or: () => ({ select: run }) };
         },
       }),
       upsert: (rows: Row[], opts: Record<string, unknown>) => ({

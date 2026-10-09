@@ -908,11 +908,23 @@ export async function writeDesignsToSupabase(
           if (failedExternalIds.has(r.externalId)) {
             continue;
           }
-          // Exact ingest identities take precedence over title matching. Leave both
-          // curated fields and collection memberships untouched; no product fetch.
+          // Exact ingest identities take precedence over title matching. Collection
+          // membership is a Redbubble platform fact, so it is synced for API-written
+          // rows too, exactly as for scraper-created ones (complete crawl only);
+          // everything else they carry stays protected — no duplicate insert, no
+          // product fetch, no mockup backfill, no curated-field write.
           if (apiExternalIds.has(r.externalId)) {
-            skipped++;
-            warnings.push(`Skipped API-linked Redbubble work ${r.externalId}`);
+            if (!existingExternalIds.has(r.externalId)) {
+              skipped++;
+              warnings.push(`Skipped API-linked Redbubble work ${r.externalId}: no design row to update`);
+              continue;
+            }
+            if (!collectionsComplete) {
+              skipped++;
+              warnings.push(`Skipped API-linked Redbubble work ${r.externalId}: collections crawl incomplete`);
+              continue;
+            }
+            updateRows.push({ externalId: r.externalId, collection: r.collection });
             continue;
           }
 
@@ -1130,8 +1142,13 @@ export async function writeDesignsToSupabase(
       const changes: { collection?: string; props?: object; updatedAt: string } = { updatedAt: nowIso };
       if (r.collection !== undefined) changes.collection = r.collection;
       if (r.props !== undefined) changes.props = r.props;
-      const { data, error } = await supabase.from("designs").update(changes).eq("externalId", r.externalId)
-        .or("source.is.null,source.neq.pod-studio").select("externalId");
+      // Collection membership syncs for every row, API-written ones included; a `props`
+      // (mockup) backfill keeps the source filter so it can never touch a pod-studio row
+      // adopted while the scrape was running. A filtered no-op (0 rows matched) is not
+      // counted as an update.
+      let query = supabase.from("designs").update(changes).eq("externalId", r.externalId);
+      if (r.props !== undefined) query = query.or("source.is.null,source.neq.pod-studio");
+      const { data, error } = await query.select("externalId");
       if (error) {
         errorsCount += 1;
         errorMessages.push(error.message);
@@ -1185,7 +1202,7 @@ export async function writeDesignsToSupabase(
           const { data, error } = await supabase
             .from("designs")
             .select(DESIGN_ID_LOOKUP_COLUMNS)
-            .in("externalId", idChunk).or("source.is.null,source.neq.pod-studio");
+            .in("externalId", idChunk);
           if (error) {
             errorsCount += idChunk.length;
             errorMessages.push(error.message);

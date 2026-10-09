@@ -42,8 +42,9 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 // The mobile viewport budget this layout must satisfy (see the above-the-fold test).
 const VIEWPORT_HEIGHT = 844;
 const HEADER_HEIGHT = 64;
-const IMAGE_HEIGHT = 430;
-const TITLE_TWO_LINES = 52; // text-xl leading-tight, 2 clamped lines
+// Image: full column width (390 − 2×16px padding) in the mockup's 3:4 shape.
+const IMAGE_HEIGHT = Math.round(((390 - 32) * 4) / 3); // 477
+const TITLE_TWO_LINES = 60; // text-2xl leading-tight, 2 clamped lines
 const BUTTON_HEIGHT = 48; // px-6 py-2 at text-base
 const DISCLOSURE_HEIGHT = 40; // two wrapped text-sm lines
 const VERTICAL_MARGINS = 16 + 16 + 12 + 12 + 24; // title mt + primary mt + secondary mt + disclosure mt + page pt
@@ -144,9 +145,10 @@ describe("/p/[slug] landing page", () => {
     getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
 
     const html = await renderPage(design.slug as string);
-    // The image is height-capped and the title line-clamped, so the stack's
-    // height is bounded: header + image + title + two buttons + disclosure.
-    expect(html).toMatch(/h-\[430px\]/);
+    // The image spans the full column in the mockup's 3:4 shape and the title
+    // is line-clamped, so the stack's height is bounded: header + image + title
+    // + two buttons + disclosure all fit one mobile viewport.
+    expect(html).toMatch(/aspect-\[3\/4\]/);
     expect(html).toMatch(/line-clamp-2/);
     const stackHeight =
       IMAGE_HEIGHT + TITLE_TWO_LINES + 2 * BUTTON_HEIGHT + DISCLOSURE_HEIGHT + VERTICAL_MARGINS;
