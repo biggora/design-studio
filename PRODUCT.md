@@ -13,6 +13,10 @@ web
 
 ## Product Purpose
 
+For the **threadquirk.lv** deployment, all decisions follow the [primary goals and decision rules in AGENTS.md](AGENTS.md#primary-goals-and-decision-rules): high-quality prints that visitors can find quickly, maximum useful organic search visibility, and a preference for free services and simple in-house solutions.
+
+The target audience for threadquirk.lv is international and English-speaking; catalog discovery and organic search content should serve that audience.
+
 Design Studio is a self-hostable, white-label storefront for print-on-demand artists. Each deployment automatically mirrors the artist's marketplace shop into a fast, searchable catalog on their own domain and funnels buyers to the marketplace listing to buy. Success means: buyers discover designs on the artist's site and click through to purchase, and the operator never maintains the catalog by hand — publishing on the marketplace is the only workflow.
 
 ## Positioning

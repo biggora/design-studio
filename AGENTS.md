@@ -2,6 +2,21 @@
 
 This file provides guidance to Ai Agents when working with code in this repository.
 
+## Primary goals and decision rules
+
+The target service is **threadquirk.lv**. Every product, design, content, technical, and infrastructure decision must support these two primary goals:
+
+1. **Quality prints and fast discovery.** Build a high-quality service with high-quality prints, where visitors quickly find what they need. Prioritize artwork quality, relevant catalog results, clear navigation, useful search and filters, and fast, accessible pages.
+2. **Organic search visibility.** Make threadquirk.lv popular and easy to discover through Google, Bing, and other search engines. Maximize useful search visibility and organic traffic through helpful content, discoverable catalog pages, and sound technical SEO, while preserving visitor experience and print quality.
+
+**Target audience:** international, English-speaking visitors. Prioritize English catalog search, content, and search intent across international markets; do not assume Latvia-only targeting from the `.lv` domain. Evaluate additional languages or country-specific pages only when evidence supports their benefit to these goals.
+
+Before proposing or implementing a change, explain which goal it serves and how its benefit can be verified. Evaluate tradeoffs against both goals; organic traffic must not come at the expense of catalog quality or visitors' ability to find relevant prints.
+
+**Cost discipline:** maximize the use of free services, existing resources, and simple self-hosted or in-house solutions. Do not optimize for higher spending or add paid dependencies by default. When a paid option is justified, compare it with viable free or self-hosted alternatives and explain its concrete benefit, recurring cost, usage limits, and maintenance burden before recommending it. Choose the simplest adequate solution, accounting for both service fees and upkeep.
+
+These goals guide this deployment; keep the underlying white-label engine configurable rather than hardcoding the domain or brand into reusable code.
+
 ## What this is
 
 Design Studio is a self-hostable, white-label print-on-demand storefront (Next.js 16 App Router, React 19, Tailwind 3). It mirrors an artist's Redbubble shop into a searchable catalog and sends buyers to the marketplace to purchase — there is no checkout and no admin UI. See `PRODUCT.md` (users, purpose) and `DESIGN.md` (visual system) before UI work; `docs/` holds deeper Russian-language docs (architecture, database, sync, deployment) that may lag the code — trust the source when they disagree.
