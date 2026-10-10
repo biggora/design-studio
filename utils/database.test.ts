@@ -74,6 +74,9 @@ function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
 vi.mock("@supabase/supabase-js", () => ({
     createClient: vi.fn(() => ({
         from: (table: string) => {
+            if (table === "design_collections") {
+                return {select: () => ({eq: () => Promise.resolve({data: [], error: null})})};
+            }
             if (table === "studio") {
                 return {
                     select: () => ({

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import companyData from "@/config/config.json";
+import type {CollectionPage} from "@/lib/collections";
 
 export interface SocialMedia {
   [key: string]: string;
@@ -63,6 +64,8 @@ export interface SiteConfig {
   themeLink: string;
   slides: CarouselSlide[];
   about: AboutConfig;
+  /** Promoted collection pages, optionally JSON-encoded in the studio table. */
+  collectionPages?: CollectionPage[] | string;
 }
 
 interface SiteConfigStore {

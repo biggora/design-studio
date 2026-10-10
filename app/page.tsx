@@ -1,11 +1,12 @@
 import { Metadata } from "next";
-import { getSiteConfig, fetchDesigns } from "@/utils/database";
+import { getSiteConfig, fetchDesigns, fetchFeaturedCollections } from "@/utils/database";
 import { Design } from "@/types/design";
 import { SiteConfig, CarouselSlide } from "@/lib/store";
 import { Carousel } from "@/app/components/Carousel";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
+import {CollectionLinks} from "@/app/components/CollectionLinks";
 
 // Bundled fallback: shown when config.slides is absent, empty, or malformed.
 const defaultCarouselItems: CarouselSlide[] = [
@@ -99,6 +100,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function Home() {
   const { featuredDesigns, config } = await getFeaturedDesigns();
+  const collections = await fetchFeaturedCollections(config.collectionPages);
 
   return (
     <>
@@ -115,6 +117,7 @@ export default async function Home() {
             </p>
           )}
         </section>
+        <CollectionLinks collections={collections} />
         <FeaturedDesigns title="Featured Designs" designs={featuredDesigns} />
       </div>
     </>

@@ -1,5 +1,6 @@
 import { load } from "cheerio";
 import { createClient } from "@supabase/supabase-js";
+import {curatedCollectionTitles} from "@/lib/collections";
 import { chromium } from "playwright";
 import fs from "node:fs";
 import path from "node:path";
@@ -808,6 +809,7 @@ export async function writeDesignsToSupabase(
   }
 
   const collectionByTitle = new Map(collections.map((c) => [c.title, c]));
+  const curatedByExternalId = new Map<number, string[]>();
 
   const insertRows: (typeof rows)[0][] = [];
   const updateRows: { externalId: number; collection?: string; props?: object }[] = [];
@@ -871,6 +873,7 @@ export async function writeDesignsToSupabase(
             existingExternalIds.add(row.externalId);
             if (row.source === "pod-studio") apiExternalIds.add(row.externalId);
             existingRowByExternalId.set(row.externalId, { props: row.props });
+            curatedByExternalId.set(row.externalId, curatedCollectionTitles(row.props));
           }
         }
 
@@ -907,6 +910,9 @@ export async function writeDesignsToSupabase(
         for (const r of batchRows) {
           if (failedExternalIds.has(r.externalId)) {
             continue;
+          }
+          if (r.collection === "no_collection") {
+            r.collection = curatedByExternalId.get(r.externalId)?.find(title => collectionByTitle.has(title)) || r.collection;
           }
           // Exact ingest identities take precedence over title matching. Collection
           // membership is a Redbubble platform fact, so it is synced for API-written
@@ -1106,7 +1112,7 @@ export async function writeDesignsToSupabase(
         .filter((d) => plannedExternalIds.has(d.externalId))
         .map((d) => ({
           externalId: d.externalId,
-          collections: (d.collections || [])
+          collections: [...new Set([...(d.collections || []), ...(curatedByExternalId.get(d.externalId) || [])])]
             .map((title) => collectionByTitle.get(title)?.externalId)
             .filter((id): id is number => id !== undefined),
         }));
@@ -1227,10 +1233,10 @@ export async function writeDesignsToSupabase(
           for (const [externalId, designId] of idChunk) {
             const design = designByExternalId.get(externalId);
             const memberIds = new Set<string>();
-            for (const title of design?.collections || []) {
+            for (const title of [...(design?.collections || []), ...(curatedByExternalId.get(externalId) || [])]) {
               const collection = collectionByTitle.get(title);
               const collectionId = collection ? collectionIdByExternalId.get(collection.externalId) : undefined;
-              if (collectionId) {
+              if (collectionId && !memberIds.has(collectionId)) {
                 memberIds.add(collectionId);
                 newLinkRows.push({ designId, collectionId });
               }

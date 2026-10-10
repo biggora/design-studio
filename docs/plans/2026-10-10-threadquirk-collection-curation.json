@@ -1,0 +1,907 @@
+{
+  "reviewedAt": "2026-10-10",
+  "baseline": {
+    "total": 303,
+    "uncovered": 126
+  },
+  "collectionPages": [
+    {
+      "collection": "Programming",
+      "title": "Programming Prints & Developer Gifts",
+      "description": "Explore coding jokes, debugging graphics and developer designs. Compare prints and find a gift for a programmer, software engineer or database enthusiast.",
+      "intro": "Pick a coding, database or debugging joke for someone who writes software. Preview each design before choosing a product on the marketplace.",
+      "heading": "Programming Prints"
+    },
+    {
+      "collection": "Photo and Video lover",
+      "title": "Photography & Videography Prints",
+      "description": "Browse camera, lens and filmmaking graphics for photographers and video creators. Find a photography print that matches their favorite hobby or everyday work.",
+      "intro": "Choose camera and lens artwork for a photography enthusiast, or a filmmaking reference for a video creator. Open a design to preview it and check available products.",
+      "heading": "Photography Prints"
+    },
+    {
+      "collection": "For gourmets and food lovers",
+      "title": "Food Prints & Gifts for Food Lovers",
+      "description": "Discover ramen, coffee, chili and other food-themed designs. Browse playful culinary artwork and find a print for a foodie, home cook or coffee lover.",
+      "intro": "Choose by their favorite flavor: ramen and noodles, coffee or spicy food. Open a print to compare its artwork and check available products on the marketplace.",
+      "heading": "Food Prints"
+    },
+    {
+      "collection": "Pet lovers",
+      "title": "Cat & Dog Prints for Pet Lovers",
+      "description": "Find cat, dog and bunny artwork for animal lovers, including playful pet humor and coding cats. Compare prints and choose a design for a pet-loving friend.",
+      "intro": "Choose cat, dog or bunny artwork, from playful pet humor to coding cats. Open a print to compare its artwork and available products on the marketplace.",
+      "heading": "Pet Prints"
+    },
+    {
+      "collection": "Open Source, Together",
+      "title": "Open Source Prints & Gifts",
+      "description": "Explore prints about open source, contributors, maintainers and collaboration. Find a design that celebrates shared code and the people who build it.",
+      "intro": "Find a contributor, maintainer or collaboration motif for someone who enjoys shared code. Preview a design before choosing its products on the marketplace.",
+      "heading": "Open Source Prints"
+    }
+  ],
+  "assignments": [
+    {
+      "id": "06c0dc82-5791-4178-bc2a-8a3ea357cbfb",
+      "title": "Quiet Interface Loud Ideas Minimal UI Design",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "5aa9cc02-f898-47ed-a59b-92ae49092376",
+      "title": "My Dotfiles, My Habitat – Cozy Developer Cat Design",
+      "collections": [
+        "Programming",
+        "Localhost and Local AI",
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "6f8d5a48-1f7e-4709-a200-5dd6df75ab81",
+      "title": "Less Clicking More Scripting Shell Automation Graphic",
+      "collections": [
+        "Programming",
+        "Localhost and Local AI"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "6a75050f-13b3-4e9f-8f18-e8f9c5254f81",
+      "title": "The Build Is Green CI/CD Status Card",
+      "collections": [
+        "Programming",
+        "Small Builds, Calm Ops"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "7c152ef7-e644-4da5-93f6-e2a0bf155534",
+      "title": "Where's the Rollback Plan? CI/CD DevOps Humor",
+      "collections": [
+        "Programming",
+        "Small Builds, Calm Ops"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "3994ae18-0f66-4f53-b957-5d02e309df98",
+      "title": "Still Centering Things CSS Humor Design",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "42be6761-ef87-4f70-a959-cc6cf5617452",
+      "title": "It Depends API Contract Developer Humor",
+      "collections": [
+        "Programming"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "0f534464-9587-404b-a36d-a51be4c58866",
+      "title": "Have You Tried Adding an Index? SQL Humor",
+      "collections": [
+        "Programming"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "e5a87ebe-a007-4dac-bd05-979a2d33ad58",
+      "title": "Too Many Processes Not Enough RAM Developer Humor",
+      "collections": [
+        "Programming",
+        "Localhost and Local AI"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "f3460133-c03d-484d-aa2d-a11cb3886d89",
+      "title": "I Speak Fluent Stack Trace Detective Cat",
+      "collections": [
+        "Programming",
+        "Bugs, Tests and Hallucinations",
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "1547b82f-b1a3-463c-94ce-f360c9e3cdee",
+      "title": "Explore Inspect Build Repository Expedition Graphic",
+      "collections": [
+        "Programming",
+        "Repo Explorers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "dfb79d7d-e298-45f1-bd80-1d9d30f15ce3",
+      "title": "Funny 404 Vibes Not Found Graphic Tee for Trendsetters",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "08d6ba02-8677-4cde-a814-67451f1eeee6",
+      "title": "CTRL+ALT+BYE Graphic Tee for Tech Enthusiasts and Gamers",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor",
+        "Gamers and Geeks"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "7771fa9e-7794-492c-9d64-a9b47e4dd068",
+      "title": "Broken Escape Key",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor",
+        "Gamers and Geeks"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "1f02f48d-81ff-4586-8865-ea1a92e66ecb",
+      "title": "Quirky Force Quit Reality Graphic Tee for Tech Lovers",
+      "collections": [
+        "Programming",
+        "Everyday Dev Humor",
+        "Gamers and Geeks"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "d5487c45-ec82-4d19-8ac6-7d9fe501582b",
+      "title": "Backups Are a Love Language Tech Humor Design",
+      "collections": [
+        "Small Builds, Calm Ops"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "37e03c3d-a363-450e-9ca8-a644bfc29e1d",
+      "title": "Contributions Welcome Puzzle Design",
+      "collections": [
+        "Open Source, Together"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "f25cd6c6-2ddf-4987-9e92-e49ec0db9a4d",
+      "title": "Maintainers Are Volunteers Lantern Design",
+      "collections": [
+        "Open Source, Together"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "07537548-4210-426a-887c-92a52dd13a16",
+      "title": "Simple Is a Feature Go Board Design",
+      "collections": [
+        "Gamers and Geeks"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "7d82ec5f-0af8-4940-b6c8-61177e59a0d0",
+      "title": "Just One More Level",
+      "collections": [
+        "Gamers and Geeks"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "582b5602-4b6a-48cb-b721-d62e1c40ebef",
+      "title": "Adorable Cat Graphic Tee for Pet Owners in Energy-Saving Mode",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "f7167163-674a-4f68-bbb7-c8fe6409e74c",
+      "title": "Funny Dog Hair Don't Care Graphic Print Outfits for Dog Lovers",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "cd9cbf9b-847a-41af-a4aa-dc71a8eb2a34",
+      "title": "I Do What I Want: Coffee Loving Cat",
+      "collections": [
+        "Pet lovers",
+        "For gourmets and food lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "8dc2d0f3-b52f-4b25-95ed-9c6aa4a75e10",
+      "title": "Nervous Ramen Cat Design, Cute Kitty Bowl",
+      "collections": [
+        "Pet lovers",
+        "For gourmets and food lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "4974d7a8-2e11-4b3e-9662-9f923926bf12",
+      "title": "Adorable Sleepy Bunny Graphic Print Tee for Stress Relief Lovers",
+      "collections": [
+        "Pet lovers",
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "0d4aa120-250f-48cd-908c-ec36e0c8ebf2",
+      "title": "Sleepy Bunny Graphic",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "ac6d5fb1-cb8f-4221-9396-3ade74afa5a4",
+      "title": "Humorous Calm Down Graphic Tee for Stress Relief Enthusiasts",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "744a990d-64e1-4104-8d01-6ec977ac5203",
+      "title": "Powerful Quote Graphic: It's Okay To Not Be Okay Unisex Apparel",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "139e7cc0-1075-4ccf-aa2e-10a33f19716e",
+      "title": "My Peace Is Priceless Meditation Unisex Tee Design",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "eabfa3f7-f549-4927-b06f-a1fdae0e4bb2",
+      "title": "Be Kind To Your Mind",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "8f6de502-5e3b-46ca-bdc6-38363fd9ee5c",
+      "title": "Support The Brains Behind The Beauty Graphic Tee For Mindfulness",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "536bb94b-baf0-44fe-b487-f38e100f8cf8",
+      "title": "Demure And Mindful Cranes",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "46b29415-f5e5-4dfe-81f6-6748f06f2d97",
+      "title": "Empowering Inhale Confidence Exhale Doubt Design Unisex",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "13306f50-9d66-4cf7-a1ef-cce88ad68fce",
+      "title": "Inspiring Mindfulness Graphic Tee for Positive Vibes",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "12746321-ab55-40a0-8130-cb90396973d1",
+      "title": "Motivational Fitness Quote Tee for Gym Enthusiasts",
+      "collections": [
+        "Health and Wellness"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "1523129b-1bd2-448c-afd3-5a374118db1d",
+      "title": "Don't Follow Me I'm Lost Too Camping T-Shirt for Outdoor Enthusiasts",
+      "collections": [
+        "Travel and Trips"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "afcc5f36-6063-4378-b77f-ecf6c57d8d19",
+      "title": "Out Of Office Nature Adventure Graphic Unisex Tee",
+      "collections": [
+        "Travel and Trips"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "afc0cd3a-8054-4339-8d26-fb25bd27262f",
+      "title": "Adventure Inspired Unisex Wander Often Wonder Always Graphic",
+      "collections": [
+        "Travel and Trips"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "85f5cb39-eefc-48ea-88c1-280137152210",
+      "title": "Humorous Lost Navigation Graphic for Adventurous Souls",
+      "collections": [
+        "Travel and Trips"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "4227ec8a-3ace-41eb-a90a-3346d29c41fb",
+      "title": "Chill Out with Palm Trees and Hammock Graphic Unisex",
+      "collections": [
+        "Travel and Trips"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "fcb6d5b6-3e26-4b2c-ac5a-00f139a47af4",
+      "title": "Ramen Lover Design",
+      "collections": [
+        "For gourmets and food lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "e3771e7b-9cdf-4e86-a335-8d8c3efdb1ce",
+      "title": "Fun Spicy Chili Pepper Graphic For Your Saturday Night Adventures",
+      "collections": [
+        "For gourmets and food lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "a1fdfeac-fb79-4353-930a-6e2acb1fc500",
+      "title": "Funny Retro Milk Carton Graphic Tee - Bad Choice",
+      "collections": [
+        "For gourmets and food lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "bd71e8c2-e2d7-4479-9377-f72f43962f32",
+      "title": "Floral Design Best Mimi Ever Graphic T-Shirt for Grandmothers",
+      "collections": [
+        "Family and Friends"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "8b841c56-9b88-4f30-bf31-279371ebcd2f",
+      "title": "Vibrant 'Too Cool For School' Graphic Unisex",
+      "collections": [
+        "Back to School"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "20908775-caa1-4514-8056-0c778a8cd935",
+      "title": "Funny Schoolboy Mischief",
+      "collections": [
+        "Back to School"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "0b356e19-ade1-48f4-98b4-93bfb7c070bb",
+      "title": "Eerie Psychedelic Mushroom Brain",
+      "collections": [
+        "Holidays and Festivals"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "08b3764c-ae84-4b4b-a592-602e05fba04d",
+      "title": "Red, White & Brews",
+      "collections": [
+        "Holidays and Festivals"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "d1e968e6-57b4-456d-afa6-9c01b74ac086",
+      "title": "That Feeling Might Be Cached Cat Glitch Graphic",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "b4a70ee8-55fd-4923-bc36-7727da951a5d",
+      "title": "My Other Machine Is Production Pixel Art",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "b55718d4-a296-4654-9210-50bc025cfda7",
+      "title": "Currently Rebasing My Decisions Cat Design",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "81025ab3-f6f6-4e12-978b-031356bd007e",
+      "title": "My Data Lives Here Pixel Art",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "1f144504-30fb-46fe-b304-543c18fd9efd",
+      "title": "Private by Preference Cat Laptop Design",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "116e4003-3ecd-4982-8688-b2ffabcbe999",
+      "title": "It Works, Don't Touch It Cat Regression Testing Humor",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "c33ff0ce-66fa-4c21-b17a-1263968f2f01",
+      "title": "Will Maintain for Coffee Cat Developer Design",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    },
+    {
+      "id": "35df9ae8-6be6-4d9e-9f0f-de3c6d3dc9bb",
+      "title": "There Is Always an Edge Case Cat T-Shirt",
+      "collections": [
+        "Pet lovers"
+      ],
+      "reason": "Reviewed title, description and specific tags support these existing themes."
+    }
+  ],
+  "deferred": [
+    {
+      "id": "d077ec7a-7fb2-4efc-9188-1d85cee33cf7",
+      "title": "Make Something Useful Keep It Small Graphic",
+      "reason": "Maker/DIY: assigning the DevOps collection would misrepresent the subject."
+    },
+    {
+      "id": "0dc1c865-76ba-49cb-a5a2-47663ec46e5e",
+      "title": "My State Needs Management Humor Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "8cdd58d7-dcc0-4b50-92c1-cd59600920d8",
+      "title": "Read Learn Build Share Mountain Trail",
+      "reason": "Reading/books: no existing reading collection; a book design is not necessarily school-related."
+    },
+    {
+      "id": "06c2a9a3-fae0-4058-9f01-096292d808ce",
+      "title": "My Bookmarks Have a Backlog Cosmic Reader Design",
+      "reason": "Reading/books: no existing reading collection; a book design is not necessarily school-related."
+    },
+    {
+      "id": "c334425c-2c76-4e94-91dd-21fdcfaa0660",
+      "title": "Cheerful Smiley Design 'I'm Just Right' Unisex Graphic Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "9af30c52-978b-4434-a497-d12e0f935f08",
+      "title": "Inspirational Be Legendary Unisex Graphic Print T-Shirt",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "7cc91b27-5008-498c-9a45-6f418563a46f",
+      "title": "Motivational Dream Plan Do Graphic Print Unisex Tee for Creators",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "6efab180-710d-4225-9cd8-3c14599a9678",
+      "title": "Embrace Social Justice with Stay Woke Statement Apparel",
+      "reason": "Social justice/identity support: no corresponding existing theme."
+    },
+    {
+      "id": "5d3ce9f4-ec4a-4583-86ba-32002579ccfc",
+      "title": "Funny Emojis Graphic Print Unisex Shirt for Humor Lovers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "4d6bbd37-bfb6-4240-8e40-ac96fadc51c0",
+      "title": "Inspiring Grind Now, Shine Later Motivational Graphic Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "39717d81-365e-41f5-8689-12310b671ef4",
+      "title": "Inspiring Progress Over Perfection Graphic Unisex Shirt",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "2d7ade42-2525-4457-86d3-80e84cc60d69",
+      "title": "Less Talk, More Walk Colorful Motivational Unisex Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "1b7ada2f-9ef2-4dc8-904b-abf63187a615",
+      "title": "Funny Argumentative Emoji Design Unisex Tee for Laid-Back Style",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "ff61c5f7-9207-4e16-9656-da66d60c90f7",
+      "title": "Inspiring Silence Speaks Louder",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "f96f1eb9-59a5-44a0-ab61-d8ef7a1a1afc",
+      "title": "Vibrant Hustle and Heart Motivational Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "f3a3df73-cf8c-453e-b716-7b5c8784397b",
+      "title": "Make It Clean Inspiring Eco-Friendly Design Unisex Apparel",
+      "reason": "Environment/gardening: no dedicated nature/eco collection; travel would be unrelated."
+    },
+    {
+      "id": "eff0ef9c-747b-4d6a-a4e5-687b6906e320",
+      "title": "Shop Local Support Small All-Occasion Graphic Tee for Everyday Wear",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "e819318a-b8a2-4175-8195-f9379d16923f",
+      "title": "Vintage Style Old School Football Graphic T-Shirt for Fans",
+      "reason": "Sports/racing/golf fandom: no dedicated existing theme; fandom alone does not imply health/wellness."
+    },
+    {
+      "id": "e7c442a4-9e5d-40e2-8060-5dbf5d751970",
+      "title": "Empowerment Graphic Unisex Tee for Women Sports Fans",
+      "reason": "Sports/racing/golf fandom: no dedicated existing theme; fandom alone does not imply health/wellness."
+    },
+    {
+      "id": "e1543a09-6dd5-4959-b770-6127aebb3fc9",
+      "title": "Funny I Reply In 3-5 Business Days Graphic Tee for Customers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "dee782a9-fec3-4b32-884d-80080d92e452",
+      "title": "Spinning Peace & Funk Graphic Unisex T-Shirt for Music Lovers",
+      "reason": "Music/records: no existing music collection."
+    },
+    {
+      "id": "dd4efad5-b894-4f58-b727-bd9de0a68591",
+      "title": "Simple Never Fails",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "d7da6f6d-6c2e-41f0-b11a-a824ad3aa11c",
+      "title": "Fast Cars, Winning Spirit: Race Inspired",
+      "reason": "Sports/racing/golf fandom: no dedicated existing theme; fandom alone does not imply health/wellness."
+    },
+    {
+      "id": "d45bfd86-6c2e-459b-ad93-8471518957c9",
+      "title": "Cute Cartoon Vibe Check Graphic for Positive Energy Lovers",
+      "reason": "Cute character artwork: verify visual style before assigning the Japanese-style Kawaii collection."
+    },
+    {
+      "id": "d4378a84-248d-4a80-86a6-ecf1c99e1eb3",
+      "title": "Fun Vibe Check Radar Design Unisex Apparel for Trendsetters",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "cf68b065-9a04-46d9-b014-92d579a7e574",
+      "title": "It's Fine, I'm Fine",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "ceb9daf8-fa68-4544-b983-69049c7608bf",
+      "title": "Protect The Dolls Empower Equality Graphic",
+      "reason": "Social justice/identity support: no corresponding existing theme."
+    },
+    {
+      "id": "cb244ebc-a451-43b4-a0db-386af8f32524",
+      "title": "Motivational Mindset Print for Success Lovers Unisex Apparel",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "c86131f0-0abd-4a78-a096-71c9ff5336fb",
+      "title": "Stylish Vinyl Record Graphic",
+      "reason": "Music/records: no existing music collection."
+    },
+    {
+      "id": "c783b530-0157-4039-8276-f9e225e4253a",
+      "title": "Stand Out From The Crowd",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "c20752d2-f74f-4e2d-8137-561c83ed4d76",
+      "title": "Born To Stand Out",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "bd316b51-6eb2-4f1f-a6a2-861fa565e0ce",
+      "title": "Power Save Mode On Sleep Graphic Tee for Chill Days",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "bae75b9b-989e-44a4-99e1-9d4708346735",
+      "title": "Inspirational Less Is More Graphic Tee for Minimalist Lovers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "b5aba5b8-0361-47c6-bba0-7b3aaee4dbe2",
+      "title": "Inspire Creativity with Imagine Graphic Tee for Dreamers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "b52271a4-755a-4a2b-8d2e-64e6525ec6b1",
+      "title": "Procrastinators Unite Tomorrow!",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "b3a7127a-810b-4e6b-b98f-b09b64ae8b53",
+      "title": "Funny Emoji Quote Graphic Print for Anyone Who's Annoying",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "b16a56d6-3ef6-47ab-8de0-620070d00410",
+      "title": "Play That Soul: Vinyl Record Heart Graphic T-Shirt for Music Lovers",
+      "reason": "Music/records: no existing music collection."
+    },
+    {
+      "id": "b084c799-fa60-4d88-9a0e-206d235061e0",
+      "title": "Adorable Soft Mood Activated Graphic",
+      "reason": "Cute character artwork: verify visual style before assigning the Japanese-style Kawaii collection."
+    },
+    {
+      "id": "ae88e9bf-1950-43e2-b305-44f5d5c27090",
+      "title": "Clarity Over Chaos Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "ac406c36-b92b-46a3-86a7-a975ce5aba95",
+      "title": "Stay True Stay Cool",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "a0cb60d5-2dc5-474a-9354-69866538601e",
+      "title": "Just One More Chapter",
+      "reason": "Reading/books: no existing reading collection; a book design is not necessarily school-related."
+    },
+    {
+      "id": "a06e05ff-b29f-4f39-9dbc-08495fdd5a2d",
+      "title": "Keep Moving Forward",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "a0417125-812d-41a5-9191-a044215f542e",
+      "title": "Chillin' Like A Villain",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "9bce5e78-a499-4b9d-a0b2-9bb9f1343f09",
+      "title": "Hilarious 'Best Time To Call Me Is Never' Graphic Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "9a9680bc-1cd6-41c6-a613-ad42f5a7a1d6",
+      "title": "Bold Moves Clean Lines Tee",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "92f8f00c-51aa-4953-bdf5-e74b6f097f86",
+      "title": "Handyman Repairman Problem Solver",
+      "reason": "Maker/DIY: assigning the DevOps collection would misrepresent the subject."
+    },
+    {
+      "id": "8f7cd635-ea0d-46b8-9f37-fb6f54445e2e",
+      "title": "Inspire Greatness with This Be Legendary Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "7c5c9a80-7446-4c8b-b2ad-8805268228a8",
+      "title": "Emotional Logout Statement Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "7a52bef7-2dfe-415d-a786-c610af4baf2c",
+      "title": "Work Hard Tee Up Harder",
+      "reason": "Sports/racing/golf fandom: no dedicated existing theme; fandom alone does not imply health/wellness."
+    },
+    {
+      "id": "762bc4a8-7d8c-4eb5-a571-6dbb531bc79e",
+      "title": "Inspire Change with Do Good Look Good Graphic Unisex",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "6833700c-9220-4a8b-8c2c-819b43d93020",
+      "title": "You'Re Not Wrong Just Annoying Quote Shirt for Humor Lovers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "5e88dcb0-5e22-4374-9970-f1b1d5380a18",
+      "title": "Patriotic Music-Themed Unisex Design for Music Lovers",
+      "reason": "Music/records: no existing music collection."
+    },
+    {
+      "id": "5aa72399-0c5d-429b-bf12-d0897994c0b6",
+      "title": "Keep Earth Cool",
+      "reason": "Environment/gardening: no dedicated nature/eco collection; travel would be unrelated."
+    },
+    {
+      "id": "5a5c9376-4f1a-4691-8b4c-c5760c106b07",
+      "title": "Patriotic Cowboy Boot Graphic",
+      "reason": "Country/rodeo/Americana: no corresponding existing theme."
+    },
+    {
+      "id": "55502560-d14b-41bb-9589-18e9f7683d56",
+      "title": "Inspirational Plant More Worry Less Graphic Unisex Top",
+      "reason": "Environment/gardening: no dedicated nature/eco collection; travel would be unrelated."
+    },
+    {
+      "id": "5276e174-9750-4c9e-b334-24618e58bd4d",
+      "title": "Casual Effortless Graphics By Design",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "4f9ff5cf-802d-4ec7-8286-a01f7bdacdd1",
+      "title": "Adorable Bear Sleeping on Cloud",
+      "reason": "Cute character artwork: verify visual style before assigning the Japanese-style Kawaii collection."
+    },
+    {
+      "id": "4b8839e5-c24e-4d74-b518-59fe0f160186",
+      "title": "Rent-Free Living: House In My Head",
+      "reason": "Homeownership/house design: no dedicated existing theme."
+    },
+    {
+      "id": "4b412072-321d-450d-bf09-74d247d4f1dc",
+      "title": "Stay True Stay Cool Fun Hippie Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "4b02f977-0edf-448d-833a-16a9f46b51d1",
+      "title": "Loud Doesn't Mean Right Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "41772cf1-1112-47f4-89c4-e803df4cf251",
+      "title": "Ice Cube Design Just Be Cool",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "3ddc1f44-8804-4789-82f6-be4c4e6225d1",
+      "title": "Pixel Art Cool Story",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "38d06e61-6a12-4fc5-a830-35a7dbcf6723",
+      "title": "Last Nerve Left Chat",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "33b6d014-87cb-4507-822e-3f322fdc9f70",
+      "title": "Sarcastic Reaction Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "327407da-65c6-42a4-b9a6-8cf2e85561d4",
+      "title": "Inspiring Distortion Doesn't Define You Graphic Tee for Self-Confidence",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "30c8c98f-8931-412a-9853-5bf250341516",
+      "title": "Adorable Sleeping Cloud Design Unisex",
+      "reason": "Cute character artwork: verify visual style before assigning the Japanese-style Kawaii collection."
+    },
+    {
+      "id": "2d1cf811-c833-4f9d-b191-d6bc6e1a46bc",
+      "title": "Bless Your Heart",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "2bd125d3-95b5-478b-90a6-7dee48226a9d",
+      "title": "Eye-Catching Typography Graphic Print Unisex Apparel",
+      "reason": "Generic typography copy does not establish the subject; requires artwork review."
+    },
+    {
+      "id": "1824e208-98d0-4700-aafe-e9df35b67e8f",
+      "title": "Retro Just Be Cool Vibes Unisex Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "166d9bab-aea2-4589-b790-28533c7566d0",
+      "title": "Fun Out Of Office",
+      "reason": "Remote work/lifestyle: travel is not established by the title or description despite an outdoor tag."
+    },
+    {
+      "id": "0fc0b8f6-ecef-48f6-abeb-37c5d40083ca",
+      "title": "Bold Bruh Graphic Print For Humor Lovers",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "0e6344ba-66dd-4524-aa63-715d3aa5f2c1",
+      "title": "Motivational Dream, Plan, Do Graphic",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "0dcb03ff-29d3-4e1f-8ed3-7bf616424148",
+      "title": "Cool Penguin Stay Chill",
+      "reason": "Cute character artwork: verify visual style before assigning the Japanese-style Kawaii collection."
+    },
+    {
+      "id": "07091347-1912-4f03-8b5b-5ace163ff433",
+      "title": "Vinyl Vibes Only",
+      "reason": "Music/records: no existing music collection."
+    },
+    {
+      "id": "0563e53f-4138-428f-b4fc-cd5e4d371771",
+      "title": "Forever Golfing Tee for Passionate Golf Lovers and Enthusiasts",
+      "reason": "Sports/racing/golf fandom: no dedicated existing theme; fandom alone does not imply health/wellness."
+    },
+    {
+      "id": "042fe598-f1e7-49fe-95c8-975732be34f7",
+      "title": "Humorous Bruh Emoji Graphic Print Unisex",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "00e3f9b4-fae8-4712-a389-7dc4a30a0e17",
+      "title": "Make It Clean Soap",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    },
+    {
+      "id": "0066e752-956e-4e99-bd2e-46df9ff68086",
+      "title": "Cool Story Bro",
+      "reason": "General quote/reaction or lifestyle design: no specific existing theme established from reviewed text."
+    }
+  ]
+}

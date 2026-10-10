@@ -14,6 +14,7 @@ import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} 
 import {hasMarketplaceLink} from "@/lib/utils";
 import {getMockupUrl} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
+import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -342,11 +343,7 @@ async function getDesignBy(
         // Convert to Design
         const design: Design = mapSupabaseRowToDesign(designData);
 
-        // "More from this collection" only makes sense when the design has one;
-        // an uncollected design would otherwise match legacy empty rows.
-        const relatedDesigns: Design[] = design.collection
-            ? await fetchRelatedByCollection(supabaseClient, design.collection, design.id)
-            : [];
+        const relatedDesigns = await fetchRelatedByCollection(supabaseClient, design.collection, design.id);
 
         return {design, relatedDesigns};
     }
@@ -364,9 +361,7 @@ async function getDesignBy(
     // Convert to Design
     const design: Design = mapRowToDesign(rows[0]);
 
-    const relatedDesigns: Design[] = design.collection
-        ? await fetchRelatedByCollectionMySQL(pool, design.collection, design.id)
-        : [];
+    const relatedDesigns = await fetchRelatedByCollectionMySQL(pool, design.collection, design.id);
 
     return {design, relatedDesigns};
 }
@@ -388,6 +383,17 @@ async function fetchRelatedByCollection(
     collection: string,
     id: string,
 ): Promise<Design[]> {
+    const memberships = await supabaseClient.from("design_collections").select("collectionId").eq("designId", id);
+    if (!memberships.error && memberships.data?.length) {
+        const {data, error} = await supabaseClient.from("designs")
+            .select("*, design_collections!inner(collectionId)")
+            .in("design_collections.collectionId", memberships.data.map(row => row.collectionId))
+            .neq("id", id)
+            .order("createdAt", {ascending: false}).order("id", {ascending: false}).limit(5);
+        if (!error) return (data || []).map(mapSupabaseRowToDesign);
+        console.error("Error fetching related collection memberships:", error);
+    }
+    if (!collection) return [];
     const {data: relatedData, error: relatedError} = await supabaseClient
         .from("designs")
         .select("*")
@@ -408,6 +414,21 @@ async function fetchRelatedByCollectionMySQL(
     collection: string,
     id: string,
 ): Promise<Design[]> {
+    try {
+        const [memberships] = await pool.query<mysql.RowDataPacket[]>(
+            "SELECT collectionId FROM design_collections WHERE designId = ?", [id],
+        );
+        if (memberships.length) {
+            const [rows] = await pool.query<mysql.RowDataPacket[]>(
+                "SELECT * FROM designs WHERE id <> ? AND EXISTS (SELECT 1 FROM design_collections dc WHERE dc.designId = designs.id AND dc.collectionId IN (?)) ORDER BY createdAt DESC, id DESC LIMIT 5",
+                [id, memberships.map(row => row.collectionId)],
+            );
+            return rows.map(mapRowToDesign);
+        }
+    } catch (err) {
+        console.error("Error fetching related collection memberships, falling back:", err);
+    }
+    if (!collection) return [];
     const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
         "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 5",
         [collection, id],
@@ -659,6 +680,78 @@ export async function fetchCollections(): Promise<string[]> {
 }
 
 export type FeedCollection = { title: string; description: string };
+export type FeaturedCollection = CollectionPage & {total: number};
+
+/** Only explicitly prepared, existing, nonempty themes are promoted/indexed. */
+export async function fetchFeaturedCollections(value: SiteConfig["collectionPages"]): Promise<FeaturedCollection[]> {
+    const pages = getCollectionPages(value);
+    if (!pages.length) return [];
+    const available = new Set((await fetchFeedCollections()).map(collection => collection.title));
+    const results = await Promise.all(pages.filter(page => available.has(page.collection)).map(async page => {
+        const {total} = await fetchDesigns(1, "", page.collection, 1);
+        return {...page, total};
+    }));
+    return results.filter(page => page.total > 0);
+}
+
+/** Add reviewed themes without changing marketplace memberships or other props. */
+export async function addCuratedCollections(id: string, titles: string[]): Promise<void> {
+    titles = [...new Set(titles)];
+    if (!titles.length) return;
+    const now = new Date().toISOString();
+    if (getProvider() === "supabase") {
+        const client = getSupabase();
+        const {data: row, error: readError} = await client.from("designs").select("id, props, collection").eq("id", id).single();
+        if (readError) throw new Error("Failed to read design for curation", {cause: readError});
+        const {data: collections, error: collectionError} = await client.from("collections").select("id, title").in("title", titles);
+        if (collectionError) throw new Error("Failed to read curation collections", {cause: collectionError});
+        if (new Set(collections?.map(item => item.title)).size !== titles.length) throw new Error("Unknown curation collection");
+        const curated = [...new Set([...curatedCollectionTitles(row.props), ...titles])];
+        const {error: writeError} = await client.from("designs").update({
+            props: {...(row.props as Record<string, unknown> | null), curatedCollections: curated},
+            collection: normalizeCollection(row.collection) || curated[0], updatedAt: now,
+        }).eq("id", id);
+        if (writeError) throw new Error("Failed to save curated collections", {cause: writeError});
+        const {error: linkError} = await client.from("design_collections").upsert(
+            (collections || []).map(collection => ({designId: id, collectionId: collection.id})),
+            {onConflict: "designId,collectionId", ignoreDuplicates: true},
+        );
+        if (linkError) throw new Error("Failed to save curated membership links", {cause: linkError});
+        return;
+    }
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT props, collection FROM designs WHERE id = ?", [id]);
+    if (!rows.length) throw new Error("Design not found for curation");
+    const [collections] = await pool.query<mysql.RowDataPacket[]>("SELECT id, title FROM collections WHERE title IN (?)", [titles]);
+    if (new Set(collections.map(item => item.title)).size !== titles.length) throw new Error("Unknown curation collection");
+    const props = typeof rows[0].props === "string" ? JSON.parse(rows[0].props) : rows[0].props;
+    const curated = [...new Set([...curatedCollectionTitles(props), ...titles])];
+    await pool.query("UPDATE designs SET props = ?, collection = ?, updatedAt = ? WHERE id = ?", [
+        JSON.stringify({...props, curatedCollections: curated}), normalizeCollection(rows[0].collection) || curated[0],
+        now.replace("T", " ").slice(0, 19), id,
+    ]);
+    await pool.query("INSERT IGNORE INTO design_collections (designId, collectionId) VALUES ?", [collections.map(collection => [id, collection.id])]);
+}
+
+export async function saveCollectionPages(pages: CollectionPage[]): Promise<void> {
+    if (getCollectionPages(pages).length !== pages.length) throw new Error("Invalid collection pages");
+    const value = JSON.stringify(pages);
+    if (getProvider() === "supabase") {
+        const client = getSupabase();
+        const {data, error} = await client.from("studio").select("id").eq("key", "collectionPages");
+        if (error) throw new Error("Failed to read collection page config", {cause: error});
+        const result = data?.length
+            ? await client.from("studio").update({value}).eq("key", "collectionPages")
+            : await client.from("studio").insert({key: "collectionPages", value});
+        if (result.error) throw new Error("Failed to save collection page config", {cause: result.error});
+        return;
+    }
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM studio WHERE `key` = ?", ["collectionPages"]);
+    if (rows.length) await pool.query("UPDATE studio SET value = ? WHERE `key` = ?", [value, "collectionPages"]);
+    else await pool.query("INSERT INTO studio (`key`, value) VALUES (?, ?)", ["collectionPages", value]);
+}
+
 export type FeedDesigns = { designs: Design[]; earliestListingAt: Record<string, string> };
 
 /** Collections with their descriptions, for the Pinterest feed index. Legacy installs

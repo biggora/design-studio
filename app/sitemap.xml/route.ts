@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { SiteConfig } from "@/lib/store";
 import { Design } from "@/types/design";
-import { getSiteConfig, fetchDesigns } from "@/utils/database";
+import { getSiteConfig, fetchDesigns, fetchFeaturedCollections } from "@/utils/database";
 import { designPath } from "@/lib/slug";
 import { escapeXml } from "@/lib/pinterest-feed";
+import {collectionPath} from "@/lib/collections";
 
 /**
  * GET /sitemap.xml — the sitemap protocol document for search engines, with a
@@ -12,7 +13,7 @@ import { escapeXml } from "@/lib/pinterest-feed";
  *
  * Hand-rolled route instead of the app/sitemap.ts metadata route because the
  * latter cannot emit the stylesheet PI. The URL set is identical to what the
- * metadata route produced (static routes + every design, newest-first pages).
+ * metadata route produced, plus prepared nonempty collection landing pages.
  */
 
 // Safety-net TTL matching the previous metadata route's revalidate.
@@ -82,11 +83,17 @@ export async function GET(): Promise<NextResponse> {
     };
   });
 
+  const collectionEntries: SitemapEntry[] = (await fetchFeaturedCollections(config.collectionPages)).map(collection => ({
+    url: `https://${config.domain}${collectionPath(collection.collection)}`,
+    priority: 0.8,
+    changefreq: "monthly",
+  }));
+
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>`,
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...[...staticRoutes, ...designEntries].map(entryXml),
+    ...[...staticRoutes, ...collectionEntries, ...designEntries].map(entryXml),
     "</urlset>",
     "",
   ].join("\n");

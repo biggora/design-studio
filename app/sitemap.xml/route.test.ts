@@ -5,11 +5,13 @@ import { Design } from "@/types/design";
 
 const getSiteConfig = vi.fn();
 const fetchDesigns = vi.fn();
+const fetchFeaturedCollections = vi.fn();
 
 vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
   fetchDesigns: (page: number, q: string, collection: string, itemsPerPage: number) =>
     fetchDesigns(page, q, collection, itemsPerPage),
+  fetchFeaturedCollections: (...args: unknown[]) => fetchFeaturedCollections(...args),
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -36,6 +38,7 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 
 beforeEach(() => {
   getSiteConfig.mockReset().mockResolvedValue({ name: "ThreadQuirk", domain: "threadquirk.test" });
+  fetchFeaturedCollections.mockReset().mockResolvedValue([]);
   // One page of designs; the loop stops when a page comes back short.
   fetchDesigns.mockReset().mockResolvedValue({
     designs: [makeDesign(), makeDesign({ id: "id-2", slug: "second-design" })],
@@ -44,6 +47,13 @@ beforeEach(() => {
 });
 
 describe("/sitemap.xml", () => {
+  it("includes only promoted nonempty collection canonicals with XML escaping", async () => {
+    fetchFeaturedCollections.mockResolvedValue([{collection: "Cats & Dogs", total: 2}]);
+    const {GET} = await import("@/app/sitemap.xml/route");
+    const xml = await (await GET()).text();
+    expect(xml).toContain("<loc>https://threadquirk.test/designs?collection=Cats+%26+Dogs</loc>");
+    expect(xml).not.toContain("?search=");
+  });
   it("serves the sitemap protocol document with the stylesheet PI", async () => {
     const { GET } = await import("@/app/sitemap.xml/route");
     const response = await GET();

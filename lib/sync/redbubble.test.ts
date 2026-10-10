@@ -4,6 +4,7 @@ import {
   extractExternalIdFromUrl,
   RequestPacer,
   syncRedbubbleToSupabase,
+  writeDesignsToSupabase,
   parseShopNextData,
   buildArtworkImageUrl,
   extractClassicTeeMockupUrl,
@@ -1414,6 +1415,33 @@ describe("syncRedbubbleToSupabase — collections", () => {
 
   const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
   const productB = "https://www.redbubble.com/i/sticker/Design-B-by-someartist/22222222.ST123";
+
+  it.each(["redbubble", "pod-studio"])("keeps reviewed memberships for %s rows through sync and dry-run", async (source) => {
+    const fixture: Parameters<typeof writeDesignsToSupabase>[0] = {
+      productLinks: [productA], designs: [{externalId: 11111111, title: "Design A", description: "", keywords: "cat",
+        externalLink: productA, externalImageUrl: "https://ih1.redbubble.net/art.jpg", category: "", collection: "no_collection",
+        collections: [], imageName: null, backgroundColor: "#FFFFFF", backgroundColors: "", shared: false, props: null}],
+      collections: [{externalId: 100, title: "Cats", description: null, coverImageUrl: null}],
+      collectionsComplete: true, errors: [], warnings: [],
+      fetchShopApPages: async () => new Map(), close: async () => {},
+    };
+    const stored = {externalId: 11111111, source, props: {mockup_tshirt: "keep", curatedCollections: ["Cats"]}};
+    selectByIdResponses = [{data: [stored], error: null}];
+    const dry = await writeDesignsToSupabase(fixture, baseOptions({dryRun: true}));
+    expect(dry.plan?.update[0].collection).toBe("Cats");
+    expect(dry.plan?.links).toEqual([{externalId: 11111111, collections: [100]}]);
+    expect(upsertCalls()).toEqual([]);
+
+    selectByIdResponses = [{data: [stored], error: null}];
+    const real = await writeDesignsToSupabase(fixture, baseOptions());
+    expect(real.errors).toBe(0);
+    expect(updateCalls()[0].changes.collection).toBe("Cats");
+    expect(updateCalls()[0].changes).not.toHaveProperty("props");
+    expect(forTable(upsertCalls(), "design_collections")[0].rows)
+      .toEqual([{designId: "design-id-11111111", collectionId: "col-id-100"}]);
+    expect(deleteCalls().some(call => call.filters.some(filter => filter.op === "eq" && filter.col === "collectionId" && filter.val === "col-id-100")))
+      .toBe(false);
+  });
 
   function mockShopWithCollections() {
     const shopPage = nextDataHtml({
