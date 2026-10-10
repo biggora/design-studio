@@ -82,7 +82,7 @@ export function Carousel({
   };
 
   return (
-    <section className="relative w-full -mt-16">
+    <section className="relative w-full">
       <Slider
         ref={sliderRef}
         {...{ ...defaultSettings, ...settings, autoplay }}
@@ -100,7 +100,6 @@ export function Carousel({
                 src={item.image}
                 alt={item.title}
                 fill
-                priority={index === 0}
                 sizes="100vw"
                 style={{ objectFit: "cover" }}
               />

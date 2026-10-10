@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { getSiteConfig, fetchDesigns, fetchFeaturedCollections } from "@/utils/database";
 import { Design } from "@/types/design";
 import { SiteConfig, CarouselSlide } from "@/lib/store";
@@ -6,7 +7,10 @@ import { Carousel } from "@/app/components/Carousel";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
-import {CollectionLinks} from "@/app/components/CollectionLinks";
+import {Input} from "@/components/ui/input";
+import {Button} from "@/components/ui/button";
+import {collectionPath} from "@/lib/collections";
+import defaultConfig from "@/config/config.json";
 
 // Bundled fallback: shown when config.slides is absent, empty, or malformed.
 const defaultCarouselItems: CarouselSlide[] = [
@@ -33,7 +37,7 @@ const defaultCarouselItems: CarouselSlide[] = [
   },
 ];
 
-// Every slide must route somewhere: the hero is the funnel's first screen.
+// Every slide retains a route to the catalog.
 const DEFAULT_CTA_LABEL = "Browse designs";
 const DEFAULT_CTA_HREF = "/designs";
 
@@ -78,22 +82,22 @@ async function getFeaturedDesigns(): Promise<FeaturedDesignsProps> {
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
-  const title = `${config.name} - ${config.intro}`;
+  const home = {...defaultConfig.home, ...config.home};
+  const title = `${home.title} - ${config.name}`;
 
   return {
     title,
-    description: config.description,
-    keywords: config.keywords,
+    description: home.description,
     alternates: { canonical: "/" },
     openGraph: {
       url: `https://${config.domain}`,
       type: "website",
       title,
-      description: config.description,
+      description: home.description,
     },
     twitter: {
       title,
-      description: config.description,
+      description: home.description,
     },
   };
 }
@@ -101,25 +105,42 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function Home() {
   const { featuredDesigns, config } = await getFeaturedDesigns();
   const collections = await fetchFeaturedCollections(config.collectionPages);
+  const home = {...defaultConfig.home, ...config.home};
 
   return (
     <>
-      <Carousel carouselItems={resolveCarouselItems(config.slides)} />
-
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
-        <section className="text-center mb-8 bg-primary text-primary-foreground py-8 rounded-lg">
-          <h1 className="text-4xl font-bold mb-3">
-            {config.name}: {config.intro}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
+        <section aria-labelledby="home-heading" className="mb-6 sm:mb-8">
+          <h1 id="home-heading" className="text-3xl sm:text-4xl font-bold mb-3 text-foreground">
+            {home.heading}
           </h1>
-          {config.subtitle && (
-            <p className="text-xl text-primary-foreground/90">
-              {config.subtitle}
-            </p>
-          )}
+          <p className="text-muted-foreground max-w-2xl mb-4">{home.description}</p>
+          <form action="/designs" method="get" role="search" aria-label="Search print catalog" className="max-w-2xl">
+            <label htmlFor="home-search" className="block font-medium mb-2 text-foreground">Search prints</label>
+            <div className="flex gap-2">
+              <Input id="home-search" name="search" type="search" placeholder="Try cat lover gift" className="min-w-0 h-11" />
+              <Button type="submit" className="min-h-11">Search</Button>
+            </div>
+          </form>
+          <Link href="/designs" className="inline-flex items-center min-h-11 mt-2 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Browse all prints</Link>
         </section>
-        <CollectionLinks collections={collections} />
-        <FeaturedDesigns title="Featured Designs" designs={featuredDesigns} />
+        {collections.length > 0 && (
+          <nav aria-label="Browse by interest" className="mb-8">
+            <h2 className="text-xl font-semibold mb-3 text-foreground">Browse by interest</h2>
+            <ul className="flex flex-wrap gap-2">
+              {collections.map(collection => (
+                <li key={collection.collection}>
+                  <Link href={collectionPath(collection.collection)} className="inline-flex items-center min-h-11 border border-input rounded-md px-2 py-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    {collection.heading || collection.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+        <FeaturedDesigns title="Latest Prints" designs={featuredDesigns} compactOnMobile />
       </div>
+      <Carousel carouselItems={resolveCarouselItems(config.slides)} />
     </>
   );
 }

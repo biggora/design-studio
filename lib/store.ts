@@ -66,6 +66,8 @@ export interface SiteConfig {
   about: AboutConfig;
   /** Promoted collection pages, optionally JSON-encoded in the studio table. */
   collectionPages?: CollectionPage[] | string;
+  /** Home discovery copy; studio rows can override home.title/heading/description. */
+  home?: {title: string; heading: string; description: string};
 }
 
 interface SiteConfigStore {
