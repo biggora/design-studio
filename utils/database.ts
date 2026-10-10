@@ -13,6 +13,7 @@ import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestRe
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
 import {getMockupUrl} from "@/lib/image";
+import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -168,23 +169,27 @@ export async function fetchDesigns(
     const safePage = Math.max(1, Number.isInteger(page) ? page : 1);
     const safeLimit = Math.max(1, Math.min(100, Number.isInteger(itemsPerPage) ? itemsPerPage : 12));
     const offset = (safePage - 1) * safeLimit;
+    const searchTerms = getSearchTerms(searchQuery);
+    if (searchQuery.trim() && !searchTerms.length) return {designs: [], total: 0};
 
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
-        const start = offset;
-        const end = offset + safeLimit - 1;
+        // Search needs every matching candidate to rank before pagination.
+        const start = searchTerms.length ? 0 : offset;
+        const end = searchTerms.length ? 99 : offset + safeLimit - 1;
+        const keywordFilters = keywords.map(k =>
+            `keywords.ilike."%${k.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}%"`).join(",");
+        const termFilters = searchTerms.map(term =>
+            `or(title.ilike.%${term}%,keywords.ilike.%${term}%,description.ilike.%${term}%)`);
+        if (keywords.length) termFilters.push(`or(${keywordFilters})`);
+        const filters = searchTerms.length ? `and(${termFilters.join(",")})` : keywordFilters;
 
         const runLegacyQuery = async (from = start, to = end) => {
             let query = supabaseClient.from("designs").select("*", {count: "exact"});
-            if (searchQuery) {
-                query = query.ilike("title", `%${searchQuery}%`);
-            }
+            if (filters) query = query.or(filters);
             if (collection) {
                 query = query.eq("collection", collection);
-            }
-            if (keywords.length) {
-                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
             }
             query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
             return query.range(from, to);
@@ -194,30 +199,26 @@ export async function fetchDesigns(
             let query = supabaseClient
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))", {count: "exact"});
-            if (searchQuery) {
-                query = query.ilike("title", `%${searchQuery}%`);
-            }
+            if (filters) query = query.or(filters);
             query = query.eq("design_collections.collections.title", collection);
-            if (keywords.length) {
-                query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
-            }
             query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
             return query.range(from, to);
         };
 
-        const runInitial = collection ? runJoinQuery : runLegacyQuery;
-        let {data, error, count} = await runInitial();
+        let runQuery = collection ? runJoinQuery : runLegacyQuery;
+        let {data, error, count} = await runQuery();
 
         // Out-of-range page: re-run the same query kind with range(0, 0) to get
         // the real count, without treating it as a join-vs-legacy fallback signal.
         if (error?.code === "PGRST103") {
-            ({count} = await runInitial(0, 0));
+            ({count} = await runQuery(0, 0));
             return {designs: [], total: count || 0};
         }
 
         // Fall back to the legacy single-collection filter if the join errors
         // (tables not migrated yet) or matches nothing.
         if (collection && (error || !count)) {
+            runQuery = runLegacyQuery;
             ({data, error, count} = await runLegacyQuery());
 
             if (error?.code === "PGRST103") {
@@ -229,6 +230,21 @@ export async function fetchDesigns(
         if (error) {
             console.error("Error fetching designs:", error);
             return {designs: [], total: 0};
+        }
+
+        if (searchTerms.length) {
+            const rows = data || [];
+            while (rows.length < (count || 0)) {
+                const batch = await runQuery(rows.length, rows.length + 99);
+                if (batch.error) {
+                    console.error("Error fetching search candidates:", batch.error);
+                    return {designs: [], total: 0};
+                }
+                if (!batch.data?.length) break;
+                rows.push(...batch.data);
+            }
+            const ranked = rankSearchDesigns(rows.map(mapSupabaseRowToDesign), searchTerms);
+            return {designs: ranked.slice(offset, offset + safeLimit), total: ranked.length};
         }
 
         // Convert data to Design[] using appropriate type checking
@@ -243,9 +259,9 @@ export async function fetchDesigns(
         let base = "FROM designs WHERE 1";
         const params: (string | number)[] = [];
 
-        if (searchQuery) {
-            base += " AND title LIKE ?";
-            params.push(`%${searchQuery}%`);
+        for (const term of searchTerms) {
+            base += " AND (LOWER(COALESCE(title, '')) LIKE ? OR LOWER(COALESCE(keywords, '')) LIKE ? OR LOWER(COALESCE(description, '')) LIKE ?)";
+            params.push(`%${term}%`, `%${term}%`, `%${term}%`);
         }
         if (collection) {
             base += withCollectionJoin
@@ -267,9 +283,10 @@ export async function fetchDesigns(
     const runMySQLQuery = async (withCollectionJoin: boolean) => {
         const {base, params} = buildBase(withCollectionJoin);
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
-            `SELECT * ${base} ORDER BY createdAt DESC, id DESC LIMIT ? OFFSET ?`,
-            [...params, safeLimit, offset],
+            `SELECT * ${base} ORDER BY createdAt DESC, id DESC${searchTerms.length ? "" : " LIMIT ? OFFSET ?"}`,
+            searchTerms.length ? params : [...params, safeLimit, offset],
         );
+        if (searchTerms.length) return {rows, total: rows.length};
         const [countRows] = await pool.query<mysql.RowDataPacket[]>(
             `SELECT COUNT(*) as total ${base}`,
             params,
@@ -292,6 +309,10 @@ export async function fetchDesigns(
 
     // Convert rows to Design[]
     const designs: Design[] = result.rows.map(mapRowToDesign);
+    if (searchTerms.length) {
+        const ranked = rankSearchDesigns(designs, searchTerms);
+        return {designs: ranked.slice(offset, offset + safeLimit), total: ranked.length};
+    }
 
     return {designs, total: result.total};
 }
