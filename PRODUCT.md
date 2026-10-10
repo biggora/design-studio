@@ -26,7 +26,7 @@ A storefront that maintains itself. The artist publishes once on their marketpla
 ## Operating Context
 
 - **Operator workflow:** publish designs on Redbubble → scheduled sync (an external scheduler POSTing `/api/sync/redbubble` with the `x-sync-secret` header, or manual `npm run sync:redbubble`) upserts the `designs` table → the storefront reflects the shop. Note: Vercel Cron cannot drive the sync endpoint as-is — it issues GET while the route is POST-only with header auth (see `docs/DEPLOYMENT_AND_CONFIGURATION.md`).
-- **Buyer workflow:** land on home (search, interest links and latest prints; carousel below) → browse/search/filter the `/designs` catalog with pagination → open a design detail → follow a shop link to the marketplace listing → purchase there; share links for social redistribution.
+- **Buyer workflow:** land on home (hero carousel, search immediately below, interest links and latest prints) → browse/search/filter the `/designs` catalog with pagination → open a design detail → follow a shop link to the marketplace listing → purchase there; share links for social redistribution.
 - **Deployment:** Vercel (with cron) or Docker; database is Supabase (PostgreSQL, default) or MySQL via `DATABASE_PROVIDER`; all brand, domain, social, and marketplace-link settings are runtime config.
 - **Sync reality:** Redbubble sits behind Cloudflare. Browser mode may require one manual challenge pass persisted to a storage-state file; serverless environments cannot hold persistent browser sessions, so the Playwright runner prefers a machine/VM. Cheerio fallback trades coverage for simplicity.
 

@@ -109,6 +109,7 @@ export default async function Home() {
 
   return (
     <>
+      <Carousel carouselItems={resolveCarouselItems(config.slides)} />
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
         <section aria-labelledby="home-heading" className="mb-6 sm:mb-8">
           <h1 id="home-heading" className="text-3xl sm:text-4xl font-bold mb-3 text-foreground">
@@ -140,7 +141,6 @@ export default async function Home() {
         )}
         <FeaturedDesigns title="Latest Prints" designs={featuredDesigns} compactOnMobile />
       </div>
-      <Carousel carouselItems={resolveCarouselItems(config.slides)} />
     </>
   );
 }

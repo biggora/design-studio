@@ -82,7 +82,7 @@ export function Carousel({
   };
 
   return (
-    <section className="relative w-full">
+    <section aria-label="Design highlights" className="relative w-full">
       <Slider
         ref={sliderRef}
         {...{ ...defaultSettings, ...settings, autoplay }}
@@ -101,6 +101,7 @@ export function Carousel({
                 alt={item.title}
                 fill
                 sizes="100vw"
+                priority={index === 0}
                 style={{ objectFit: "cover" }}
               />
               <div className="absolute inset-0 bg-primary/60 flex flex-col justify-center items-center text-center p-4">

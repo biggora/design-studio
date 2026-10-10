@@ -67,7 +67,7 @@ npm run designs:background:dry -- --all --color=auto  # same, --dry-run preview 
 
 Collection profiles may also provide an optional short `heading`, used for the visible H1 and navigation labels while `title` remains the metadata title. On a selected collection page, neighboring theme links follow the results/pagination so they do not push mobile prints below the first screen. After updating `collectionPages`, use the authenticated config revalidation endpoint or allow the existing five-minute cache TTL to refresh; CLI scripts use `loadSiteConfig` for uncached reads.
 
-**Home discovery:** optional `home.title`, `home.heading`, and `home.description` override the JSON defaults through studio dot-notation rows. The server-rendered homepage starts with a native GET search to `/designs`, prepared collection links and the latest five designs, followed by the configured carousel. `compactOnMobile` in `FeaturedDesigns`/`DesignCard` is enabled for the homepage only: two cards per row with uncropped media and title links; detail descriptions remain available. Other grids retain their defaults.
+**Home discovery:** optional `home.title`, `home.heading`, and `home.description` override the JSON defaults through studio dot-notation rows. The configured carousel opens the homepage; immediately below it, the server-rendered native GET search leads to `/designs`, followed by prepared collection links and the latest five designs. Keep search outside the rotating slides so it has a stable position. `compactOnMobile` in `FeaturedDesigns`/`DesignCard` is enabled for the homepage only: two cards per row with uncropped media and title links; detail descriptions remain available. Other grids retain their defaults.
 
 ## Styling / design system
 

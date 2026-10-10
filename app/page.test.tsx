@@ -23,7 +23,7 @@ beforeEach(() => {
 });
 
 describe("home catalog discovery", () => {
-  it("puts a native catalog search and crawlable themes before prints and slides", async () => {
+  it("places the carousel first, followed by native search, crawlable themes and prints", async () => {
     const {default: Home} = await import("./page");
     const html = renderToStaticMarkup(await Home());
     const $ = load(html);
@@ -36,7 +36,7 @@ describe("home catalog discovery", () => {
     expect($("h1")).toHaveLength(1);
     expect(html.indexOf('<form')).toBeLessThan(html.indexOf('data-testid="prints"'));
     expect(html.indexOf('Browse by interest')).toBeLessThan(html.indexOf('data-testid="prints"'));
-    expect(html.indexOf('data-testid="prints"')).toBeLessThan(html.indexOf('data-testid="carousel"'));
+    expect(html.indexOf('data-testid="carousel"')).toBeLessThan(html.indexOf('<form'));
     expect($('[data-testid="prints"] h2').text()).toBe("Latest Prints");
   });
 
