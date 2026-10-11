@@ -21,7 +21,7 @@ describe("root metadata", () => {
       domain: "other.example.test",
     });
     const metadata = await generateMetadata();
-    expect(metadata.metadataBase?.href).toBe("https://other.example.test/");
+    expect(metadata.metadataBase?.toString()).toBe("https://other.example.test/");
     expect(metadata.applicationName).toBe("Other Studio");
   });
 
