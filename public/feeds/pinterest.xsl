@@ -86,7 +86,7 @@
       </head>
       <body>
         <div class="band">
-          <div class="brand">ThreadQuirk</div>
+          <div class="brand"><xsl:value-of select="rss/channel/title"/></div>
           <div class="sub">RSS feed — Pinterest auto-publish (one feed per board)</div>
         </div>
         <main>

@@ -13,6 +13,18 @@ vi.mock("@/app/components/JsonLd", () => ({ JsonLd: () => null }));
 vi.mock("@/app/wrapper", () => ({ default: () => null }));
 
 describe("root metadata", () => {
+  it("uses the deployment's configured domain and brand", async () => {
+    const { generateMetadata } = await import("./layout");
+    getSiteConfig.mockResolvedValue({
+      ...baseConfig,
+      name: "Other Studio",
+      domain: "other.example.test",
+    });
+    const metadata = await generateMetadata();
+    expect(metadata.metadataBase?.href).toBe("https://other.example.test/");
+    expect(metadata.applicationName).toBe("Other Studio");
+  });
+
   it("emits the Pinterest p:domain_verify tag only when configured", async () => {
     const { generateMetadata } = await import("./layout");
     getSiteConfig.mockResolvedValue({

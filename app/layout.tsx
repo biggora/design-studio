@@ -138,7 +138,7 @@ export default async function RootLayout({
           <link rel="stylesheet" crossOrigin="anonymous" href={themeLink} />
         ) : null}
         {newConfig?.analytics?.google ? (
-          <AnalyticsGate gaId={newConfig.analytics.google} />
+          <AnalyticsGate gaId={newConfig.analytics.google} domain={newConfig.domain} />
         ) : null}
         <ContextWrapper config={newConfig}>
           <Header />

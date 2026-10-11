@@ -4,12 +4,13 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import { useCookieConsent } from "@/lib/consent";
 
 /**
- * Mounts Google Analytics only after the visitor accepted cookies — nothing
- * loads before the choice (or after a decline), and accepting turns it on
- * without a reload.
+ * Mounts Google Analytics only on the configured site after cookie consent.
+ * Local and preview copies sharing the database must not send production events.
  */
-export function AnalyticsGate({ gaId }: { gaId: string }) {
+export function AnalyticsGate({ gaId, domain }: { gaId: string; domain: string }) {
   const consent = useCookieConsent();
-  if (consent !== "accepted") return null;
+  if (consent !== "accepted" || typeof window === "undefined") return null;
+  const siteHostname = new URL(`https://${domain}`).hostname.replace(/^www\./, "");
+  if (window.location.hostname.replace(/^www\./, "") !== siteHostname) return null;
   return <GoogleAnalytics gaId={gaId} />;
 }

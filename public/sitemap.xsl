@@ -73,7 +73,7 @@
       </head>
       <body>
         <div class="band">
-          <div class="brand">ThreadQuirk</div>
+          <div class="brand"><xsl:value-of select="s:urlset/s:url[1]/s:loc"/></div>
           <div class="sub">Sitemap — every public URL of this site</div>
         </div>
         <main>

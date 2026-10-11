@@ -9,7 +9,7 @@ import { UUID_PATTERN, SLUG_PATTERN } from "@/lib/slug";
  * GET /p/[slug]/pin.jpg — the 1000×1500 (2:3) pin image for a design.
  *
  * The mockup is fetched server-side from the allow-listed Redbubble image host
- * (Pinterest only ever sees this threadquirk.lv URL — every feed URL must stay
+ * (Pinterest only ever sees this site's URL — every feed URL must stay
  * on the claimed domain). The optional ?v= version param from the feed is
  * ignored here; it exists purely so a changed design gets a fresh URL past
  * caches. Upstream failures answer 503 with no-store so the CDN never pins a
