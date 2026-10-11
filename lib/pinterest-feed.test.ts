@@ -9,6 +9,7 @@ import {
   PIN_HEIGHT,
   PIN_WIDTH,
   assignCollectionSlugs,
+  assignDesignsToFeeds,
   buildCollectionFeedXml,
   buildFeedIndexXml,
   buildFeedItem,
@@ -18,6 +19,7 @@ import {
   feedTitle,
   pinImageUrl,
   pinLandingPath,
+  pinterestFeedCollection,
   toRfc822,
 } from "@/lib/pinterest-feed";
 
@@ -285,5 +287,260 @@ describe("buildFeedIndexXml", () => {
 describe("feed stylesheet", () => {
   it("exists in public/ where the xml-stylesheet PI points", () => {
     expect(existsSync(join(process.cwd(), "public", "feeds", "pinterest.xsl"))).toBe(true);
+  });
+});
+
+const FEED_REFS = [
+  { title: "Programming", slug: "programming" },
+  { title: "Open Source Together", slug: "open-source-together" },
+  { title: "Pet Lovers", slug: "pet-lovers" },
+];
+
+function permutations<T>(items: readonly T[]): T[][] {
+  if (items.length <= 1) return [[...items]];
+  return items.flatMap((item, index) =>
+    permutations([...items.slice(0, index), ...items.slice(index + 1)]).map(rest => [item, ...rest]),
+  );
+}
+
+describe("pinterestFeedCollection", () => {
+  it("picks the primary collection when it is one of the design's feed collections", () => {
+    expect(pinterestFeedCollection({ collection: "Pet Lovers" }, FEED_REFS)).toBe("Pet Lovers");
+    expect(pinterestFeedCollection({ collection: "Programming" }, FEED_REFS)).toBe("Programming");
+  });
+
+  it("falls back to the first slug alphabetically when the primary label is empty", () => {
+    expect(pinterestFeedCollection({ collection: "" }, FEED_REFS)).toBe("Open Source Together");
+  });
+
+  it("falls back to the first slug alphabetically when the primary is not a membership", () => {
+    expect(pinterestFeedCollection({ collection: "Retro" }, FEED_REFS)).toBe("Open Source Together");
+  });
+
+  it("returns undefined when the design has no feed collections", () => {
+    expect(pinterestFeedCollection({ collection: "Pet Lovers" }, [])).toBeUndefined();
+    expect(pinterestFeedCollection({ collection: "" }, [])).toBeUndefined();
+  });
+
+  it("returns the only collection when there is just one", () => {
+    expect(pinterestFeedCollection({ collection: "" }, [{ title: "Solo", slug: "solo" }])).toBe("Solo");
+  });
+
+  it("gives the same answer for every ordering of the input collections", () => {
+    for (const order of permutations(FEED_REFS)) {
+      expect(pinterestFeedCollection({ collection: "" }, order)).toBe("Open Source Together");
+      expect(pinterestFeedCollection({ collection: "Programming" }, order)).toBe("Programming");
+    }
+  });
+
+  it("orders by slug, not by title", () => {
+    const refs = [
+      { title: "Alpha", slug: "z-alpha" },
+      { title: "Zulu", slug: "a-zulu" },
+    ];
+    expect(pinterestFeedCollection({ collection: "" }, refs)).toBe("Zulu");
+    expect(pinterestFeedCollection({ collection: "" }, [...refs].reverse())).toBe("Zulu");
+  });
+
+  it("compares slugs by plain code unit, not by locale or numeric order", () => {
+    // "feed-10" < "feed-9" by code unit (numeric collation would say otherwise).
+    expect(
+      pinterestFeedCollection({ collection: "" }, [
+        { title: "Nine", slug: "feed-9" },
+        { title: "Ten", slug: "feed-10" },
+      ]),
+    ).toBe("Ten");
+    // Uppercase sorts before lowercase by code unit (localeCompare would put "a" first).
+    expect(
+      pinterestFeedCollection({ collection: "" }, [
+        { title: "Lower", slug: "a-feed" },
+        { title: "Upper", slug: "B-feed" },
+      ]),
+    ).toBe("Upper");
+    // A prefix sorts before its extension.
+    expect(
+      pinterestFeedCollection({ collection: "" }, [
+        { title: "Cats 2", slug: "cats-2" },
+        { title: "Cats", slug: "cats" },
+      ]),
+    ).toBe("Cats");
+  });
+
+  it("breaks an identical-slug tie by title and stays order independent", () => {
+    const refs = [
+      { title: "b-title", slug: "same" },
+      { title: "B-title", slug: "same" },
+      { title: "a-title", slug: "same" },
+    ];
+    for (const order of permutations(refs)) {
+      // Code-unit order: "B-title" < "a-title" < "b-title".
+      expect(pinterestFeedCollection({ collection: "" }, order)).toBe("B-title");
+    }
+  });
+});
+
+// Overlapping fixture: designs in 2-3 collections, some with none, some whose
+// primary label is not among their memberships.
+const FIXTURE_FEED_TITLES = ["Cats", "Space", "Dogs", "Tech Memes", "Retro"];
+
+function fixtureDesigns(): Design[] {
+  const base = (id: string, collection: string) =>
+    makeDesign({ id, slug: `slug-${id}`, title: `Design ${id}`, collection });
+  return [
+    base("d1", "Cats"),
+    base("d2", "Space"),
+    base("d3", "Dogs"),
+    base("d4", ""),
+    base("d5", "Retro"),
+    base("d6", "Tech Memes"),
+    base("d7", ""),
+    base("d8", "Orphan"),
+    base("d9", "Dogs"),
+    base("d10", "Cats"),
+  ];
+}
+
+function fixtureMemberships(): Map<string, string[]> {
+  return new Map([
+    ["d1", ["Cats", "Space"]],
+    ["d2", ["Cats", "Space"]],
+    ["d3", ["Cats", "Dogs", "Retro"]],
+    ["d4", ["Space", "Retro", "Tech Memes"]],
+    ["d5", ["Space", "Tech Memes"]], // primary "Retro" is not a membership
+    ["d6", ["Tech Memes"]],
+    // d7: no memberships at all
+    ["d8", ["Orphan"]], // a collection without a feed
+    ["d9", ["Dogs", "Cats", "Space"]],
+    ["d10", ["Retro", "Cats"]],
+  ]);
+}
+
+function fixtureFeedSlugs(): Map<string, string> {
+  return assignCollectionSlugs(FIXTURE_FEED_TITLES.map(title => ({ title })));
+}
+
+function idsByFeed(feeds: Map<string, Design[]>): Record<string, string[]> {
+  return Object.fromEntries([...feeds].map(([title, designs]) => [title, designs.map(design => design.id)]));
+}
+
+describe("assignDesignsToFeeds", () => {
+  it("places each design in exactly one feed, by primary else first slug", () => {
+    const feeds = assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs());
+    expect(idsByFeed(feeds)).toEqual({
+      Cats: ["d1", "d10"],
+      Space: ["d2", "d5"],
+      Dogs: ["d3", "d9"],
+      Retro: ["d4"],
+      "Tech Memes": ["d6"],
+    });
+  });
+
+  it("never lists a design in more than one feed", () => {
+    const feeds = assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs());
+    const placed = [...feeds.values()].flat().map(design => design.id);
+    expect(new Set(placed).size).toBe(placed.length);
+  });
+
+  it("covers every design with at least one feed collection, and only those", () => {
+    const designs = fixtureDesigns();
+    const memberships = fixtureMemberships();
+    const slugs = fixtureFeedSlugs();
+    const feeds = assignDesignsToFeeds(designs, memberships, slugs);
+    const placed = new Set([...feeds.values()].flat().map(design => design.id));
+    const expected = new Set(
+      designs
+        .filter(design => (memberships.get(design.id) ?? []).some(title => slugs.has(title)))
+        .map(design => design.id),
+    );
+    expect(expected.size).toBeGreaterThanOrEqual(5);
+    expect(placed).toEqual(expected);
+  });
+
+  it("keeps designs without any (feed) collection out of every feed", () => {
+    const feeds = assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs());
+    const placed = [...feeds.values()].flat().map(design => design.id);
+    expect(placed).not.toContain("d7"); // no memberships
+    expect(placed).not.toContain("d8"); // only a collection without a feed
+  });
+
+  it("preserves input order within each feed", () => {
+    const reversed = [...fixtureDesigns()].reverse();
+    const feeds = assignDesignsToFeeds(reversed, fixtureMemberships(), fixtureFeedSlugs());
+    expect(idsByFeed(feeds)).toEqual({
+      Cats: ["d10", "d1"],
+      Space: ["d5", "d2"],
+      Dogs: ["d9", "d3"],
+      Retro: ["d4"],
+      "Tech Memes": ["d6"],
+    });
+  });
+
+  it("does not depend on the order of a design's memberships", () => {
+    const reversedMemberships = new Map(
+      [...fixtureMemberships()].map(([id, titles]) => [id, [...titles].reverse()]),
+    );
+    const feeds = assignDesignsToFeeds(fixtureDesigns(), reversedMemberships, fixtureFeedSlugs());
+    expect(idsByFeed(feeds)).toEqual(
+      idsByFeed(assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs())),
+    );
+  });
+
+  it("returns an empty map when nothing has a feed", () => {
+    expect(assignDesignsToFeeds(fixtureDesigns(), new Map(), fixtureFeedSlugs()).size).toBe(0);
+    expect(assignDesignsToFeeds([], fixtureMemberships(), fixtureFeedSlugs()).size).toBe(0);
+  });
+});
+
+// Golden output captured from the (untouched) item builder: the one-feed rule
+// must change which feed carries a design, never how an item is rendered.
+describe("feed items are unchanged by the one-feed rule", () => {
+  const keptDesign = makeDesign({
+    id: "d1",
+    slug: "retro-cat-moon-tee",
+    title: "Retro Cat & Moon <Tee>",
+    collection: "Cats",
+    description: "A <b>retro</b> cat on the moon. Shop https://x.example now",
+    externalId: 1,
+    externalLink: "https://www.redbubble.com/shop/ap/1",
+    keywords: "cat,moon",
+  });
+  const LISTING = "2026-10-06T07:00:00.000Z";
+  const EXPECTED_ITEM = [
+    "    <item>",
+    "      <title>Retro Cat &amp; Moon &lt;Tee&gt;</title>",
+    "      <link>https://threadquirk.test/p/retro-cat-moon-tee</link>",
+    '      <guid isPermaLink="true">https://threadquirk.test/p/retro-cat-moon-tee</guid>',
+    "      <description>A retro cat on the moon. Shop now</description>",
+    "      <pubDate>Tue, 06 Oct 2026 07:00:00 GMT</pubDate>",
+    '      <media:content url="https://threadquirk.test/p/retro-cat-moon-tee/pin.jpg?v=17bbe9" medium="image" type="image/jpeg" width="1000" height="1500"/>',
+    "    </item>",
+  ].join("\n");
+
+  function catsFeed(): Design[] {
+    const designs = [keptDesign, ...fixtureDesigns().filter(design => design.id !== "d1")];
+    return assignDesignsToFeeds(designs, fixtureMemberships(), fixtureFeedSlugs()).get("Cats") ?? [];
+  }
+
+  it("renders a kept design byte-for-byte as before", () => {
+    const kept = catsFeed().find(design => design.id === "d1");
+    expect(kept).toBeDefined();
+    expect(buildFeedItem("threadquirk.test", { design: kept as Design, listingPublishedAt: LISTING })).toBe(
+      EXPECTED_ITEM,
+    );
+  });
+
+  it("embeds that exact item in the collection feed that carries the design", () => {
+    const designs = catsFeed();
+    const xml = buildCollectionFeedXml({
+      siteName: "ThreadQuirk",
+      collection: { title: "Cats", description: "Feline friends" },
+      domain: "threadquirk.test",
+      designs,
+      earliestListingAt: { d1: LISTING },
+      now: new Date("2026-10-10T00:00:00.000Z"),
+    });
+    expect(xml).toContain(`\n${EXPECTED_ITEM}\n`);
+    expect((xml.match(/<item>/g) || []).length).toBe(designs.length);
+    expect(xml).toContain("<lastBuildDate>Sat, 10 Oct 2026 00:00:00 GMT</lastBuildDate>");
   });
 });

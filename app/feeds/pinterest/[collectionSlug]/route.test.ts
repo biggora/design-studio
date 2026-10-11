@@ -8,8 +8,8 @@ const fetchCollectionFeedDesigns = vi.fn();
 vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
   fetchFeedCollections: () => fetchFeedCollections(),
-  fetchCollectionFeedDesigns: (title: string, limit: number) =>
-    fetchCollectionFeedDesigns(title, limit),
+  fetchCollectionFeedDesigns: (title: string, limit: number, feedCollections: unknown) =>
+    fetchCollectionFeedDesigns(title, limit, feedCollections),
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -71,7 +71,11 @@ describe("/feeds/pinterest/[collectionSlug].xml", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
-    expect(fetchCollectionFeedDesigns).toHaveBeenCalledWith("Bugs, Tests and Hallucinations", 100);
+    // The full collection list is passed so the facade can assign each design to one feed.
+    expect(fetchCollectionFeedDesigns).toHaveBeenCalledWith("Bugs, Tests and Hallucinations", 100, [
+      { title: "Bugs, Tests and Hallucinations", description: "Tech memes" },
+      { title: "Cats", description: "" },
+    ]);
 
     const xml = await response.text();
     expect(xml).toContain('<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">');
@@ -112,6 +116,25 @@ describe("/feeds/pinterest/[collectionSlug].xml", () => {
     const response = await callRoute("cats");
     const xml = await response.text();
     expect((xml.match(/<item>/g) || []).length).toBe(100);
+  });
+
+  it("serves a well-formed empty RSS 2.0 feed when the collection owns no designs", async () => {
+    fetchFeedCollections.mockResolvedValue([{ title: "Cats", description: "Feline friends" }]);
+    fetchCollectionFeedDesigns.mockResolvedValue({ designs: [], earliestListingAt: {} });
+
+    const response = await callRoute("cats");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
+
+    const xml = await response.text();
+    expect(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>')).toBe(true);
+    expect(xml).toContain('<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">');
+    expect(xml).toContain("<channel>");
+    expect(xml).toContain("<title>ThreadQuirk – Cats</title>");
+    expect(xml).toContain("</channel>");
+    expect(xml).toContain("</rss>");
+    expect(xml).not.toContain("<item>");
+    expect(xml).not.toContain("<media:content");
   });
 
   it("404s for an unknown collection slug", async () => {

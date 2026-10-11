@@ -75,6 +75,60 @@ export function assignCollectionSlugs(collections: { title: string }[]): Map<str
   return bySlug;
 }
 
+export type FeedCollectionRef = { title: string; slug: string };
+
+/**
+ * Pinterest creates a separate Pin per feed item, so a design listed in several
+ * collection feeds would be pinned several times (duplicate pins read as spam).
+ * Each design therefore belongs to exactly ONE feed. `collections` are the
+ * design's collections that HAVE a feed. The design's primary `collection` wins
+ * when it is one of them; otherwise the first slug in plain code-unit order
+ * (title breaks ties), so the result never depends on input order or locale.
+ * Returns the title of that feed, or undefined when the design has no feed.
+ */
+export function pinterestFeedCollection(
+  design: Pick<Design, "collection">,
+  collections: readonly FeedCollectionRef[],
+): string | undefined {
+  if (!collections.length) return undefined;
+  if (design.collection && collections.some(entry => entry.title === design.collection)) {
+    return design.collection;
+  }
+  let best = collections[0];
+  for (const entry of collections) {
+    if (entry.slug < best.slug || (entry.slug === best.slug && entry.title < best.title)) best = entry;
+  }
+  return best.title;
+}
+
+/**
+ * Splits designs across feeds so that none appears in more than one (see
+ * pinterestFeedCollection). `membershipsByDesignId` maps design id → the titles
+ * of its collections; titles without a feed (absent from `feedSlugsByTitle`)
+ * are ignored. Returns feed title → designs, input order preserved per feed;
+ * designs with no feed appear in no list.
+ */
+export function assignDesignsToFeeds(
+  designs: readonly Design[],
+  membershipsByDesignId: ReadonlyMap<string, readonly string[]>,
+  feedSlugsByTitle: ReadonlyMap<string, string>,
+): Map<string, Design[]> {
+  const byFeed = new Map<string, Design[]>();
+  for (const design of designs) {
+    const refs: FeedCollectionRef[] = [];
+    for (const title of membershipsByDesignId.get(design.id) ?? []) {
+      const slug = feedSlugsByTitle.get(title);
+      if (slug !== undefined) refs.push({ title, slug });
+    }
+    const feed = pinterestFeedCollection(design, refs);
+    if (feed === undefined) continue;
+    const list = byFeed.get(feed);
+    if (list) list.push(design);
+    else byFeed.set(feed, [design]);
+  }
+  return byFeed;
+}
+
 export function escapeXml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

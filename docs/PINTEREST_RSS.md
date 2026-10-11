@@ -122,6 +122,42 @@ next itself; **no new dependency**.
   filter), so there is nothing extra to skip. If a visibility flag is added
   later, `fetchCollectionFeedDesigns` is the place to apply it.
 
+**One design, one feed.** Pinterest creates a separate Pin for every feed item
+it reads, so a design listed in several collection feeds would be pinned once
+per board (live check on 2026-10-11: 24 feeds held 290 items but only 225
+distinct designs), and duplicate Pins risk the account being flagged as spam.
+Each design is therefore an item in exactly **one** feed, chosen by
+`pinterestFeedCollection` / `assignDesignsToFeeds` (`lib/pinterest-feed.ts`):
+
+1. the design's primary collection (`designs.collection`), when it is one of
+   the design's collections and has a feed;
+2. otherwise the design's collection whose feed slug sorts first
+   alphabetically (plain code-unit order, not locale-aware);
+3. a design with no collections is in no feed.
+
+The choice is deterministic and depends only on stored data. A design belonging
+to Programming, Open Source Together and Pet Lovers whose primary collection is
+Open Source Together appears only in
+`/feeds/pinterest/open-source-together.xml`. Memberships come from
+`design_collections`; if that lookup fails, or a design has no join rows
+(legacy installs), its membership falls back to its primary `designs.collection`
+label — fail-safe, so a design is never placed in more feeds than before.
+
+The rule is applied after the eligibility rules above and before the 100-item
+cap. A feed left with no items is still served as a valid RSS 2.0 channel with
+no `<item>` (HTTP 200, never 404), because Pinterest is already connected to
+its URL.
+
+Only the Pinterest feeds are narrowed. The site's collection pages
+(`/designs?collection=…`), `/designs/[slug]`, the public API, the sitemap and
+`/p/[slug]` still list and show the design in **all** of its collections.
+
+> **Warning:** changing a design's primary collection later — or adding a
+> collection whose slug sorts earlier to a design that has no feed-backed
+> primary collection — moves its item to another feed. Pinterest then creates a
+> **new** Pin on that feed's board; the old Pin stays on the old board and must
+> be removed manually.
+
 **Collection slugs.** The `collections` table has no slug column, so feeds
 address collections by a deterministic derivation of the title
 (`collectionSlugFor` in `lib/pinterest-feed.ts`):
@@ -150,7 +186,9 @@ XML itself.
 A small RSS document listing every collection feed: item `<title>` is
 `{site name} – {collection}` (the Pinterest board name), `<link>` is the feed
 URL to paste into Pinterest, `<description>` carries the item count and the
-board description to paste. Same caching as the collection feeds.
+board description to paste. Same caching as the collection feeds. Counts
+reflect the one-feed rule (§1.3), so they sum to the number of distinct
+eligible designs.
 
 ---
 
@@ -189,7 +227,7 @@ it.
 
 | Feed URL (paste into Pinterest) | Board name | Board description | Items |
 |---|---|---|---|
-| `https://threadquirk.lv/feeds/pinterest/{collection-slug}.xml` | `{collection title}` | `{collections.description}` | eligible designs, ≤ 100 |
+| `https://threadquirk.lv/feeds/pinterest/{collection-slug}.xml` | `{collection title}` | `{collections.description}` | designs this feed owns (one-feed rule), ≤ 100 |
 
 The exact list of the site's 25 collections is deployment data — run
 `npm run feeds:list` against the production `.env` (or open
@@ -213,6 +251,9 @@ live, so the doc never drifts from the database.
 - **Stable guids**: `/p/{slug}` never changes for a design.
 - **No redirects**: the landing page never auto-redirects; it renders the
   design and the buy buttons.
+- **One design, one feed**: a design is an item in exactly one collection feed
+  (§1.3), so Pinterest never creates the same Pin on several boards. An emptied
+  feed still answers 200 with an empty channel.
 - **Duplicate-pin guard**: designs already pinned via the pod-uploader API
   (`design_social_posts`, `status = 'published'`) are excluded from feeds.
   Note this exclusion is fail-open: if the private social-posts table cannot
@@ -230,14 +271,16 @@ live, so the doc never drifts from the database.
 | `app/feeds/pinterest/[collectionSlug]/route.ts` | Per-collection RSS feed (the `.xml` URL rides on a rewrite). |
 | `public/feeds/pinterest.xsl` | Browser styling for feed previews (via `<?xml-stylesheet?>`). |
 | `app/feeds/pinterest.xml/route.ts` | Index of all feeds. |
-| `lib/pinterest-feed.ts` | Slug derivation, version hashes, RSS builders (pure, unit-tested). |
+| `lib/pinterest-feed.ts` | Slug derivation, one-feed assignment (`pinterestFeedCollection`, `assignDesignsToFeeds`), version hashes, RSS builders (pure, unit-tested). |
 | `lib/pin-image.tsx` | Pin composition (`next/og` + `sharp`). |
-| `utils/database.ts` | `fetchFeedCollections`, `fetchCollectionFeedDesigns` (Supabase + MySQL). |
+| `utils/database.ts` | `fetchFeedCollections`, `fetchCollectionFeedDesigns` (Supabase + MySQL; takes the feed collection list to apply the one-feed rule). |
 | `scripts/list-pinterest-feeds.ts` | `npm run feeds:list` — prints the setup table. |
 
 Tests: `lib/pinterest-feed.test.ts`, `utils/feed-database.test.ts`,
 `app/p/[slug]/page.test.ts`, `app/p/[slug]/pin.jpg/route.test.ts`,
 `app/feeds/…/route.test.ts` — covering RSS validity, one `media:content` per
-item, the claimed-domain rule, the 100-item cap, the API-pinned exclusion,
+item, the claimed-domain rule, the 100-item cap, the API-pinned exclusion, the
+one-feed rule (primary collection wins, else first slug alphabetically, no
+design in two feeds),
 above-the-fold button layout, the TeePublic-primary fallback, the 404 rules,
 and the 1000×1500 rendering with a mocked upstream.

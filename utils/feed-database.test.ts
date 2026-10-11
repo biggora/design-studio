@@ -64,7 +64,9 @@ function supabaseRow(overrides: Record<string, unknown>): Record<string, unknown
         externalLink: "https://www.redbubble.com/shop/ap/184507566",
         externalImageUrl: "https://ih1.redbubble.com/image.jpg",
         category: "no_category",
-        collection: "no_collection",
+        // Primary label: with no design_collections rows the one-feed rule falls
+        // back to it, so the default keeps designs in the "Space" feed.
+        collection: "Space",
         imageName: "",
         description: "Space art",
         keywords: "space",
@@ -75,6 +77,56 @@ function supabaseRow(overrides: Record<string, unknown>): Record<string, unknown
         shared: false,
         props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" },
         ...overrides,
+    };
+}
+
+// The feed-collections argument: every collection that has a feed.
+const SPACE_FEED = [{title: "Space", description: ""}];
+const SPACE_AND_CATS_FEEDS = [
+    {title: "Space", description: ""},
+    {title: "Cats", description: ""},
+];
+
+// design_collections join rows as PostgREST returns them for
+// select("designId, collections(title)").
+function membershipRows(memberships: Record<string, string[]>): {designId: string; collections: {title: string}}[] {
+    return Object.entries(memberships).flatMap(([designId, titles]) =>
+        titles.map(title => ({designId, collections: {title}})),
+    );
+}
+
+function stubMySQLEnv() {
+    vi.stubEnv("DATABASE_PROVIDER", "mysql");
+    vi.stubEnv("MYSQL_HOST", "localhost");
+    vi.stubEnv("MYSQL_USER", "user");
+    vi.stubEnv("MYSQL_PASSWORD", "pass");
+    vi.stubEnv("MYSQL_DATABASE", "db");
+}
+
+// The membership query is the only MySQL statement that starts with this prefix
+// (the designs query mentions design_collections too, but inside an EXISTS).
+function isMembershipSql(sql: unknown): boolean {
+    return String(sql).trimStart().startsWith("SELECT dc.designId");
+}
+
+function mysqlDesignRow(id: string, collection: string): Record<string, unknown> {
+    return {
+        id,
+        externalId: 184507566,
+        title: `Design ${id}`,
+        slug: `design-${id}`,
+        externalLink: "https://www.redbubble.com/shop/ap/184507566",
+        externalImageUrl: "https://ih1.redbubble.com/image.jpg",
+        category: "no_category",
+        collection,
+        imageName: "",
+        description: "Space art",
+        keywords: "space",
+        backgroundColors: "",
+        backgroundColor: "#FFFFFF",
+        createdAt: new Date("2026-10-07T08:10:00Z"),
+        updatedAt: null,
+        props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.jpg" },
     };
 }
 
@@ -145,7 +197,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 2);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 2, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["a", "b"]);
     });
 
@@ -164,7 +216,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["teepublic-only", "redbubble"]);
     });
 
@@ -180,7 +232,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["mockup-only"]);
         // The mockup requirement is one PostgREST or/is-null filter over the prop.
         const orStep = steps.designs.filter(step => step.method === "or")[0];
@@ -198,7 +250,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["fresh"]);
     });
 
@@ -210,7 +262,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["a"]);
     });
 
@@ -225,7 +277,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs.map(design => design.id)).toEqual(["legacy-row"]);
         const selects = steps.designs.filter(step => step.method === "select");
         expect(selects[0].args[0]).toContain("design_collections");
@@ -244,7 +296,7 @@ describe("fetchCollectionFeedDesigns", () => {
         };
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {earliestListingAt} = await fetchCollectionFeedDesigns("Space", 100);
+        const {earliestListingAt} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(earliestListingAt).toEqual({
             a: "2026-10-05T00:00:00.000Z",
             b: "2026-10-01T00:00:00.000Z",
@@ -261,6 +313,7 @@ describe("fetchCollectionFeedDesigns", () => {
             if (sql.includes("design_listings")) {
                 return [[{designId: "a", earliest: "2026-10-05 07:00:00.000"}], []];
             }
+            if (isMembershipSql(sql)) return [[{designId: "a", title: "Space"}], []];
             return [[{
                 id: "a",
                 externalId: 184507566,
@@ -269,7 +322,7 @@ describe("fetchCollectionFeedDesigns", () => {
                 externalLink: "https://www.redbubble.com/shop/ap/184507566",
                 externalImageUrl: "https://ih1.redbubble.com/image.jpg",
                 category: "no_category",
-                collection: "no_collection",
+                collection: "Space",
                 imageName: "",
                 description: "Space art",
                 keywords: "space",
@@ -282,7 +335,7 @@ describe("fetchCollectionFeedDesigns", () => {
         });
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs, earliestListingAt} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs, earliestListingAt} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
 
         expect(designs.map(design => design.id)).toEqual(["a"]);
         expect(earliestListingAt).toEqual({a: "2026-10-05T07:00:00.000Z"});
@@ -310,10 +363,190 @@ describe("fetchCollectionFeedDesigns", () => {
         });
 
         const {fetchCollectionFeedDesigns} = await importFacade();
-        const {designs} = await fetchCollectionFeedDesigns("Space", 100);
+        const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
         expect(designs).toEqual([]);
         expect(attempt).toBe(2);
         expect(String(mysqlQuery.mock.calls[1][0])).not.toContain("design_social_posts");
+    });
+});
+
+// A design in several collections must be carried by exactly one feed.
+describe("fetchCollectionFeedDesigns one feed per design", () => {
+    it("drops a Space+Cats design with primary Cats from Space's feed and keeps it in Cats's", async () => {
+        responses = {
+            designs: {data: [
+                supabaseRow({id: "primary-cats", collection: "Cats"}),
+                supabaseRow({id: "primary-space", collection: "Space"}),
+            ], error: null},
+            design_collections: {data: membershipRows({
+                "primary-cats": ["Space", "Cats"],
+                "primary-space": ["Space", "Cats"],
+            }), error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs.map(design => design.id)).toEqual(["primary-space"]);
+        expect(cats.designs.map(design => design.id)).toEqual(["primary-cats"]);
+    });
+
+    it("looks memberships up by the eligible design ids in design_collections", async () => {
+        responses = {
+            designs: {data: [supabaseRow({id: "a"}), supabaseRow({id: "b"})], error: null},
+            design_collections: {data: membershipRows({a: ["Space"], b: ["Space"]}), error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
+        const selects = steps.design_collections.filter(step => step.method === "select");
+        expect(selects[0].args[0]).toBe("designId, collections(title)");
+        const inStep = steps.design_collections.find(step => step.method === "in");
+        expect(inStep?.args).toEqual(["designId", ["a", "b"]]);
+    });
+
+    it("accepts the joined collections as an array as well as an object", async () => {
+        responses = {
+            designs: {data: [supabaseRow({id: "a", collection: "Cats"})], error: null},
+            design_collections: {data: [
+                {designId: "a", collections: [{title: "Space"}, {title: "Cats"}]},
+            ], error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs).toEqual([]);
+        expect(cats.designs.map(design => design.id)).toEqual(["a"]);
+    });
+
+    it("falls back to the alphabetically first feed slug when the primary is not a membership", async () => {
+        const feeds = [...SPACE_AND_CATS_FEEDS, {title: "Dogs", description: ""}];
+        responses = {
+            designs: {data: [supabaseRow({id: "a", collection: "Dogs"})], error: null},
+            // Memberships are Space and Cats; primary "Dogs" has a feed but isn't one of them.
+            design_collections: {data: membershipRows({a: ["Space", "Cats"]}), error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const byFeed: Record<string, string[]> = {};
+        for (const feed of feeds) {
+            const {designs} = await fetchCollectionFeedDesigns(feed.title, 100, feeds);
+            byFeed[feed.title] = designs.map(design => design.id);
+        }
+        // "cats" sorts before "space".
+        expect(byFeed).toEqual({Space: [], Cats: ["a"], Dogs: []});
+    });
+
+    it("falls back to the primary label without duplicates when the membership query errors", async () => {
+        responses = {
+            designs: {data: [
+                supabaseRow({id: "x", collection: "Cats"}),
+                supabaseRow({id: "y", collection: "Space"}),
+            ], error: null},
+            design_collections: {data: null, error: {message: "permission denied"}},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs.map(design => design.id)).toEqual(["y"]);
+        expect(cats.designs.map(design => design.id)).toEqual(["x"]);
+        expect(console.error).toHaveBeenCalled();
+    });
+
+    it("keeps a design with no join rows in the feed of its primary label only", async () => {
+        responses = {
+            designs: {data: [supabaseRow({id: "legacy", collection: "Space"})], error: null},
+            design_collections: {data: [], error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs.map(design => design.id)).toEqual(["legacy"]);
+        expect(cats.designs).toEqual([]);
+    });
+
+    it("applies the limit after the one-feed filter", async () => {
+        responses = {
+            designs: {data: [
+                // Newest two belong to Cats, so a cap applied before the filter would empty Space's feed.
+                supabaseRow({id: "a", collection: "Cats", createdAt: "2026-10-09T00:00:00.000Z"}),
+                supabaseRow({id: "b", collection: "Cats", createdAt: "2026-10-08T00:00:00.000Z"}),
+                supabaseRow({id: "c", createdAt: "2026-10-07T00:00:00.000Z"}),
+                supabaseRow({id: "d", createdAt: "2026-10-06T00:00:00.000Z"}),
+                supabaseRow({id: "e", createdAt: "2026-10-05T00:00:00.000Z"}),
+            ], error: null},
+            design_collections: {data: membershipRows({
+                a: ["Space", "Cats"],
+                b: ["Space", "Cats"],
+                c: ["Space"],
+                d: ["Space"],
+                e: ["Space"],
+            }), error: null},
+            design_social_posts: {data: [], error: null},
+            design_listings: {data: [], error: null},
+        };
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const {designs} = await fetchCollectionFeedDesigns("Space", 2, SPACE_AND_CATS_FEEDS);
+        expect(designs.map(design => design.id)).toEqual(["c", "d"]);
+    });
+
+    it("applies the one-feed rule to MySQL results using the membership query", async () => {
+        stubMySQLEnv();
+        mysqlQuery.mockImplementation(async (sql: string) => {
+            if (sql.includes("design_listings")) return [[], []];
+            if (isMembershipSql(sql)) {
+                return [[
+                    {designId: "primary-cats", title: "Space"},
+                    {designId: "primary-cats", title: "Cats"},
+                    {designId: "primary-space", title: "Space"},
+                    {designId: "primary-space", title: "Cats"},
+                ], []];
+            }
+            return [[mysqlDesignRow("primary-cats", "Cats"), mysqlDesignRow("primary-space", "Space")], []];
+        });
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs.map(design => design.id)).toEqual(["primary-space"]);
+        expect(cats.designs.map(design => design.id)).toEqual(["primary-cats"]);
+
+        // First call is still the designs query; the membership query follows with the eligible ids.
+        expect(isMembershipSql(mysqlQuery.mock.calls[0][0])).toBe(false);
+        const membershipCall = mysqlQuery.mock.calls.find(call => isMembershipSql(call[0]));
+        expect(String(membershipCall?.[0])).toContain("JOIN collections c ON c.id = dc.collectionId");
+        expect(membershipCall?.[1]).toEqual([["primary-cats", "primary-space"]]);
+    });
+
+    it("falls back to the primary label on MySQL when the membership query errors", async () => {
+        stubMySQLEnv();
+        mysqlQuery.mockImplementation(async (sql: string) => {
+            if (sql.includes("design_listings")) return [[], []];
+            if (isMembershipSql(sql)) throw new Error("Table 'design_collections' doesn't exist");
+            return [[mysqlDesignRow("x", "Cats"), mysqlDesignRow("y", "Space")], []];
+        });
+
+        const {fetchCollectionFeedDesigns} = await importFacade();
+        const space = await fetchCollectionFeedDesigns("Space", 100, SPACE_AND_CATS_FEEDS);
+        const cats = await fetchCollectionFeedDesigns("Cats", 100, SPACE_AND_CATS_FEEDS);
+        expect(space.designs.map(design => design.id)).toEqual(["y"]);
+        expect(cats.designs.map(design => design.id)).toEqual(["x"]);
     });
 });
 

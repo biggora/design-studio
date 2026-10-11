@@ -7,8 +7,8 @@ const fetchCollectionFeedDesigns = vi.fn();
 vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
   fetchFeedCollections: () => fetchFeedCollections(),
-  fetchCollectionFeedDesigns: (title: string, limit: number) =>
-    fetchCollectionFeedDesigns(title, limit),
+  fetchCollectionFeedDesigns: (title: string, limit: number, feedCollections: unknown) =>
+    fetchCollectionFeedDesigns(title, limit, feedCollections),
 }));
 
 beforeEach(() => {
@@ -58,5 +58,41 @@ describe("/feeds/pinterest.xml index", () => {
     for (const url of urls) {
       expect(new URL(url).hostname).toBe("threadquirk.test");
     }
+  });
+
+  it("reports each feed's own item count, in the same feed order and URLs as before", async () => {
+    const collections = [
+      { title: "Space", description: "" },
+      { title: "Cats", description: "" },
+      { title: "Dogs", description: "" },
+    ];
+    fetchFeedCollections.mockResolvedValue(collections);
+    const countsByTitle: Record<string, number> = { Space: 3, Cats: 12, Dogs: 0 };
+    fetchCollectionFeedDesigns.mockImplementation(async (title: string) => ({
+      designs: Array.from({ length: countsByTitle[title] }, (_, i) => ({ id: `${title}-${i}` })),
+      earliestListingAt: {},
+    }));
+
+    const { GET } = await import("@/app/feeds/pinterest.xml/route");
+    const xml = await (await GET()).text();
+
+    // Each feed is queried with the full collection list so designs are split across feeds.
+    expect(fetchCollectionFeedDesigns).toHaveBeenCalledTimes(3);
+    for (const { title } of collections) {
+      expect(fetchCollectionFeedDesigns).toHaveBeenCalledWith(title, 100, collections);
+    }
+
+    // Items are sorted by title (Cats, Dogs, Space), each with its own count and URL.
+    const items = [...xml.matchAll(/<item>[\s\S]*?<\/item>/g)].map(match => match[0]);
+    expect(items).toHaveLength(3);
+    expect(items[0]).toContain("<link>https://threadquirk.test/feeds/pinterest/cats.xml</link>");
+    expect(items[0]).toContain("Pinterest board: Cats");
+    expect(items[0]).toContain("12 designs");
+    expect(items[1]).toContain("<link>https://threadquirk.test/feeds/pinterest/dogs.xml</link>");
+    expect(items[1]).toContain("Pinterest board: Dogs");
+    expect(items[1]).toContain("0 designs");
+    expect(items[2]).toContain("<link>https://threadquirk.test/feeds/pinterest/space.xml</link>");
+    expect(items[2]).toContain("Pinterest board: Space");
+    expect(items[2]).toContain("3 designs");
   });
 });

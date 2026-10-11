@@ -24,7 +24,7 @@ export async function GET() {
 
   const feeds = await Promise.all(
     collections.map(async collection => {
-      const { designs } = await fetchCollectionFeedDesigns(collection.title, FEED_MAX_ITEMS);
+      const { designs } = await fetchCollectionFeedDesigns(collection.title, FEED_MAX_ITEMS, collections);
       return {
         title: collection.title,
         description: collection.description,

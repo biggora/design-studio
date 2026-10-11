@@ -42,6 +42,7 @@ export async function GET(
   const { designs, earliestListingAt } = await fetchCollectionFeedDesigns(
     collection.title,
     FEED_MAX_ITEMS,
+    collections,
   );
 
   const xml = buildCollectionFeedXml({

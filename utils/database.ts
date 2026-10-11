@@ -15,6 +15,7 @@ import {hasMarketplaceLink} from "@/lib/utils";
 import {getMockupUrl} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
+import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 
@@ -823,10 +824,17 @@ function isoTime(value: unknown): string {
  * 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
  * `earliestListingAt` maps design id → the earliest design_listings.publishedAt, used
  * as the feed's pubDate. There is no hidden/trashed column in the schema (the `shared`
- * flag is vestigial and always false), so removal state is exactly the social-post row. */
+ * flag is vestigial and always false), so removal state is exactly the social-post row.
+ *
+ * One feed per design: Pinterest makes a separate Pin per feed item, so a design that
+ * belongs to several collections is kept only in the feed chosen by
+ * `pinterestFeedCollection` (its primary collection if it has a feed, else the first
+ * feed slug alphabetically). `feedCollections` is the full list of collections that have
+ * a feed. This narrows feeds only; the website's collection pages are untouched. */
 export async function fetchCollectionFeedDesigns(
     collectionTitle: string,
     limit: number,
+    feedCollections: readonly FeedCollection[],
 ): Promise<FeedDesigns> {
     const safeLimit = Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 100));
     // Over-fetch so post-JSON checks (TeePublic link in props) can
@@ -835,9 +843,12 @@ export async function fetchCollectionFeedDesigns(
 
     const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
         const unique = new Map(rows.map(design => [design.id, design]));
-        const designs = [...unique.values()]
-            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null)
-            .slice(0, safeLimit);
+        const eligible = [...unique.values()]
+            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null);
+        const memberships = await fetchDesignMemberships(eligible);
+        const owned = assignDesignsToFeeds(eligible, memberships, assignCollectionSlugs([...feedCollections]))
+            .get(collectionTitle) ?? [];
+        const designs = owned.slice(0, safeLimit);
         return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
     };
 
@@ -920,6 +931,52 @@ export async function fetchCollectionFeedDesigns(
         }
     }
     return finalize(designs);
+}
+
+// Collection titles per design, for the one-feed-per-design rule. Fail-safe: when the
+// lookup fails, or a design has no join rows (legacy installs), its membership is just
+// its primary `collection` label — a design is never placed in more feeds than it was.
+async function fetchDesignMemberships(designs: Design[]): Promise<Map<string, string[]>> {
+    const memberships = new Map<string, string[]>();
+    if (!designs.length) return memberships;
+    const ids = designs.map(design => design.id);
+    const add = (designId: string, title: string | null | undefined) => {
+        if (!title) return;
+        const titles = memberships.get(designId);
+        if (titles) titles.push(title);
+        else memberships.set(designId, [title]);
+    };
+    try {
+        if (getProvider() === "supabase") {
+            const {data, error} = await getSupabase()
+                .from("design_collections")
+                .select("designId, collections(title)")
+                .in("designId", ids);
+            if (error) throw error;
+            for (const row of (data ?? []) as unknown as {
+                designId: string;
+                collections: {title: string | null} | {title: string | null}[] | null;
+            }[]) {
+                const linked = Array.isArray(row.collections) ? row.collections : [row.collections];
+                for (const collection of linked) add(row.designId, collection?.title);
+            }
+        } else {
+            const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+                `SELECT dc.designId, c.title FROM design_collections dc
+                 JOIN collections c ON c.id = dc.collectionId
+                 WHERE dc.designId IN (?)`,
+                [ids],
+            );
+            for (const row of rows) add(row.designId as string, row.title as string | null);
+        }
+    } catch (err) {
+        console.error("Error fetching collection memberships for feed:", err);
+        memberships.clear();
+    }
+    for (const design of designs) {
+        if (!memberships.has(design.id) && design.collection) memberships.set(design.id, [design.collection]);
+    }
+    return memberships;
 }
 
 // Supabase keeps the exclusion out-of-band (private table, separate query). A read

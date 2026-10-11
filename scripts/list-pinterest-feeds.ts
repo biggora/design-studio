@@ -17,7 +17,7 @@ async function run(): Promise<void> {
 
   const rows = await Promise.all(
     collections.map(async collection => {
-      const { designs } = await fetchCollectionFeedDesigns(collection.title, FEED_MAX_ITEMS);
+      const { designs } = await fetchCollectionFeedDesigns(collection.title, FEED_MAX_ITEMS, collections);
       return {
         feed: `${domain}/feeds/pinterest/${slugsByTitle.get(collection.title)}.xml`,
         board: collection.title,
