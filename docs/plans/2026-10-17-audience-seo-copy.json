@@ -213,6 +213,54 @@
   ],
   "giftPages": [
     {
+      "slug": "black-friday-gift-ideas",
+      "title": "Black Friday Gift Ideas for Every List",
+      "heading": "Black Friday Gift Ideas",
+      "description": "Black Friday gift ideas by recipient: holiday designs, family favourites, and picks for developers, hobbyists and pet people.",
+      "intro": "A holiday list goes faster when you sort it by person. Start with the seasonal designs for the host and the family table, then match the rest to what each person already loves: their code, their craft or their pet. Pick something they would wear again after the holidays, and open the marketplace page to see the options for each design.",
+      "sections": [
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Thanksgiving, Black Friday and Christmas",
+          "blurb": "Seasonal designs for shoppers, hosts and bakers, from sale-rack romance to gingerbread ambition."
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "For the whole table and its grandmas",
+          "blurb": "Group-chat Christmas sweaters, casserole loyalty and grandma crowns for family gatherings."
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "For the pet person on your list",
+          "blurb": "Cats and dogs with opinions about the tree and the wrapping, for owners whose pets run the holidays."
+        },
+        {
+          "collection": "Programming",
+          "heading": "For the developer on your list",
+          "blurb": "Language jokes and AI-agent humour for programmers, a safe pick when you do not know their stack."
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "For the hobbyist with a serious craft",
+          "blurb": "Candles, beads, knitting, climbing and more, with club-badge humour that names their exact hobby."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are there Black Friday discounts?",
+          "answer": "Any sale pricing, promotions and shipping cut-offs are set by the marketplaces, Redbubble and TeePublic, and shown on their product pages. This site does not set prices or run sales, so check the marketplace page for current offers."
+        },
+        {
+          "question": "When should I order for the holidays?",
+          "answer": "Check the delivery estimate on the marketplace product page before you order, since it depends on the product and where it ships. Ordering earlier gives you more room if you need to compare options."
+        },
+        {
+          "question": "How do I pick a gift for someone hard to shop for?",
+          "answer": "Choose a theme they already talk about, such as their job, hobby or pet, and keep the tone friendly. A design they can wear after the holidays is a better choice than a one-time joke."
+        }
+      ]
+    },
+    {
       "slug": "gifts-for-developers",
       "title": "Gifts for Developers & Programmers",
       "heading": "Gifts for Developers",
