@@ -54,3 +54,4 @@ next-env.d.ts
 # zcode session state
 /.zcode/
 /CLAUDE.md
+/.codex/
