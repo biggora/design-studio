@@ -74,3 +74,21 @@ Collection profiles may also provide an optional short `heading`, used for the v
 - Colors and radii are HSL CSS variables in `app/globals.css` (`:root`), mapped to Tailwind semantic names in `tailwind.config.ts` (`bg-primary`, `text-accent`, `border-input`, …). Use those tokens, never literal color values — deployments re-skin by overriding the variables or via the `themeLink` config (validated by `isAllowedThemeUrl` in `app/layout.tsx`).
 - UI primitives are shadcn/ui ("new-york", `components/ui/`); site-specific components live in `app/components/`. Use `cn()` from `lib/utils.ts` for class merging.
 - `DESIGN.md` defines the palette names (Loom Ink, Indigo Thread as the single interactive hue, etc.), typography scale, and rules — follow it for any visual change.
+
+<!-- agent-memory:start -->
+## Общая память проекта (MCP: agent-memory)
+
+Проект в памяти: `design-studio` (общие знания продукта: `print-on-demand`).
+
+- ПЕРЕД началом любой задачи и ПЕРЕД ответом на вопросы о проекте (договорённости, принятые решения и их причины,
+  окружение, процессы, "как у нас принято", известные грабли) вызови `memory_search` с `project="design-studio,print-on-demand"` и сутью вопроса.
+  Код показывает, ЧТО сделано, а память — ПОЧЕМУ и как договорились; не отвечай по одному коду, не проверив память.
+- Когда принято решение, найдена причина бага, выяснена неочевидная особенность окружения или
+  договорённость — сохрани через `memory_save` (`kind`: decision / gotcha / howto / convention / fact / todo)
+  с `project="design-studio"` (если знание относится ко всему продукту — `project=print-on-demand`).
+  Пиши самодостаточно: что, почему, где. Одна идея — одна заметка. В `source_agent` укажи свою
+  программу (claude-code, codex, cursor…).
+- Если знание изменилось — найди заметку и обнови её `memory_update`, а не создавай дубль;
+  устаревшие и ошибочные — `memory_archive`.
+- Не сохраняй секреты, токены, пароли и содержимое .env.
+<!-- agent-memory:end -->

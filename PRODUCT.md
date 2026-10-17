@@ -43,7 +43,7 @@ Constraints: no on-site checkout — purchases happen on external marketplaces; 
 
 ## Evidence on Hand
 
-- Reference deployment shops ([docs/MY_SHOPS.md](docs/MY_SHOPS.md)): Redbubble `redbubble.com/people/ThreadQuirk/shop`, TeePublic `teepublic.com/user/threadquirk`.
+- Reference deployment shops ([docs/MY_SHOPS.md](../../../../pod-research/docs/MY_SHOPS.md)): Redbubble `redbubble.com/people/ThreadQuirk/shop`, TeePublic `teepublic.com/user/threadquirk`.
 - Marketplace logo SVGs and hero-carousel slides in `public/images`.
 - Technical documentation set in [docs/](docs/) (architecture, database, sync system, frontend, deployment — in English).
 - 18 unit tests in `lib/utils.test.ts` (`npm test`); a verified production build of all 11 routes (route set unchanged since the v0.1.0 release plan).

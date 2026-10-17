@@ -29,7 +29,7 @@
 **Decisions log**:
 - D1: docs language → English (user, 2026-09-24).
 - D2: RELEASE_PLAN.md → historical record; translate, add banner, no modernization (user, 2026-09-24).
-- D3: `docs/MY_SHOPS.md` is gitignored — out of scope.
+- D3: `../../../../../pod-research/docs/MY_SHOPS.md` is gitignored — out of scope.
 
 **Open questions**: none (user answered D1/D2 pre-dispatch).
 
