@@ -366,6 +366,34 @@ describe("pinterestFeedCollection", () => {
     ).toBe("Cats");
   });
 
+  it("prefers the smallest collection over the primary one", () => {
+    const refs = [
+      { title: "AI Hype", slug: "ai-hype", size: 28 },
+      { title: "Trust Boundaries", slug: "trust-boundaries", size: 7 },
+      { title: "Programming", slug: "programming", size: 109 },
+    ];
+    for (const order of permutations(refs)) {
+      expect(pinterestFeedCollection({ collection: "AI Hype" }, order)).toBe("Trust Boundaries");
+    }
+  });
+
+  it("breaks an equal-size tie by primary collection, then by slug", () => {
+    const refs = [
+      { title: "Zeta", slug: "zeta", size: 5 },
+      { title: "Alpha", slug: "alpha", size: 5 },
+    ];
+    expect(pinterestFeedCollection({ collection: "Zeta" }, refs)).toBe("Zeta");
+    expect(pinterestFeedCollection({ collection: "" }, refs)).toBe("Alpha");
+  });
+
+  it("ranks collections without a known size after sized ones", () => {
+    const refs = [
+      { title: "Primary", slug: "primary" },
+      { title: "Niche", slug: "niche", size: 3 },
+    ];
+    expect(pinterestFeedCollection({ collection: "Primary" }, refs)).toBe("Niche");
+  });
+
   it("breaks an identical-slug tie by title and stays order independent", () => {
     const refs = [
       { title: "b-title", slug: "same" },
@@ -483,6 +511,19 @@ describe("assignDesignsToFeeds", () => {
     expect(idsByFeed(feeds)).toEqual(
       idsByFeed(assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs())),
     );
+  });
+
+  it("moves multi-collection designs to their smallest feed when sizes are known", () => {
+    const sizes = new Map([["Cats", 4], ["Space", 5], ["Dogs", 2], ["Tech Memes", 3], ["Retro", 3]]);
+    const feeds = assignDesignsToFeeds(fixtureDesigns(), fixtureMemberships(), fixtureFeedSlugs(), sizes);
+    expect(idsByFeed(feeds)).toEqual({
+      Cats: ["d1", "d2"],
+      Dogs: ["d3", "d9"],
+      Retro: ["d4", "d10"],
+      "Tech Memes": ["d5", "d6"],
+    });
+    const placed = [...feeds.values()].flat().map(design => design.id);
+    expect(new Set(placed).size).toBe(placed.length);
   });
 
   it("returns an empty map when nothing has a feed", () => {

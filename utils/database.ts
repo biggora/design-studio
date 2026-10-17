@@ -680,7 +680,8 @@ export async function fetchCollections(): Promise<string[]> {
     }
 }
 
-export type FeedCollection = { title: string; description: string };
+/** `size` is the collection's design_collections membership count (absent on legacy installs). */
+export type FeedCollection = { title: string; description: string; size?: number };
 export type FeaturedCollection = CollectionPage & {total: number};
 
 /** Only explicitly prepared, existing, nonempty themes are promoted/indexed. */
@@ -764,7 +765,7 @@ export async function fetchFeedCollections(): Promise<FeedCollection[]> {
         const supabaseClient = getSupabase();
         const {data, error} = await supabaseClient
             .from("collections")
-            .select("title, description")
+            .select("title, description, design_collections(count)")
             .order("title");
 
         if (error || !data || !data.length) {
@@ -776,13 +777,16 @@ export async function fetchFeedCollections(): Promise<FeedCollection[]> {
         return dedupeFeedCollections(data.map(row => ({
             title: row.title as string,
             description: (row.description as string | null) ?? "",
+            size: (row.design_collections as unknown as {count: number}[] | null)?.[0]?.count ?? 0,
         })));
     }
 
     try {
         const pool = getMySQLPool();
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
-            "SELECT title, description FROM collections ORDER BY title",
+            `SELECT c.title, c.description, COUNT(dc.designId) AS size FROM collections c
+             LEFT JOIN design_collections dc ON dc.collectionId = c.id
+             GROUP BY c.id, c.title, c.description ORDER BY c.title`,
         );
 
         if (!rows.length) {
@@ -793,6 +797,7 @@ export async function fetchFeedCollections(): Promise<FeedCollection[]> {
         return dedupeFeedCollections(rows.map(row => ({
             title: row.title as string,
             description: (row.description as string | null) ?? "",
+            size: Number(row.size),
         })));
     } catch (err) {
         console.error("Error fetching feed collections table, falling back:", err);
@@ -828,9 +833,9 @@ function isoTime(value: unknown): string {
  *
  * One feed per design: Pinterest makes a separate Pin per feed item, so a design that
  * belongs to several collections is kept only in the feed chosen by
- * `pinterestFeedCollection` (its primary collection if it has a feed, else the first
- * feed slug alphabetically). `feedCollections` is the full list of collections that have
- * a feed. This narrows feeds only; the website's collection pages are untouched. */
+ * `pinterestFeedCollection` (its smallest feed-backed collection by catalog-wide
+ * membership `size`, then its primary collection, then the first feed slug
+ * alphabetically). `feedCollections` is the full list of collections that have a feed. This narrows feeds only; the website's collection pages are untouched. */
 export async function fetchCollectionFeedDesigns(
     collectionTitle: string,
     limit: number,
@@ -846,7 +851,8 @@ export async function fetchCollectionFeedDesigns(
         const eligible = [...unique.values()]
             .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null);
         const memberships = await fetchDesignMemberships(eligible);
-        const owned = assignDesignsToFeeds(eligible, memberships, assignCollectionSlugs([...feedCollections]))
+        const sizes = new Map(feedCollections.flatMap(entry => entry.size === undefined ? [] : [[entry.title, entry.size] as const]));
+        const owned = assignDesignsToFeeds(eligible, memberships, assignCollectionSlugs([...feedCollections]), sizes)
             .get(collectionTitle) ?? [];
         const designs = owned.slice(0, safeLimit);
         return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};

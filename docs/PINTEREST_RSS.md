@@ -129,16 +129,24 @@ distinct designs), and duplicate Pins risk the account being flagged as spam.
 Each design is therefore an item in exactly **one** feed, chosen by
 `pinterestFeedCollection` / `assignDesignsToFeeds` (`lib/pinterest-feed.ts`):
 
-1. the design's primary collection (`designs.collection`), when it is one of
-   the design's collections and has a feed;
-2. otherwise the design's collection whose feed slug sorts first
-   alphabetically (plain code-unit order, not locale-aware);
-3. a design with no collections is in no feed.
+1. the design's **smallest** feed-backed collection, by its catalog-wide
+   membership count in `design_collections` (`fetchFeedCollections` returns it
+   as `size`), so niche boards such as Trust Boundaries are not emptied by
+   broad ones such as Programming;
+2. among collections of equal size, the design's primary collection
+   (`designs.collection`);
+3. then the collection whose feed slug sorts first alphabetically (plain
+   code-unit order, not locale-aware);
+4. a design with no collections is in no feed.
+
+(Until 2026-10-17 the primary collection always won; that left every feed whose
+designs all had a broader primary collection empty — Trust Boundaries had 0 of
+its 7 designs. Switching rules moved 67 of 350 feed items to another board.)
 
 The choice is deterministic and depends only on stored data. A design belonging
-to Programming, Open Source Together and Pet Lovers whose primary collection is
-Open Source Together appears only in
-`/feeds/pinterest/open-source-together.xml`. Memberships come from
+to Programming (109 designs), AI Hype and Reality Check (28) and Trust
+Boundaries (7) appears only in `/feeds/pinterest/trust-boundaries.xml`,
+whatever its primary collection. Memberships come from
 `design_collections`; if that lookup fails, or a design has no join rows
 (legacy installs), its membership falls back to its primary `designs.collection`
 label — fail-safe, so a design is never placed in more feeds than before.
@@ -152,9 +160,9 @@ Only the Pinterest feeds are narrowed. The site's collection pages
 (`/designs?collection=…`), `/designs/[slug]`, the public API, the sitemap and
 `/p/[slug]` still list and show the design in **all** of its collections.
 
-> **Warning:** changing a design's primary collection later — or adding a
-> collection whose slug sorts earlier to a design that has no feed-backed
-> primary collection — moves its item to another feed. Pinterest then creates a
+> **Warning:** adding a design to a smaller collection, or collection sizes
+> crossing each other as the catalog grows (and, on equal sizes, changing its
+> primary collection), moves its item to another feed. Pinterest then creates a
 > **new** Pin on that feed's board; the old Pin stays on the old board and must
 > be removed manually.
 

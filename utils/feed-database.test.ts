@@ -148,15 +148,15 @@ beforeEach(() => {
 describe("fetchFeedCollections", () => {
     it("reads titles and descriptions from the collections table", async () => {
         responses = {collections: {data: [
-            {title: "Cats", description: "Feline friends"},
-            {title: "Space", description: null},
-            {title: "Cats", description: "duplicate row"},
+            {title: "Cats", description: "Feline friends", design_collections: [{count: 3}]},
+            {title: "Space", description: null, design_collections: [{count: 0}]},
+            {title: "Cats", description: "duplicate row", design_collections: [{count: 9}]},
         ], error: null}};
 
         const {fetchFeedCollections} = await importFacade();
         await expect(fetchFeedCollections()).resolves.toEqual([
-            {title: "Cats", description: "Feline friends"},
-            {title: "Space", description: ""},
+            {title: "Cats", description: "Feline friends", size: 3},
+            {title: "Space", description: "", size: 0},
         ]);
     });
 
@@ -176,10 +176,10 @@ describe("fetchFeedCollections", () => {
         vi.stubEnv("MYSQL_USER", "user");
         vi.stubEnv("MYSQL_PASSWORD", "pass");
         vi.stubEnv("MYSQL_DATABASE", "db");
-        mysqlQuery.mockResolvedValue([[{title: "Cats", description: "Feline"}], []]);
+        mysqlQuery.mockResolvedValue([[{title: "Cats", description: "Feline", size: 4}], []]);
 
         const {fetchFeedCollections} = await importFacade();
-        await expect(fetchFeedCollections()).resolves.toEqual([{title: "Cats", description: "Feline"}]);
+        await expect(fetchFeedCollections()).resolves.toEqual([{title: "Cats", description: "Feline", size: 4}]);
     });
 });
 
