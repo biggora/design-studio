@@ -1,0 +1,545 @@
+{
+  "home": {
+    "title": "Original Interest-Based Prints & Gifts",
+    "heading": "Prints for people with a thing",
+    "description": "Original print designs for developers, pet owners, gamers, crafters, foodies and more, available as t-shirts and other products on the marketplaces."
+  },
+  "intro": "Original prints for every kind of enthusiast",
+  "description": "Browse original designs by interest, from coding and pets to crafts and travel, then pick a t-shirt or other product for yourself or as a gift.",
+  "collectionPages": [
+    {
+      "collection": "Abstract Pattern",
+      "title": "Abstract Pattern Shirts & Art Prints",
+      "heading": "Abstract Pattern Prints",
+      "description": "Gradient waves, arched rainbow stripes, stained-glass colour and monochrome camo: abstract patterns for people who let colour do the talking.",
+      "intro": "Colour-first designs with no slogan to explain: gradient waves, watercolor stripes, stained-glass shapes and a black-and-grey camo. They go with almost any outfit, which makes them a safe gift for a friend who loves art but not words on a shirt."
+    },
+    {
+      "collection": "AI Hype and Reality Check",
+      "title": "AI Humor Shirts & Tech Gifts",
+      "heading": "AI Reality Check Prints",
+      "description": "Funny AI designs about wrappers, prompt injection, local models and vacation plans an algorithm made, for people who still double-check the output.",
+      "intro": "From a stochastic parrot and a spicy autocomplete to an AI-planned trip that ended in chaos, these prints poke gentle fun at the hype. For anyone who uses AI daily and has opinions, and a good pick for a tech colleague or a partner who talks about models at dinner."
+    },
+    {
+      "collection": "Back to School",
+      "title": "Back to School Shirts & Gifts",
+      "heading": "Back to School Prints",
+      "description": "School-season designs with pencils, snack priorities and AI study buddies, for students, teachers and parents surviving the new term.",
+      "intro": "Fresh pencils, doodle margins, a backpack with academic ambitions and a robot lab partner who needs a hall pass. Wear one on the first day, or give it to a student, a teacher or a parent who has the supply list memorised."
+    },
+    {
+      "collection": "Bugs, Tests and Hallucinations",
+      "title": "Debugging & Bug Humor T-Shirts",
+      "heading": "Bugs and Hallucinations",
+      "description": "Rubber-duck debugging, regression jokes and AI that is confidently wrong: shirts for developers who live with stack traces.",
+      "intro": "A cat that says the API exists in its imagination, a bug with a long history, and a request for the error text instead of a screenshot. Made for developers and QA folks, and a fit for a teammate's birthday or a farewell gift."
+    },
+    {
+      "collection": "Context, Prompts and Vibe",
+      "title": "Vibe Coding Shirts & Prompt Humor",
+      "heading": "Prompts and Vibe Coding",
+      "description": "Context windows, token limits and one more prompt before bed: humorous prints for people who build with AI assistants.",
+      "intro": "Typography and retro cartoons about forgetting the first prompt, hitting a rate limit and shipping something that probably works. For vibe coders and prompt tinkerers, and a friendly gift for whoever always says just one more prompt."
+    },
+    {
+      "collection": "Dynamic Fluid",
+      "title": "Dynamic Sports & Motion Art Shirts",
+      "heading": "Dynamic Fluid Art",
+      "description": "Skiers, cyclists, racers and paddleboarders drawn in swirling abstract colour, for people who love speed, sport and movement.",
+      "intro": "Athletes and vehicles caught mid-motion inside bold swirls: a skier, a parkour jump, a motorcycle, a go-kart and a sports car. Take it to the gym or the track, or give it to a friend whose weekends are all about getting outside."
+    },
+    {
+      "collection": "Everyday Dev Humor",
+      "title": "Funny Coder Shirts & Dev Humor",
+      "heading": "Everyday Dev Humor",
+      "description": "Programming-language jokes, rubber ducks with API keys and meetings AI could attend, for the developer who laughs at their own stack.",
+      "intro": "Typographic jokes about indentation, ownership issues and packages that do not exist, plus a few cartoon robots and ducks. The in-jokes are for people who code, which is what makes them a good gift for a developer on your team."
+    },
+    {
+      "collection": "Family and Friends",
+      "title": "Family & Friends Gathering Shirts",
+      "heading": "Family and Friends",
+      "description": "Grandma crowns, Thanksgiving casseroles, Halloween group costumes and Christmas tables with room for one more, for the people you celebrate with.",
+      "intro": "Designs about the crowd around the table: grandmas with crowns, cousins on candy duty, matching pajamas and a group chat in Christmas sweaters. Pick one for a family gathering, a friends' holiday or a grandparent who deserves the title."
+    },
+    {
+      "collection": "For gourmets and food lovers",
+      "title": "Foodie Shirts & Food Lover Gifts",
+      "heading": "Food Lover Prints",
+      "description": "Ramen, pasta, chili, sourdough starter and strong coffee, with a sense of humour, for home cooks, bakers and anyone who lives to eat.",
+      "intro": "Cheerful food characters and kitchen puns, from a miso soup cup and a gym-going avocado to a sourdough starter with weekend plans. Wear it to the table, or give it to the friend who always picks the restaurant and knows what to order."
+    },
+    {
+      "collection": "Gamers and Geeks",
+      "title": "Gamer Shirts & Geek Gifts",
+      "heading": "Gamers and Geeks",
+      "description": "Controller astronauts, a broken escape key, a Go board and haunted tabletop jokes: designs for gamers and puzzle-loving geeks.",
+      "intro": "For the people who say just one more level, from a shattered Game Over screen to a minimalist Go board and dice-rolling ghosts. A good gift for a partner or friend who games, and low-key enough to wear outside the living room."
+    },
+    {
+      "collection": "Health and Wellness",
+      "title": "Mindfulness Shirts & Wellness Gifts",
+      "heading": "Health and Wellness",
+      "description": "Easy-pace walks, rest days and care on the calendar, plus calm-down slogans and plant art, for people who put wellbeing on the list.",
+      "intro": "Gentle prints about asking for help, stretching a little, taking the conversational pace and letting plants do the healing. Wear them to yoga or a slow Sunday, or send one to a friend who could use a reminder to rest."
+    },
+    {
+      "collection": "Hobby Clubs",
+      "title": "Hobby Club Shirts & Craft Gifts",
+      "heading": "Hobby Club Prints",
+      "description": "Beading, knitting, candle making, aquariums, ham radio, climbing, curling and more: humorous club-style prints for people with a serious hobby.",
+      "intro": "Inside jokes for people who pour candles, string pony beads, keep fish tanks, true bicycle wheels, fly model rockets or turn wooden bowls. Choose the exact hobby for a gift that proves you noticed, or a club badge for a whole crew."
+    },
+    {
+      "collection": "Holidays and Festivals",
+      "title": "Holiday & Festival Shirts and Gifts",
+      "heading": "Holidays and Festivals",
+      "description": "Thanksgiving, Halloween, Black Friday and Christmas designs, plus festival and fiesta art, for people who love a seasonal celebration.",
+      "intro": "A year of occasions: a turkey flock out for a run, gingerbread ambition, a sale-rack romance, Christmas-cheer-with-minimal-effort and fiesta or flamenco art. Good for hosts, Secret Santa swaps and anyone with a favourite festival."
+    },
+    {
+      "collection": "Humans in the Loop",
+      "title": "Human in the Loop Shirts for Devs",
+      "heading": "Humans in the Loop",
+      "description": "Trust but verify the diff: shirts about reviewing the robot's work, for developers who stay accountable for what AI ships.",
+      "intro": "Terminal emblems, comics and blueprints about reviewing an agent's pull request, asking who debugs the AI and explaining what the bot shipped. For engineers who check the work, and a thoughtful gift for a code-review-minded colleague."
+    },
+    {
+      "collection": "Kawaii",
+      "title": "Kawaii Shirts & Cute Animal Gifts",
+      "heading": "Kawaii Prints",
+      "description": "Cute robots, pastel pixels and bubbly animal friends set off on little adventures: kawaii designs for fans of soft, cheerful characters.",
+      "intro": "Tiny bots with passport stamps, error 404 cuteness and a pastel dream of travel, alongside a bubble print of animal friends. A friendly pick for a travel-loving friend, a younger relative or anyone who collects cute things."
+    },
+    {
+      "collection": "Localhost and Local AI",
+      "title": "Homelab & Self-Hosting Shirts",
+      "heading": "Localhost and Local AI",
+      "description": "Home servers, tokens per second and It's Always DNS: pixel art and graphics for self-hosters who run their own machines.",
+      "intro": "Server racks in the cabin, blinking lights that are normal, and a GPU-poor llama who came for privacy. For homelab fans and local-AI tinkerers, and a clear in-joke gift for the friend who maintains the family server."
+    },
+    {
+      "collection": "Love and Relationships",
+      "title": "Love Shirts & Couple Gifts",
+      "heading": "Love and Relationships",
+      "description": "Couple designs about shared fries, borrowed hoodies and clear boundaries, for partners who like romance with a sense of humour.",
+      "intro": "Warm, funny lines for two: flirting in grocery lists, separate dessert orders, same team but different blanket needs. Suited to Valentine's Day or an anniversary, for a partner who prefers playful over mushy."
+    },
+    {
+      "collection": "Mental Health",
+      "title": "Mental Health Awareness Shirts & Gifts",
+      "heading": "Mental Health Prints",
+      "description": "Soft, supportive designs about worth, pace and big feelings, made for people who want a kinder message to wear or share.",
+      "intro": "Quiet reminders such as a softer inner voice, a day with some pauses and worth that does not clock in. Wear one for yourself, or give it to someone you care about as a gentle sign that you are on their side."
+    },
+    {
+      "collection": "Monsters",
+      "title": "Cute Monster Shirts & Gifts",
+      "heading": "Monster Prints",
+      "description": "Furry monsters with big teeth and tiny social batteries, from Monday-weary roars to haunters who always knock first.",
+      "intro": "Characters with plenty of fang and plenty of heart: a monster who packed your nightmare a lunch, one whose roar can wait until Monday, and a third eye that needs a break. Fun for adults and kids who like their creatures cute and a bit introverted."
+    },
+    {
+      "collection": "Open Source, Together",
+      "title": "Open Source Shirts & Maintainer Gifts",
+      "heading": "Open Source, Together",
+      "description": "Your first PR, contributions welcome and kindness in code reviews: shirts for contributors, maintainers and people still learning.",
+      "intro": "Community-minded prints about maintainers being volunteers, good first issues and reading CONTRIBUTING.md. Wear it to a meetup, or thank a maintainer or a mentor with a design that says why open source works."
+    },
+    {
+      "collection": "Outdoors and Nature",
+      "title": "Nature Lover & Birdwatcher Shirts",
+      "heading": "Outdoors and Nature Prints",
+      "description": "Mushroom foragers, early birders and woodland trail walkers in linocut and field-guide style, for people happiest outside.",
+      "intro": "Gone looking for little brown mushrooms, one more bird before breakfast, a boot path through the woods. A fitting gift for a forager, a birdwatcher or a hiker who rarely makes it home by dusk."
+    },
+    {
+      "collection": "Pet lovers",
+      "title": "Pet Lover Shirts & Gifts",
+      "heading": "Pet Lover Prints",
+      "description": "Cats, dogs and holiday-season pets who have opinions about the tree, for owners whose animals run the entire house.",
+      "intro": "Prints about the rituals of living with animals: a cat with notes on your tree, a dog who believes Santa delivers snacks, gifts wrapped with love and opened with teeth. A safe pick for a fellow pet person at Christmas or any day."
+    },
+    {
+      "collection": "Photo and Video lover",
+      "title": "Photographer Shirts & Creator Gifts",
+      "heading": "Photo and Video Prints",
+      "description": "Prompts, keyframes and RAW talent: witty designs for photographers, filmmakers and stock creators working alongside AI.",
+      "intro": "Jokes about shooting RAW while AI does magic, a timeline with an AI problem and a passive income that is very active. A suitable gift for a photographer in the family or a coworker who is always filming something."
+    },
+    {
+      "collection": "Programming",
+      "title": "Programming Shirts & Developer Gifts",
+      "heading": "Programming Prints",
+      "description": "Language jokes, hiring-process humour and AI-agent typography for programmers, with a wide range of designs to choose from.",
+      "intro": "The broadest developer collection: Python, TypeScript, Go, Java and Rust jokes in bold type, plus agents, tokens and open-source habits. A broad starting point when you want a gift for a developer and are not sure which language they use."
+    },
+    {
+      "collection": "Repo Explorers",
+      "title": "README & Repo Explorer Shirts",
+      "heading": "Repo Explorers",
+      "description": "Vintage trail badges, astronauts and README love for developers who explore open-source repositories like an expedition.",
+      "intro": "Outdoor-style badges and explorer graphics about reading the README, checking the licence and finding your next fork. A calm, curious look for developers who also like hiking, and a neat gift for a friend who bookmarks too many repos."
+    },
+    {
+      "collection": "Small Builds, Calm Ops",
+      "title": "DevOps & Side Project Shirts",
+      "heading": "Small Builds, Calm Ops",
+      "description": "Boring deploys, green pipelines and quiet side projects: relaxed shirts for developers and ops folks who value calm.",
+      "intro": "Designs about read-only Fridays, tested backups, cosy dotfiles and building something useful and small. For people who like their systems quiet, and a kind gift for a teammate or a new engineer shipping a first release."
+    },
+    {
+      "collection": "States of the USA",
+      "title": "US State Sunset Shirts & Gifts",
+      "heading": "US State Sunset Prints",
+      "description": "Sunset graphics for California, Texas, Florida, New York, Ohio and other states, for people who love where they live or grew up.",
+      "intro": "Sunset designs, each built around a state's landscape or skyline. Wear your home state, or give one to a relative who has moved away, a graduate or a friend who is proud of where they are from."
+    },
+    {
+      "collection": "Travel and Trips",
+      "title": "Travel & Adventure Shirts",
+      "heading": "Travel and Trips Prints",
+      "description": "Camping humour, scenic detours, Christmas-market suitcases and AI-planned adventures, for people who are happiest on the move.",
+      "intro": "Being lost on purpose, a sleigh with a boarding pass, a tiny camper with full-size Christmas spirit and a vacation an algorithm booked. A good gift for a hiker, a holiday traveller or a friend about to leave on a trip."
+    },
+    {
+      "collection": "Trust Boundaries",
+      "title": "Cybersecurity Humor Shirts",
+      "heading": "Trust Boundaries Prints",
+      "description": "Prompt injection, slopsquatting and threat-modeling jokes for security-minded developers and anyone who guards the system prompt.",
+      "intro": "Warning signs and graphics about keeping secrets out of commits, not trusting user input and packages that do not exist. For security engineers and the developers who sit next to them."
+    }
+  ],
+  "giftPages": [
+    {
+      "slug": "gifts-for-developers",
+      "title": "Gifts for Developers & Programmers",
+      "heading": "Gifts for Developers",
+      "description": "Looking for something a programmer will really wear? Browse coding, debugging and side-project designs by theme.",
+      "intro": "Developers tend to wear what makes them feel understood, not what looks like a joke on them. Choose a language or workflow your recipient actually uses, and lean toward dry, quiet humour. If you are unsure what they code in, the broad Programming collection is the safest place to start.",
+      "sections": [
+        {
+          "collection": "Programming",
+          "heading": "Language jokes for any programmer",
+          "blurb": "Typography about Python, TypeScript, Go and Rust, plus agent humour, a safe start when you do not know their stack."
+        },
+        {
+          "collection": "Bugs, Tests and Hallucinations",
+          "heading": "For the debugger and the tester",
+          "blurb": "Rubber ducks, bug-hunt cats and regressions, for the person who is always tracking something down."
+        },
+        {
+          "collection": "Everyday Dev Humor",
+          "heading": "For the team member with in-jokes",
+          "blurb": "Short, funny lines about indentation, packages and meetings that a coworker will recognise at once."
+        },
+        {
+          "collection": "Open Source, Together",
+          "heading": "For contributors and maintainers",
+          "blurb": "Warm designs about first PRs and kind reviews, a thoughtful thank-you for someone who keeps projects going."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I buy these designs?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the buy link on any design page to open it on the marketplace."
+        },
+        {
+          "question": "Can I choose the product, size and colour?",
+          "answer": "Yes. Product types, sizes, colours and prices are set on the marketplace page for each design, so check which options are offered there."
+        },
+        {
+          "question": "How do I pick a design if I do not know their language or stack?",
+          "answer": "Choose a theme rather than a language: debugging, open source or everyday humour. A general programming joke avoids naming a language they do not use."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-coworkers",
+      "title": "Gifts for Coworkers & Colleagues",
+      "heading": "Gifts for Coworkers",
+      "description": "Thoughtful office and remote-work designs for Secret Santa, farewells and birthdays, from tech humour to calm-down prints.",
+      "intro": "A good coworker gift is something light that the person would still choose to wear on a weekend. Match it to the work they do rather than a private joke, keep the tone friendly, and avoid anything that singles them out. Most of these suit tech teams, while wellness prints work at any desk.",
+      "sections": [
+        {
+          "collection": "Humans in the Loop",
+          "heading": "For the colleague who reviews the work",
+          "blurb": "Review-the-robot designs that salute people who keep AI output honest, a friendly nod for a senior engineer."
+        },
+        {
+          "collection": "AI Hype and Reality Check",
+          "heading": "For the team's resident AI sceptic",
+          "blurb": "Dry jokes about prompts, agents and models, good for a Secret Santa where everyone talks about AI."
+        },
+        {
+          "collection": "Small Builds, Calm Ops",
+          "heading": "For a calm teammate or a farewell",
+          "blurb": "Boring deploys and quiet builds, a gentle fit for an engineer on your team or a colleague moving on."
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "For anyone who needs a breather",
+          "blurb": "Rest-day and easy-pace slogans that work in any office, remote or on site."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are these designs suitable for Secret Santa?",
+          "answer": "Many are, because they are friendly and understated. Check the product options on the marketplace first, since products and prices are set there."
+        },
+        {
+          "question": "Where do I order, and who handles shipping?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Shipping, delivery and returns are handled by the marketplace, so check them on the product page before ordering."
+        },
+        {
+          "question": "What if I do not know their taste?",
+          "answer": "Pick a theme that matches their job rather than a joke about them. Calm and kind designs are the safest choice when you only know a coworker a little."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-pet-lovers",
+      "title": "Gifts for Pet Lovers & Cute Fans",
+      "heading": "Gifts for Pet Lovers",
+      "description": "Cat and dog designs for pet owners who treat their animals like family, plus kawaii and monster characters for cute fans.",
+      "intro": "For a pet person, the best gift reflects their actual animal: a scheming cat, a snack-minded dog or a tiny bunny. Choose the animal they have, then the tone, funny or gentle. If the person simply loves cute characters, the kawaii and monster collections are a softer route.",
+      "sections": [
+        {
+          "collection": "Pet lovers",
+          "heading": "Cats and dogs with strong opinions",
+          "blurb": "Holiday-season cats and dogs who judge the tree, for owners whose pets run the house."
+        },
+        {
+          "collection": "Kawaii",
+          "heading": "For fans of cute characters",
+          "blurb": "Tiny bots, pastel pixels and bubbly animal friends for someone who likes soft, cheerful artwork."
+        },
+        {
+          "collection": "Monsters",
+          "heading": "Cute creatures with big teeth",
+          "blurb": "Furry monsters with soft hearts, for a pet lover with a playful, slightly spooky streak."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Can I get a design with my own pet on it?",
+          "answer": "No. These are original designs, and personalisation is not offered through this site. Look for the animal that most resembles theirs."
+        },
+        {
+          "question": "Where are the designs sold?",
+          "answer": "Through Redbubble and TeePublic. Products, sizes, colours and prices are shown on the marketplace page."
+        },
+        {
+          "question": "What should I choose for a friend with several pets?",
+          "answer": "Go for a general pet theme with humour rather than a specific breed, so it fits whoever lives in the house."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-gamers-and-geeks",
+      "title": "Gifts for Gamers & Geeks",
+      "heading": "Gifts for Gamers and Geeks",
+      "description": "Designs for gamers, tinkerers and self-hosters, from controller art to home servers and prompt-driven building.",
+      "intro": "Gamers and geeks like designs that quietly signal their hobby. Think about whether the person plays, tinkers or builds, then choose something understated for daily wear. Browse the gaming set first, then the tech-leaning collections if they run servers or experiment with AI.",
+      "sections": [
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "For people who say one more level",
+          "blurb": "Controller astronauts, a broken escape key, a Go board and tabletop ghosts, for players and puzzle fans."
+        },
+        {
+          "collection": "Localhost and Local AI",
+          "heading": "For homelab and self-hosting fans",
+          "blurb": "Home servers, blinking lights and tokens per second for the friend who runs their own machines."
+        },
+        {
+          "collection": "Context, Prompts and Vibe",
+          "heading": "For prompt tinkerers and vibe coders",
+          "blurb": "Context windows and rate limits, for someone who builds things by talking to AI."
+        },
+        {
+          "collection": "Repo Explorers",
+          "heading": "For the curious and the collectors",
+          "blurb": "Vintage badges for people who explore projects for fun and never finish their bookmarks."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Which marketplace do I buy from?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the links on a design page to see the available products."
+        },
+        {
+          "question": "How do I check sizes and colours?",
+          "answer": "Sizes, colours and product types are chosen on the marketplace page, where you can compare the options available for each design."
+        },
+        {
+          "question": "What if I do not know which games they play?",
+          "answer": "Pick a general design such as a controller or a Game Over print, and avoid anything that assumes a specific title."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-food-lovers",
+      "title": "Gifts for Food Lovers & Home Cooks",
+      "heading": "Gifts for Food Lovers",
+      "description": "Funny foodie designs featuring ramen, sourdough, chili and coffee, for home cooks, bakers and holiday hosts alike.",
+      "intro": "Foodies like a design that tastes like them. Choose what the person actually loves, whether ramen, bread, spice or a coffee habit, then decide how playful you want it. Cheerful characters suit casual gifts, and holiday baking prints suit the one who hosts.",
+      "sections": [
+        {
+          "collection": "For gourmets and food lovers",
+          "heading": "Ramen, sourdough, chili and coffee",
+          "blurb": "Cheerful food characters and kitchen puns for home cooks, bakers and people who live to eat."
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "For the holiday host and baker",
+          "blurb": "Gingerbread ambition, Thanksgiving energy and festive cookies for whoever runs the feast."
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "For plant-powered cooks",
+          "blurb": "Herbs, greens and roots in eco-friendly artwork for someone who cooks fresh."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I buy these?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Click a design's buy link to see products on the marketplace."
+        },
+        {
+          "question": "Is a mug or sticker available?",
+          "answer": "Product types vary by design and are listed on the marketplace page, so check there for what is offered."
+        },
+        {
+          "question": "How do I pick one for a friend who loves cooking?",
+          "answer": "Choose the dish they cook or order most often. A specific favourite, like ramen or sourdough, feels more personal than a general food print."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-family-and-friends",
+      "title": "Gifts for Family, Friends & Couples",
+      "heading": "Gifts for Family and Friends",
+      "description": "Gift ideas for grandmothers, partners, friends and festive crowds, from heartfelt family designs to playful couple prints.",
+      "intro": "Family gifts work best when they say something warm in a way the person would wear. Start with who they are: a grandmother, a partner or a friend who hosts every holiday. Then choose a tone that suits them and a motif they will reach for more than once.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "For the whole table and its grandmas",
+          "blurb": "Grandma crowns, Thanksgiving casseroles and Christmas crowds, for birthdays, Mother's Day and family holidays."
+        },
+        {
+          "collection": "Love and Relationships",
+          "heading": "For a partner, with a playful touch",
+          "blurb": "Shared fries, borrowed hoodies and grocery-list flirting for Valentine's Day, an anniversary or a just-because gift."
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "For people who love a celebration",
+          "blurb": "Thanksgiving, Halloween, Christmas and fiesta designs for friends with a favourite season."
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "For friends who are always going somewhere",
+          "blurb": "Camping humour, Christmas-market suitcases and scenic detours for someone with a trip coming up."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I order?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Product types, sizes, colours and prices are shown on the marketplace page."
+        },
+        {
+          "question": "Can the design be changed or personalised?",
+          "answer": "No. They are original designs as shown, and personalisation is not offered on this site."
+        },
+        {
+          "question": "How do I choose for someone I do not see often?",
+          "answer": "Pick a warm, simple theme over a specific joke. A grandmother or friendship design rarely misses."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-hobbyists",
+      "title": "Gifts for Hobbyists & Crafters",
+      "heading": "Gifts for Hobbyists",
+      "description": "Club-style designs for crafters, climbers, bird watchers and tinkerers: find the exact hobby of the person you are shopping for.",
+      "intro": "The best hobby gift names the exact pastime, because hobbyists notice. Look for the craft or club they belong to, from candle pouring and knitting to ham radio, climbing and keeping chickens. If they prefer the outdoors, the nature and travel collections cover foraging, birding and trips.",
+      "sections": [
+        {
+          "collection": "Hobby Clubs",
+          "heading": "For crafters, collectors and club regulars",
+          "blurb": "Beading, knitting, candles, aquariums, puzzles, ham radio, rockets and more, with club-badge humour."
+        },
+        {
+          "collection": "Outdoors and Nature",
+          "heading": "For foragers, birders and trail walkers",
+          "blurb": "Mushroom hunts, early birding and woodland paths in linocut and field-guide style."
+        },
+        {
+          "collection": "Photo and Video lover",
+          "heading": "For photographers and video makers",
+          "blurb": "Keyframes, RAW files and prompt jokes for creators who live behind a lens."
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "For hikers, campers and wanderers",
+          "blurb": "Light adventure humour for someone who is happiest out of the office."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Which hobbies are covered?",
+          "answer": "The Hobby Clubs collection spans crafts, games, sports and outdoor pastimes, and it keeps growing. Open the collection to see which hobbies are currently listed."
+        },
+        {
+          "question": "Where do I buy these designs?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the buy link on a design page to see products there."
+        },
+        {
+          "question": "What if I am not sure which hobby suits them?",
+          "answer": "Ask a friend or check what they talk about most, then pick the design that names it. A hobby they already love will feel more personal than a general one."
+        }
+      ]
+    },
+    {
+      "slug": "gifts-for-self-care-and-wellness",
+      "title": "Self-Care Gifts & Wellness Shirts",
+      "heading": "Self-Care and Wellness Gifts",
+      "description": "Gentle designs about rest, pace and kindness to yourself, for a friend, a coworker or you. Supportive, never preachy.",
+      "intro": "A self-care gift says you want the person to be okay, and it works best when it is gentle rather than pointed. Choose a soft message about rest or pace, and skip anything that sounds like advice. These designs offer encouragement and are not medical guidance.",
+      "sections": [
+        {
+          "collection": "Mental Health",
+          "heading": "Kind words to wear or share",
+          "blurb": "Soft reminders about worth, pace and big feelings, for someone you want to support."
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "For rest days and slow walks",
+          "blurb": "Easy-pace, stretch and care-on-the-calendar designs for anyone learning to slow down."
+        },
+        {
+          "collection": "Love and Relationships",
+          "heading": "For the person who feels like home",
+          "blurb": "Warm, humorous couple designs about shared blankets and clear boundaries."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are these designs medical or therapeutic advice?",
+          "answer": "No. They are supportive messages and artwork only, not health advice. If someone is struggling, encourage them to talk to someone they trust or a qualified professional."
+        },
+        {
+          "question": "How do I choose without being awkward?",
+          "answer": "Pick a gentle, general message such as a softer voice or an easy pace, rather than one that names a specific struggle."
+        },
+        {
+          "question": "Where are these sold?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Products, sizes and prices are set on the marketplace page."
+        }
+      ]
+    }
+  ]
+}

@@ -18,6 +18,8 @@
     "sync:redbubble:json": "tsx scripts/sync-redbubble.ts --target=json",
     "backfill:slugs": "tsx scripts/backfill-design-slugs.ts",
     "db:migrate": "tsx scripts/migrate.ts",
+    "seo:copy": "tsx scripts/apply-seo-copy.ts",
+    "seo:copy:dry": "tsx scripts/apply-seo-copy.ts --dry-run",
     "designs:background": "tsx scripts/set-background.ts",
     "designs:background:dry": "tsx scripts/set-background.ts --dry-run",
     "sync:teepublic": "tsx scripts/sync-teepublic.ts",

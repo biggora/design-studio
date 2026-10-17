@@ -10,6 +10,8 @@ vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   fetchDesigns: async () => ({designs: [], total: 0}),
   fetchFeaturedCollections: (...args: unknown[]) => fetchFeaturedCollections(...args),
+  fetchLiveGiftPages: async (value: unknown) => (await import("@/lib/gifts")).getGiftPages(value)
+    .filter(page => page.sections.some(section => section.collection !== "Empty")),
 }));
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));
 vi.mock("@/app/components/Carousel", () => ({Carousel: () => <section data-testid="carousel">Slides</section>}));
@@ -51,6 +53,25 @@ describe("home catalog discovery", () => {
     expect(metadata.openGraph?.url).toBe("https://example.test");
     expect(metadata.alternates?.canonical).toBe("/");
     expect(metadata.robots).toBeUndefined();
+  });
+
+  it("shows a Gift ideas block only when gift pages are configured", async () => {
+    const {default: Home} = await import("./page");
+    expect(load(renderToStaticMarkup(await Home()))('nav[aria-label="Gift ideas"]')).toHaveLength(0);
+    config = {...config, giftPages: [{slug: "cats", title: "Cat Gifts", description: "D", intro: "I",
+      sections: [{collection: "Cats", heading: "H"}]}]} as typeof config;
+    const html = renderToStaticMarkup(await Home());
+    const $ = load(html);
+    expect($('nav[aria-label="Gift ideas"] h2').text()).toBe("Gift ideas");
+    expect($('nav[aria-label="Gift ideas"] a').attr("href")).toBe("/gifts/cats");
+    expect(html.indexOf("Browse by interest")).toBeLessThan(html.indexOf("Gift ideas"));
+  });
+
+  it("omits gift pages that have no designs from the home block", async () => {
+    config = {...config, giftPages: [{slug: "none", title: "None", description: "D", intro: "I",
+      sections: [{collection: "Empty", heading: "H"}]}]} as typeof config;
+    const {default: Home} = await import("./page");
+    expect(load(renderToStaticMarkup(await Home()))('nav[aria-label="Gift ideas"]')).toHaveLength(0);
   });
 
   it("keeps catalog access when there are no promoted collections", async () => {

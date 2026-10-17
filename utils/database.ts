@@ -15,6 +15,7 @@ import {hasMarketplaceLink} from "@/lib/utils";
 import {getMockupUrl} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
+import {GiftPage, getGiftPages} from "@/lib/gifts";
 import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
@@ -696,6 +697,15 @@ export async function fetchFeaturedCollections(value: SiteConfig["collectionPage
     return results.filter(page => page.total > 0);
 }
 
+/** Gift pages with at least one nonempty section collection; counts are looked up once per collection. */
+export async function fetchLiveGiftPages(value: SiteConfig["giftPages"]): Promise<GiftPage[]> {
+    const pages = getGiftPages(value);
+    const collections = [...new Set(pages.flatMap(page => page.sections.map(section => section.collection)))];
+    const totals = new Map(await Promise.all(collections.map(async collection =>
+        [collection, (await fetchDesigns(1, "", collection, 1)).total] as const)));
+    return pages.filter(page => page.sections.some(section => (totals.get(section.collection) ?? 0) > 0));
+}
+
 /** Add reviewed themes without changing marketplace memberships or other props. */
 export async function addCuratedCollections(id: string, titles: string[]): Promise<void> {
     titles = [...new Set(titles)];
@@ -735,23 +745,29 @@ export async function addCuratedCollections(id: string, titles: string[]): Promi
     await pool.query("INSERT IGNORE INTO design_collections (designId, collectionId) VALUES ?", [collections.map(collection => [id, collection.id])]);
 }
 
-export async function saveCollectionPages(pages: CollectionPage[]): Promise<void> {
-    if (getCollectionPages(pages).length !== pages.length) throw new Error("Invalid collection pages");
-    const value = JSON.stringify(pages);
+/** Upsert one `studio` row (select, then update or insert) on either provider. */
+export async function saveStudioValue(key: string, value: string): Promise<void> {
     if (getProvider() === "supabase") {
         const client = getSupabase();
-        const {data, error} = await client.from("studio").select("id").eq("key", "collectionPages");
-        if (error) throw new Error("Failed to read collection page config", {cause: error});
+        const {data, error} = await client.from("studio").select("id").eq("key", key);
+        if (error) throw new Error(`Failed to read studio config ${key}`, {cause: error});
+        // An RLS-denied write matches 0 rows without an error, so require returned rows.
         const result = data?.length
-            ? await client.from("studio").update({value}).eq("key", "collectionPages")
-            : await client.from("studio").insert({key: "collectionPages", value});
-        if (result.error) throw new Error("Failed to save collection page config", {cause: result.error});
+            ? await client.from("studio").update({value}).eq("key", key).select("id")
+            : await client.from("studio").insert({key, value}).select("id");
+        if (result.error) throw new Error(`Failed to save studio config ${key}`, {cause: result.error});
+        if (!result.data?.length) throw new Error(`studio write affected no rows: ${key}`);
         return;
     }
     const pool = getMySQLPool();
-    const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM studio WHERE `key` = ?", ["collectionPages"]);
-    if (rows.length) await pool.query("UPDATE studio SET value = ? WHERE `key` = ?", [value, "collectionPages"]);
-    else await pool.query("INSERT INTO studio (`key`, value) VALUES (?, ?)", ["collectionPages", value]);
+    const [rows] = await pool.query<mysql.RowDataPacket[]>("SELECT id FROM studio WHERE `key` = ?", [key]);
+    if (rows.length) await pool.query("UPDATE studio SET value = ? WHERE `key` = ?", [value, key]);
+    else await pool.query("INSERT INTO studio (`key`, value) VALUES (?, ?)", [key, value]);
+}
+
+export async function saveCollectionPages(pages: CollectionPage[]): Promise<void> {
+    if (getCollectionPages(pages).length !== pages.length) throw new Error("Invalid collection pages");
+    await saveStudioValue("collectionPages", JSON.stringify(pages));
 }
 
 export type FeedDesigns = { designs: Design[]; earliestListingAt: Record<string, string> };

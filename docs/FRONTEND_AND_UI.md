@@ -178,7 +178,16 @@ Generated per deployment from the configured domain:
 
 ### 3.4 Structured Data (JSON-LD)
 - Site-wide: `Organization` (name, url, logo, email, `sameAs` social profiles) and `WebSite`, emitted by the root layout via the `JsonLd` component.
-- Per design: `BreadcrumbList` (Home → Designs → design) and `CreativeWork` (name, description, image, `dateCreated`, keywords, creator).
+- Site-wide `WebSite` also carries a `SearchAction` pointing at `/designs?search={search_term_string}`.
+- Per design: `BreadcrumbList` (Home → primary collection → design, or Home → Designs → design when uncollected) and `CreativeWork` (name, description, image, `dateCreated`, keywords, creator).
+- Collection catalog pages (`/designs?collection=...`, known and non-empty): `CollectionPage` with an `ItemList` of the current page's designs.
+
+### 3.5 Gift pages (`app/gifts`)
+- Config key `giftPages` (studio row as JSON text, or an array in `config.json`), parsed by `getGiftPages` in `lib/gifts.ts`: `{slug, title, heading?, description, intro, sections: [{collection, heading, blurb?}], faq?: [{question, answer}]}`. Invalid entries (bad slug, missing copy, empty sections) and duplicate slugs are dropped.
+- Routes: `/gifts` (index of cards, noindex when none configured) and `/gifts/<slug>` (one section per collection with up to 8 `DesignCard`s, a "See all" link to the collection, a visible FAQ, `BreadcrumbList` and `ItemList` JSON-LD; sections without designs are skipped and a page with none is a 404).
+- Linked from the header, footer, home page ("Gift ideas") and, on a design page, from a "Gift ideas:" line when one of the design's collections is in a gift section.
+- `/sitemap.xml` lists `/gifts` and every gift page that has at least one section with designs (`fetchLiveGiftPages`, which also gates the `/gifts` index and the home "Gift ideas" block).
+- Copy is applied with `npx tsx scripts/apply-seo-copy.ts --plan=<json> [--dry-run|--apply]` (`npm run seo:copy:dry -- --plan=...`). The plan is `{home?, intro?, description?, collectionPages?, giftPages?}`; its page structure is validated (unknown collection names are only reported in `warnings.unknownCollections`; the site hides them until they exist), it is previewed by default, and `--apply` backs up previous values to `.cache/seo-copy-<timestamp>.json` before writing the changed `studio` rows. Then call `POST /api/revalidate/config` or wait for the 5-minute cache.
 
 ---
 

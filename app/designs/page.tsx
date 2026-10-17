@@ -10,7 +10,9 @@ import { getDesignDisplayImage } from "@/lib/image";
 import TrackCatalogState from "@/app/components/TrackCatalogState";
 import { buttonVariants } from "@/components/ui/button";
 import { parsePageParam } from "@/lib/utils";
-import {getCollectionPages} from "@/lib/collections";
+import {getCollectionPages, collectionPath} from "@/lib/collections";
+import {designPath} from "@/lib/slug";
+import {JsonLd} from "@/app/components/JsonLd";
 import {CollectionLinks} from "@/app/components/CollectionLinks";
 
 const ITEMS_PER_PAGE = 15;
@@ -84,7 +86,7 @@ export default async function DesignFolio(
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";
 
-  const {designs, total, collections, featuredCollections, heading, intro} =
+  const {config, designs, total, collections, featuredCollections, heading, intro, description, knownCollection} =
     await loadCatalog(currentPage, searchQuery, selectedCollection);
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
@@ -103,8 +105,26 @@ export default async function DesignFolio(
     redirect(createPageUrl(targetPage));
   }
 
+  const siteUrl = `https://${config.domain}`;
+  const collectionJsonLd = selectedCollection && !searchQuery && knownCollection && total > 0 ? {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: heading,
+    description: description || intro,
+    url: `${siteUrl}${collectionPath(selectedCollection, currentPage)}`,
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: designs.map((design: Design, index: number) => ({
+        "@type": "ListItem",
+        position: index + 1,
+        url: `${siteUrl}${designPath(design)}`,
+      })),
+    },
+  } : null;
+
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {collectionJsonLd && <JsonLd data={collectionJsonLd} />}
       <TrackCatalogState />
       <h1 className="text-4xl font-bold mb-4 text-foreground">{heading}</h1>
       {intro && <p className="text-muted-foreground max-w-3xl mb-6">{intro}</p>}

@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { designPath } from "@/lib/slug";
 import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
 import { cn, safeHexColor } from "@/lib/utils";
+import { collectionPath } from "@/lib/collections";
 
 type DesignCardProps = {
   design: Design;
@@ -52,7 +53,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
           <p className={cn("text-muted-foreground mb-2", compactOnMobile && "hidden sm:block")}>
             Collection:&nbsp;
             <Link
-              href={`/designs?collection=${encodeURIComponent(design.collection)}`}
+              href={collectionPath(design.collection)}
               className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {design.collection}

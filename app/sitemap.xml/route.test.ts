@@ -6,12 +6,14 @@ import { Design } from "@/types/design";
 const getSiteConfig = vi.fn();
 const fetchDesigns = vi.fn();
 const fetchFeaturedCollections = vi.fn();
+const fetchLiveGiftPages = vi.fn();
 
 vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
   fetchDesigns: (page: number, q: string, collection: string, itemsPerPage: number) =>
     fetchDesigns(page, q, collection, itemsPerPage),
   fetchFeaturedCollections: (...args: unknown[]) => fetchFeaturedCollections(...args),
+  fetchLiveGiftPages: (...args: unknown[]) => fetchLiveGiftPages(...args),
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -39,6 +41,7 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 beforeEach(() => {
   getSiteConfig.mockReset().mockResolvedValue({ name: "ThreadQuirk", domain: "threadquirk.test" });
   fetchFeaturedCollections.mockReset().mockResolvedValue([]);
+  fetchLiveGiftPages.mockReset().mockResolvedValue([]);
   // One page of designs; the loop stops when a page comes back short.
   fetchDesigns.mockReset().mockResolvedValue({
     designs: [makeDesign(), makeDesign({ id: "id-2", slug: "second-design" })],
@@ -74,10 +77,23 @@ describe("/sitemap.xml", () => {
     expect(xml).toContain("<loc>https://threadquirk.test/</loc>");
     expect(xml).toContain("<loc>https://threadquirk.test/disclosure</loc>");
     expect(xml).toContain("<loc>https://threadquirk.test/designs/look-past-the-stars-astronaut-design</loc>");
-    expect(xml).toContain("<lastmod>2026-10-07</lastmod>");
+    expect(xml).toContain("<lastmod>2026-10-07</lastmod>"); // createdAt, not the sync-rewritten updatedAt
     expect(xml).toContain("<changefreq>monthly</changefreq>");
     expect(xml).toContain("<priority>1</priority>");
     expect(xml).toContain("<priority>0.5</priority>");
+  });
+
+  it("lists /gifts and only the live gift pages returned by fetchLiveGiftPages", async () => {
+    const { GET } = await import("@/app/sitemap.xml/route");
+    expect(await (await GET()).text()).not.toContain("/gifts");
+
+    const gift = { slug: "programmers", title: "T", description: "D", intro: "I", sections: [{ collection: "Programming", heading: "H" }] };
+    getSiteConfig.mockResolvedValue({ name: "ThreadQuirk", domain: "threadquirk.test", giftPages: [gift] });
+    fetchLiveGiftPages.mockResolvedValue([gift]);
+    const xml = await (await GET()).text();
+    expect(fetchLiveGiftPages).toHaveBeenCalledWith([gift]);
+    expect(xml).toContain("<loc>https://threadquirk.test/gifts</loc>");
+    expect(xml).toContain("<loc>https://threadquirk.test/gifts/programmers</loc>");
   });
 
   it("escapes XML-significant characters in URLs", async () => {

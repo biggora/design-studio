@@ -43,6 +43,19 @@ describe("collection catalog pages", () => {
     expect(html).toContain('href="/designs?collection=Programming"');
   });
 
+  it("emits CollectionPage JSON-LD with the page's designs for a known non-empty collection only", async () => {
+    const {default: Page} = await import("./page");
+    fetchDesigns.mockResolvedValue({designs: [{id: "1", slug: "one", title: "One"}], total: 22});
+    const html = renderToStaticMarkup(await Page({searchParams: Promise.resolve({collection: "Programming"})}));
+    const ld = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);
+    expect(ld).toMatchObject({
+      "@type": "CollectionPage", name: "Programming Prints", url: "https://example.test/designs?collection=Programming",
+      mainEntity: {"@type": "ItemList", itemListElement: [{position: 1, url: "https://example.test/designs/one"}]},
+    });
+    const empty = renderToStaticMarkup(await Page({searchParams: Promise.resolve({})}));
+    expect(empty).not.toContain("CollectionPage");
+  });
+
   it("uses database copy for other real collections", async () => {
     const {generateMetadata} = await import("./page");
     const metadata = await generateMetadata({searchParams: Promise.resolve({collection: "Photography"})});

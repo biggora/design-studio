@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import companyData from "@/config/config.json";
 import type {CollectionPage} from "@/lib/collections";
+import type {GiftPage} from "@/lib/gifts";
 
 export interface SocialMedia {
   [key: string]: string;
@@ -66,6 +67,8 @@ export interface SiteConfig {
   about: AboutConfig;
   /** Promoted collection pages, optionally JSON-encoded in the studio table. */
   collectionPages?: CollectionPage[] | string;
+  /** Curated gift landing pages (/gifts/<slug>), optionally JSON-encoded in the studio table. */
+  giftPages?: GiftPage[] | string;
   /** Home discovery copy; studio rows can override home.title/heading/description. */
   home?: {title: string; heading: string; description: string};
 }

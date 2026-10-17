@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { SiteConfig } from "@/lib/store";
 import { Design } from "@/types/design";
-import { getSiteConfig, fetchDesigns, fetchFeaturedCollections } from "@/utils/database";
+import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages } from "@/utils/database";
 import { designPath } from "@/lib/slug";
 import { escapeXml } from "@/lib/pinterest-feed";
 import {collectionPath} from "@/lib/collections";
+import {giftPath} from "@/lib/gifts";
 
 /**
  * GET /sitemap.xml — the sitemap protocol document for search engines, with a
@@ -89,11 +90,21 @@ export async function GET(): Promise<NextResponse> {
     changefreq: "monthly",
   }));
 
+  const liveGiftPages = await fetchLiveGiftPages(config.giftPages);
+  const giftEntries: SitemapEntry[] = liveGiftPages.length ? [
+    { url: `https://${config.domain}/gifts`, priority: 0.8, changefreq: "monthly" },
+    ...liveGiftPages.map(gift => ({
+      url: `https://${config.domain}${giftPath(gift.slug)}`,
+      priority: 0.8,
+      changefreq: "monthly" as const,
+    })),
+  ] : [];
+
   const xml = [
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>`,
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...[...staticRoutes, ...collectionEntries, ...designEntries].map(entryXml),
+    ...[...staticRoutes, ...collectionEntries, ...giftEntries, ...designEntries].map(entryXml),
     "</urlset>",
     "",
   ].join("\n");

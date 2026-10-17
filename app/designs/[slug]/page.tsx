@@ -30,6 +30,8 @@ import ShareLinks from "@/app/components/ShareLinks";
 import { JsonLd } from "@/app/components/JsonLd";
 import BuyLink from "@/app/components/BuyLink";
 import { buttonVariants } from "@/components/ui/button";
+import { collectionPath, curatedCollectionTitles } from "@/lib/collections";
+import { getGiftPages, giftPath } from "@/lib/gifts";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -103,6 +105,11 @@ export default async function DesignDetails(
   const collectionQuery = collectionParams.toString();
   const collectionUrl = collectionQuery ? `/designs?${collectionQuery}` : "/designs";
 
+  const designCollections = [design.collection, ...curatedCollectionTitles(design.props)].filter(Boolean);
+  const giftLinks = getGiftPages(config.giftPages).filter((page) =>
+    page.sections.some((section) => designCollections.includes(section.collection)),
+  );
+
   const shareUrl = `https://${config.domain}${designPath(design)}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
@@ -131,8 +138,8 @@ export default async function DesignDetails(
       {
         "@type": "ListItem",
         position: 2,
-        name: "Designs",
-        item: `https://${config.domain}/designs`,
+        name: design.collection || "Designs",
+        item: `https://${config.domain}${design.collection ? collectionPath(design.collection) : "/designs"}`,
       },
       {
         "@type": "ListItem",
@@ -171,7 +178,7 @@ export default async function DesignDetails(
             >
               <Image
                 src={displayImage || "/images/no_image_available.svg"}
-                alt={design.title}
+                alt={design.collection ? `${design.title} – ${design.collection} design` : `${design.title} design`}
                 width={designCardWidth}
                 height={designCardHeight}
                 priority
@@ -197,6 +204,22 @@ export default async function DesignDetails(
                     >
                       {design.collection}
                     </Link>
+                  </p>
+                )}
+                {giftLinks.length > 0 && (
+                  <p className="text-muted-foreground mb-4">
+                    Gift ideas:&nbsp;
+                    {giftLinks.map((page, index) => (
+                      <span key={page.slug}>
+                        {index > 0 && ", "}
+                        <Link
+                          href={giftPath(page.slug)}
+                          className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          {page.heading || page.title}
+                        </Link>
+                      </span>
+                    ))}
                   </p>
                 )}
                 <p className="text-muted-foreground mb-4 lg:text-right">

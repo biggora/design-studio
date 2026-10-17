@@ -5,13 +5,19 @@ let row: Record<string, unknown>;
 let memberships: {collectionId: string}[];
 let collections: {id: string; title: string; description: string}[];
 let writes: {table: string; value: unknown}[];
+let noRowsWritten = false;
 const filters: unknown[][] = [];
 const mysqlQuery = vi.fn();
 
 vi.mock("@supabase/supabase-js", () => ({createClient: () => ({from: (table: string) => {
     const writer = (value: unknown) => {
         writes.push({table, value});
-        return {eq: async () => ({error: null}), then: (resolve: (result: unknown) => unknown) => Promise.resolve({error: null}).then(resolve)};
+        const written = () => ({error: null, data: noRowsWritten ? [] : [{id: "1"}]});
+        const result = {
+            select: async () => written(),
+            then: (resolve: (result: unknown) => unknown) => Promise.resolve({error: null}).then(resolve),
+        };
+        return {...result, eq: () => result};
     };
     return {update: writer, upsert: writer, insert: writer, select: (selection: string) => {
         let collection = "";
@@ -43,6 +49,7 @@ beforeEach(() => {
     memberships = [{collectionId: "pets"}, {collectionId: "coding"}];
     collections = [{id: "pets", title: "Pets", description: "Pet artwork"}];
     writes = [];
+    noRowsWritten = false;
     filters.length = 0;
     mysqlQuery.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
@@ -61,6 +68,35 @@ describe("collection database behavior", () => {
         memberships = [];
         const {getDesignBySlug} = await import("@/utils/database");
         expect((await getDesignBySlug("cat"))?.relatedDesigns).toEqual([]);
+    });
+
+    it("saveStudioValue inserts a missing row", async () => {
+        const {saveStudioValue} = await import("@/utils/database");
+        await saveStudioValue("giftPages", "[]");
+        expect(writes).toEqual([{table: "studio", value: {key: "giftPages", value: "[]"}}]);
+    });
+
+    it("saveStudioValue throws when the write affects no rows (e.g. RLS denial)", async () => {
+        noRowsWritten = true;
+        const {saveStudioValue} = await import("@/utils/database");
+        await expect(saveStudioValue("giftPages", "[]")).rejects.toThrow("studio write affected no rows: giftPages");
+    });
+
+    it("fetchLiveGiftPages keeps only pages with a nonempty section collection", async () => {
+        const gift = (slug: string, ...cols: string[]) => ({slug, title: "T", description: "D", intro: "I",
+            sections: cols.map(collection => ({collection, heading: "H"}))});
+        const {fetchLiveGiftPages} = await import("@/utils/database");
+        const live = await fetchLiveGiftPages([gift("a", "Pets"), gift("b", "Empty"), gift("c", "Empty", "Pets")]);
+        expect(live.map(page => page.slug)).toEqual(["a", "c"]);
+    });
+
+    it("saveStudioValue updates an existing mysql row", async () => {
+        vi.stubEnv("DATABASE_PROVIDER", "mysql");
+        for (const name of ["MYSQL_HOST", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"]) vi.stubEnv(name, "x");
+        mysqlQuery.mockResolvedValueOnce([[{id: 1}]]).mockResolvedValueOnce([[]]);
+        const {saveStudioValue} = await import("@/utils/database");
+        await saveStudioValue("home.title", "New");
+        expect(mysqlQuery).toHaveBeenLastCalledWith("UPDATE studio SET value = ? WHERE `key` = ?", ["New", "home.title"]);
     });
 
     it("adds curation while preserving props and an existing primary theme", async () => {
@@ -100,6 +136,7 @@ describe("collection database behavior", () => {
 describe("MySQL collection behavior", () => {
     beforeEach(() => {
         vi.stubEnv("DATABASE_PROVIDER", "mysql");
+        for (const name of ["MYSQL_HOST", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"]) vi.stubEnv(name, "x");
         for (const key of ["MYSQL_HOST", "MYSQL_USER", "MYSQL_PASSWORD", "MYSQL_DATABASE"]) vi.stubEnv(key, "test");
         mysqlQuery.mockImplementation((sql: string) => {
             if (sql.includes("FROM collections")) return Promise.resolve([collections]);

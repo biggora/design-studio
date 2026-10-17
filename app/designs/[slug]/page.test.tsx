@@ -64,6 +64,38 @@ describe("non-Redbubble design page", () => {
       position: "secondary",
     });
   });
+  it("uses the collection in breadcrumbs and alt text, and links matching gift pages", async () => {
+    const original = { collection: design.collection, props: design.props };
+    design.collection = "Cat lovers";
+    design.props = { curatedCollections: ["Programming"] };
+    Object.assign(config, {
+      giftPages: [
+        { slug: "devs", title: "Gifts for Devs", description: "D", intro: "I", sections: [{ collection: "Programming", heading: "H" }] },
+        { slug: "other", title: "Other", description: "D", intro: "I", sections: [{ collection: "Plants", heading: "H" }] },
+      ],
+    });
+    try {
+      const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
+      expect(html).toContain('alt="Space cat – Cat lovers design"');
+      expect(html).toContain('href="/gifts/devs"');
+      expect(html).toContain("Gift ideas:");
+      expect(html).not.toContain("/gifts/other");
+      const ld = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);
+      expect(ld[0].itemListElement[1]).toMatchObject({
+        name: "Cat lovers",
+        item: `https://${config.domain}/designs?collection=Cat+lovers`,
+      });
+    } finally {
+      Object.assign(design, original);
+      delete (config as { giftPages?: unknown }).giftPages;
+    }
+  });
+  it("falls back to Designs breadcrumb, plain alt text and no gift line without a collection", async () => {
+    const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
+    expect(html).toContain('alt="Space cat design"');
+    expect(html).not.toContain("Gift ideas:");
+    expect(html).toContain('"name":"Designs"');
+  });
   it("generates metadata with the stable design path", async () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ slug: "space-cat" }) });
     expect(metadata.alternates?.canonical).toBe("/designs/space-cat");

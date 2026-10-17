@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { getSiteConfig, fetchDesigns, fetchFeaturedCollections } from "@/utils/database";
+import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages } from "@/utils/database";
 import { Design } from "@/types/design";
 import { SiteConfig, CarouselSlide } from "@/lib/store";
 import { Carousel } from "@/app/components/Carousel";
@@ -10,6 +10,7 @@ import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {collectionPath} from "@/lib/collections";
+import {giftPath} from "@/lib/gifts";
 import defaultConfig from "@/config/config.json";
 
 // Bundled fallback: shown when config.slides is absent, empty, or malformed.
@@ -106,6 +107,7 @@ export default async function Home() {
   const { featuredDesigns, config } = await getFeaturedDesigns();
   const collections = await fetchFeaturedCollections(config.collectionPages);
   const home = {...defaultConfig.home, ...config.home};
+  const giftPages = await fetchLiveGiftPages(config.giftPages);
 
   return (
     <>
@@ -133,6 +135,20 @@ export default async function Home() {
                 <li key={collection.collection}>
                   <Link href={collectionPath(collection.collection)} className="inline-flex items-center min-h-11 border border-input rounded-md px-2 py-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     {collection.heading || collection.title}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+        {giftPages.length > 0 && (
+          <nav aria-label="Gift ideas" className="mb-8">
+            <h2 className="text-xl font-semibold mb-3 text-foreground">Gift ideas</h2>
+            <ul className="flex flex-wrap gap-2">
+              {giftPages.map(page => (
+                <li key={page.slug}>
+                  <Link href={giftPath(page.slug)} className="inline-flex items-center min-h-11 border border-input rounded-md px-2 py-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    {page.heading || page.title}
                   </Link>
                 </li>
               ))}

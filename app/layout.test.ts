@@ -10,7 +10,35 @@ vi.mock("./components/Footer", () => ({ default: () => null }));
 vi.mock("./components/CookieBanner", () => ({ CookieBanner: () => null }));
 vi.mock("./components/AnalyticsGate", () => ({ AnalyticsGate: () => null }));
 vi.mock("@/app/components/JsonLd", () => ({ JsonLd: () => null }));
+import { JsonLd } from "@/app/components/JsonLd";
 vi.mock("@/app/wrapper", () => ({ default: () => null }));
+
+function findJsonLdData(node: unknown): unknown {
+  if (Array.isArray(node)) return node.map(findJsonLdData).find(Boolean);
+  if (!node || typeof node !== "object") return undefined;
+  const el = node as { type?: unknown; props?: { data?: unknown; children?: unknown } };
+  if (el.type === JsonLd) return el.props?.data;
+  return findJsonLdData(el.props?.children);
+}
+
+describe("root JSON-LD", () => {
+  it("declares a WebSite SearchAction for the catalog search", async () => {
+    const { default: RootLayout } = await import("./layout");
+    getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test" });
+    const data = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+    expect(data.find((item) => item["@type"] === "WebSite")).toMatchObject({
+      url: "https://other.example.test",
+      potentialAction: {
+        "@type": "SearchAction",
+        target: {
+          "@type": "EntryPoint",
+          urlTemplate: "https://other.example.test/designs?search={search_term_string}",
+        },
+        "query-input": "required name=search_term_string",
+      },
+    });
+  });
+});
 
 describe("root metadata", () => {
   it("uses the deployment's configured domain and brand", async () => {
