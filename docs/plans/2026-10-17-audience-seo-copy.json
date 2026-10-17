@@ -213,6 +213,49 @@
   ],
   "giftPages": [
     {
+      "slug": "halloween-gift-ideas",
+      "title": "Halloween Gift Ideas for Every Fan",
+      "heading": "Halloween Gift Ideas",
+      "description": "Halloween gift ideas with friendly monsters, haunted-tabletop jokes, pumpkin-porch humour and group-costume designs for fans of the season.",
+      "intro": "Halloween gifts work best when they are spooky in a cheerful way. Think about whether the person loves cute monsters, hosts the party or is the one organising the group costume. Choose the vibe first, then check the marketplace page for the products available.",
+      "sections": [
+        {
+          "collection": "Monsters",
+          "heading": "For fans of friendly creatures",
+          "blurb": "Furry monsters with big fangs and small social batteries, including ones who knock before they haunt."
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "For the group-costume organiser",
+          "blurb": "Matching costumes, candy consultants and haunted family trees for a crew that dresses up together."
+        },
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "For gamers who love a haunt",
+          "blurb": "Ghosts that skip the documentation, haunted backups and loot-poor haunted houses."
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "For pumpkin-porch decorators",
+          "blurb": "Seasonal jokes about too many pumpkins and the pumpkin shift that starts at dusk."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Halloween gift?",
+          "answer": "Pick the kind of spooky the person enjoys: cute, funny or nerdy. Designs that read as playful rather than scary are easier to wear beyond October. This site does not offer costumes, so check the marketplace for the products available."
+        }
+      ]
+    },
+    {
       "slug": "black-friday-gift-ideas",
       "title": "Black Friday Gift Ideas for Every List",
       "heading": "Black Friday Gift Ideas",
@@ -257,6 +300,87 @@
         {
           "question": "How do I pick a gift for someone hard to shop for?",
           "answer": "Choose a theme they already talk about, such as their job, hobby or pet, and keep the tone friendly. A design they can wear after the holidays is a better choice than a one-time joke."
+        }
+      ]
+    },
+    {
+      "slug": "thanksgiving-gift-ideas",
+      "title": "Thanksgiving Gift Ideas for Hosts & Guests",
+      "heading": "Thanksgiving Gift Ideas",
+      "description": "Thanksgiving gift ideas for hosts, cooks and the people who show up with casseroles: harvest tables, feast illustrations and turkey humour.",
+      "intro": "Thanksgiving is about the table, so lean toward gifts that celebrate the people and the food. Think of the host who plans the menu, the guest who always brings a dish, or the relative who runs the turkey trot. Pick the tone, warm or funny, and open the design to see the options.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "For the guest who brings the casserole",
+          "blurb": "Good company that travels in casseroles, and a harvest table wreath of Thanksgiving dishes."
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "For the turkey-trot crowd",
+          "blurb": "Jogging and sprinting turkey mascots, for people who run before they feast."
+        },
+        {
+          "collection": "For gourmets and food lovers",
+          "heading": "For the cook behind the feast",
+          "blurb": "A Thanksgiving dinner table illustration and food humour for the one who runs the kitchen."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Thanksgiving gift?",
+          "answer": "Pick something about the gathering rather than a specific person, such as the shared table or the cook. Warm, simple designs suit hosts, guests and visiting relatives alike."
+        }
+      ]
+    },
+    {
+      "slug": "christmas-gift-ideas",
+      "title": "Christmas Gift Ideas for Family & Friends",
+      "heading": "Christmas Gift Ideas",
+      "description": "Christmas gift ideas for families, friends, pet owners and holiday travellers: cosy tables, gingerbread humour and festive pets.",
+      "intro": "A good Christmas gift matches the way the person celebrates. Some hosts feed a crowd, some travel to markets, and some share the season with a cat who has opinions about the tree. Choose the scene that sounds most like them, then compare the products on the marketplace page.",
+      "sections": [
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "For the festive planner",
+          "blurb": "Small trees, big December energy, gingerbread ambition and Christmas plans that involve baking and napping."
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "For the whole Christmas table",
+          "blurb": "Matching pajamas, group-chat Christmas sweaters and a table that always fits one more."
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "For pets who judge the tree",
+          "blurb": "Cats and dogs with notes on the decorations, the stockings and the wrapping."
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "For people travelling for the holidays",
+          "blurb": "Train-window Christmas views, carry-on-size cheer and a sleigh with a boarding pass."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Christmas gift?",
+          "answer": "Think about where and with whom they celebrate: at home, on the road or with a pet. A design that fits the occasion and the person feels more thoughtful than a general festive one."
         }
       ]
     },
@@ -586,6 +710,168 @@
         {
           "question": "Where are these sold?",
           "answer": "Designs are sold through Redbubble and TeePublic. Products, sizes and prices are set on the marketplace page."
+        }
+      ]
+    },
+    {
+      "slug": "valentines-day-gift-ideas",
+      "title": "Valentine's Day Gift Ideas for Anyone",
+      "heading": "Valentine's Day Gift Ideas",
+      "description": "Valentine's Day gift ideas for partners, friends and Galentine's plans: playful love designs, in-jokes and warm messages.",
+      "intro": "Valentine's Day is not only for couples, so you can choose for a partner, a close friend or a family member. Start with how they like to show affection, whether that is playful, quiet or full of in-jokes. Pick a message they would be happy to wear all year.",
+      "sections": [
+        {
+          "collection": "Love and Relationships",
+          "heading": "For a partner who likes it playful",
+          "blurb": "Shared fries, borrowed hoodies, grocery-list flirting and love that makes room for weird."
+        },
+        {
+          "collection": "Programming",
+          "heading": "For the developer in your life",
+          "blurb": "Love-language jokes about backups, Markdown and Python for someone who speaks in code."
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "For friends and Galentine's plans",
+          "blurb": "Warm designs about the people you trust with your candy and your holiday table."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose for a friend or family member?",
+          "answer": "Pick a warm, humorous message about friendship, not romance. Galentine's gifts, a thank-you to a friend or a note for a relative all work with a light touch."
+        }
+      ]
+    },
+    {
+      "slug": "mothers-day-gift-ideas",
+      "title": "Mother's Day Gift Ideas for Every Mom",
+      "heading": "Mother's Day Gift Ideas",
+      "description": "Mother's Day gift ideas for moms, grandmothers and mother figures: grandma-themed designs, craft hobby prints, plus pet and wellness picks.",
+      "intro": "The best Mother's Day gifts reflect who she is, not a role. Start with the grandmother designs if she has the title, then match what she enjoys: a craft, a pet, a quiet moment of her own. Choose something she would pick for herself.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "For grandmothers and Nanas",
+          "blurb": "Grandma, Nana and Mimi designs with crowns, flowers and capes for the grandmother who deserves it."
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "For moms with a favourite craft",
+          "blurb": "Knitting, candles, beads, backyard chickens and more, in club-badge style."
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "For the pet mom",
+          "blurb": "Cats and dogs with opinions, for the person whose animals run the house."
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "For a quiet moment of her own",
+          "blurb": "Rest days, easy-pace walks and care on the calendar for someone who rarely takes a break."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Mother's Day gift?",
+          "answer": "Think about what she enjoys rather than what she does for others. A hobby, a pet or a rest-day message shows you know her, and grandmother designs fit the role."
+        }
+      ]
+    },
+    {
+      "slug": "fathers-day-gift-ideas",
+      "title": "Father's Day Gift Ideas for Dads & Mentors",
+      "heading": "Father's Day Gift Ideas",
+      "description": "Father's Day gift ideas for dads, grandfathers and father figures: designs for developers, gamers, hobbyists and outdoor fans.",
+      "intro": "Skip the generic dad theme and match the gift to his interests. Does he code, game, craft or head for the trail on weekends? Pick the interest first, then choose a design he would wear because it fits him.",
+      "sections": [
+        {
+          "collection": "Programming",
+          "heading": "For the developer dad",
+          "blurb": "Language jokes and AI-agent humour for a programmer who loves the work."
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "For a dad with a serious hobby",
+          "blurb": "Climbing, ham radio, model rockets, woodturning and more, with club-badge humour."
+        },
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "For a gaming or puzzle-loving dad",
+          "blurb": "Controller astronauts and a Go board for a dad who says one more level."
+        },
+        {
+          "collection": "Outdoors and Nature",
+          "heading": "For a dad on the trail",
+          "blurb": "Mushroom hunts, early birding and woodland paths for a father who lives outside."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Father's Day gift?",
+          "answer": "Choose his interest, not his role. A design about something he does every week feels more personal than a general dad theme, and works for fathers, stepfathers and mentors alike."
+        }
+      ]
+    },
+    {
+      "slug": "back-to-school-gift-ideas",
+      "title": "Back to School Gift Ideas for Students",
+      "heading": "Back to School Gift Ideas",
+      "description": "Back to school gift ideas for students, teachers and parents: pencil and snack designs, plus writing and rest-focused picks.",
+      "intro": "A back-to-school gift should help a student feel ready or a little braver. Choose between playful school-life designs, a gentle reminder to rest and a craft or writing theme for the creative one. Teachers and parents can use the same list.",
+      "sections": [
+        {
+          "collection": "Back to School",
+          "heading": "For students and teachers",
+          "blurb": "Fresh pencils, snack priorities, doodle margins and a robot lab partner who needs a hall pass."
+        },
+        {
+          "collection": "Mental Health",
+          "heading": "For a student who needs kind words",
+          "blurb": "Soft, supportive reminders about pace and big feelings for the start of a busy term."
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "For the writer, sketcher or crafter",
+          "blurb": "Pencil, manuscript and sketchbook designs for creative students and teachers."
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a back-to-school gift?",
+          "answer": "Pick a design that matches the person's mood about the new term: playful for the enthusiast, gentle for the nervous one. Teachers and parents often enjoy the humorous ones."
         }
       ]
     }
