@@ -34,6 +34,26 @@ describe("/gifts", () => {
     expect(metadata.robots).toBeUndefined();
   });
 
+  it("renders pages in seasonal order for the current date", async () => {
+    vi.useFakeTimers({toFake: ["Date"]});
+    const original = giftPages;
+    const seasonal = (slug: string, start: string, end: string) => ({slug, title: slug, description: "D", intro: "I",
+      season: {start, end}, sections: [{collection: "Programming", heading: "H"}]});
+    giftPages = [seasonal("winter", "12-01", "12-24"), {...seasonal("evergreen", "01-01", "01-01"), season: undefined}, seasonal("autumn", "10-01", "10-31")];
+    try {
+      const {default: Page} = await import("./page");
+      vi.setSystemTime(new Date("2026-10-17T12:00:00Z"));
+      let $ = load(renderToStaticMarkup(await Page()));
+      expect($("li a").map((_, el) => $(el).attr("href")).get()).toEqual(["/gifts/autumn", "/gifts/evergreen", "/gifts/winter"]);
+      vi.setSystemTime(new Date("2026-12-10T12:00:00Z"));
+      $ = load(renderToStaticMarkup(await Page()));
+      expect($("li a").map((_, el) => $(el).attr("href")).get()).toEqual(["/gifts/winter", "/gifts/evergreen", "/gifts/autumn"]);
+    } finally {
+      vi.useRealTimers();
+      giftPages = original;
+    }
+  });
+
   it("does not link gift pages whose sections are all empty", async () => {
     emptyCollections = new Set(["Cats"]);
     const {default: Page} = await import("./page");

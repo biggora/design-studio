@@ -216,6 +216,10 @@
       "slug": "halloween-gift-ideas",
       "title": "Halloween Gift Ideas for Every Fan",
       "heading": "Halloween Gift Ideas",
+      "season": {
+        "start": "09-01",
+        "end": "10-31"
+      },
       "description": "Halloween gift ideas with friendly monsters, haunted-tabletop jokes, pumpkin-porch humour and group-costume designs for fans of the season.",
       "intro": "Halloween gifts work best when they are spooky in a cheerful way. Think about whether the person loves cute monsters, hosts the party or is the one organising the group costume. Choose the vibe first, then check the marketplace page for the products available.",
       "sections": [
@@ -259,6 +263,10 @@
       "slug": "black-friday-gift-ideas",
       "title": "Black Friday Gift Ideas for Every List",
       "heading": "Black Friday Gift Ideas",
+      "season": {
+        "start": "10-15",
+        "end": "11-30"
+      },
       "description": "Black Friday gift ideas by recipient: holiday designs, family favourites, and picks for developers, hobbyists and pet people.",
       "intro": "A holiday list goes faster when you sort it by person. Start with the seasonal designs for the host and the family table, then match the rest to what each person already loves: their code, their craft or their pet. Pick something they would wear again after the holidays, and open the marketplace page to see the options for each design.",
       "sections": [
@@ -307,6 +315,10 @@
       "slug": "thanksgiving-gift-ideas",
       "title": "Thanksgiving Gift Ideas for Hosts & Guests",
       "heading": "Thanksgiving Gift Ideas",
+      "season": {
+        "start": "10-01",
+        "end": "11-26"
+      },
       "description": "Thanksgiving gift ideas for hosts, cooks and the people who show up with casseroles: harvest tables, feast illustrations and turkey humour.",
       "intro": "Thanksgiving is about the table, so lean toward gifts that celebrate the people and the food. Think of the host who plans the menu, the guest who always brings a dish, or the relative who runs the turkey trot. Pick the tone, warm or funny, and open the design to see the options.",
       "sections": [
@@ -345,6 +357,10 @@
       "slug": "christmas-gift-ideas",
       "title": "Christmas Gift Ideas for Family & Friends",
       "heading": "Christmas Gift Ideas",
+      "season": {
+        "start": "10-15",
+        "end": "12-25"
+      },
       "description": "Christmas gift ideas for families, friends, pet owners and holiday travellers: cosy tables, gingerbread humour and festive pets.",
       "intro": "A good Christmas gift matches the way the person celebrates. Some hosts feed a crowd, some travel to markets, and some share the season with a cat who has opinions about the tree. Choose the scene that sounds most like them, then compare the products on the marketplace page.",
       "sections": [
@@ -717,6 +733,10 @@
       "slug": "valentines-day-gift-ideas",
       "title": "Valentine's Day Gift Ideas for Anyone",
       "heading": "Valentine's Day Gift Ideas",
+      "season": {
+        "start": "01-02",
+        "end": "02-14"
+      },
       "description": "Valentine's Day gift ideas for partners, friends and Galentine's plans: playful love designs, in-jokes and warm messages.",
       "intro": "Valentine's Day is not only for couples, so you can choose for a partner, a close friend or a family member. Start with how they like to show affection, whether that is playful, quiet or full of in-jokes. Pick a message they would be happy to wear all year.",
       "sections": [
@@ -755,6 +775,10 @@
       "slug": "mothers-day-gift-ideas",
       "title": "Mother's Day Gift Ideas for Every Mom",
       "heading": "Mother's Day Gift Ideas",
+      "season": {
+        "start": "03-20",
+        "end": "05-12"
+      },
       "description": "Mother's Day gift ideas for moms, grandmothers and mother figures: grandma-themed designs, craft hobby prints, plus pet and wellness picks.",
       "intro": "The best Mother's Day gifts reflect who she is, not a role. Start with the grandmother designs if she has the title, then match what she enjoys: a craft, a pet, a quiet moment of her own. Choose something she would pick for herself.",
       "sections": [
@@ -798,6 +822,10 @@
       "slug": "fathers-day-gift-ideas",
       "title": "Father's Day Gift Ideas for Dads & Mentors",
       "heading": "Father's Day Gift Ideas",
+      "season": {
+        "start": "05-01",
+        "end": "06-21"
+      },
       "description": "Father's Day gift ideas for dads, grandfathers and father figures: designs for developers, gamers, hobbyists and outdoor fans.",
       "intro": "Skip the generic dad theme and match the gift to his interests. Does he code, game, craft or head for the trail on weekends? Pick the interest first, then choose a design he would wear because it fits him.",
       "sections": [
@@ -841,6 +869,10 @@
       "slug": "back-to-school-gift-ideas",
       "title": "Back to School Gift Ideas for Students",
       "heading": "Back to School Gift Ideas",
+      "season": {
+        "start": "07-01",
+        "end": "09-15"
+      },
       "description": "Back to school gift ideas for students, teachers and parents: pencil and snack designs, plus writing and rest-focused picks.",
       "intro": "A back-to-school gift should help a student feel ready or a little braver. Choose between playful school-life designs, a gentle reminder to rest and a craft or writing theme for the creative one. Teachers and parents can use the same list.",
       "sections": [

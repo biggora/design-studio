@@ -31,7 +31,7 @@ import { JsonLd } from "@/app/components/JsonLd";
 import BuyLink from "@/app/components/BuyLink";
 import { buttonVariants } from "@/components/ui/button";
 import { collectionPath, curatedCollectionTitles } from "@/lib/collections";
-import { getGiftPages, giftPath } from "@/lib/gifts";
+import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -106,7 +106,7 @@ export default async function DesignDetails(
   const collectionUrl = collectionQuery ? `/designs?${collectionQuery}` : "/designs";
 
   const designCollections = [design.collection, ...curatedCollectionTitles(design.props)].filter(Boolean);
-  const giftLinks = getGiftPages(config.giftPages).filter((page) =>
+  const giftLinks = orderGiftPages(getGiftPages(config.giftPages)).filter((page) =>
     page.sections.some((section) => designCollections.includes(section.collection)),
   );
 

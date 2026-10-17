@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getSiteConfig, fetchLiveGiftPages } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
-import { giftPath } from "@/lib/gifts";
+import { giftPath, orderGiftPages } from "@/lib/gifts";
 
 const DESCRIPTION = "Gift ideas by interest: find a print for the programmer, pet lover, photographer or traveller in your life.";
 
@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function GiftsIndex() {
   const config = await getSiteConfig();
-  const pages = await fetchLiveGiftPages(config.giftPages);
+  const pages = orderGiftPages(await fetchLiveGiftPages(config.giftPages));
   const siteUrl = `https://${config.domain}`;
 
   const breadcrumbJsonLd = {

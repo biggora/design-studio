@@ -10,7 +10,7 @@ import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
 import {collectionPath} from "@/lib/collections";
-import {giftPath} from "@/lib/gifts";
+import {giftPath, orderGiftPages} from "@/lib/gifts";
 import defaultConfig from "@/config/config.json";
 
 // Bundled fallback: shown when config.slides is absent, empty, or malformed.
@@ -107,7 +107,7 @@ export default async function Home() {
   const { featuredDesigns, config } = await getFeaturedDesigns();
   const collections = await fetchFeaturedCollections(config.collectionPages);
   const home = {...defaultConfig.home, ...config.home};
-  const giftPages = await fetchLiveGiftPages(config.giftPages);
+  const giftPages = orderGiftPages(await fetchLiveGiftPages(config.giftPages));
 
   return (
     <>
