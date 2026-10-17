@@ -198,6 +198,19 @@ board description to paste. Same caching as the collection feeds. Counts
 reflect the one-feed rule (§1.3), so they sum to the number of distinct
 eligible designs.
 
+### 1.5 Gift page feeds (not for Pinterest boards)
+
+- `GET /feeds/gifts/{gift-slug}.xml` — same item format as the collection
+  feeds, for each page in `studio.giftPages`: the union of the designs of all
+  its section collections, deduplicated, newest first, at most 100.
+- `GET /feeds/gifts.xml` — index of the gift page feeds. They are not listed in
+  `/feeds/pinterest.xml`.
+
+These feeds deliberately overlap the collection feeds: the one-feed-per-design
+rule (§1.3) does not apply, so a design can appear in a gift feed and in its
+collection feed. Never connect them to Pinterest, or the same design would be
+published as duplicate Pins. They are for other uses only.
+
 ---
 
 ## 2. URL patterns

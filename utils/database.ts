@@ -955,6 +955,58 @@ export async function fetchCollectionFeedDesigns(
     return finalize(designs);
 }
 
+/** Designs of any of the given collections for a gift RSS feed: deduplicated by id, newest first,
+ * with the same eligibility as the collection feeds (marketplace link, Classic T-Shirt mockup).
+ * Deliberately skips the one-feed-per-design assignment: gift feeds overlap collection feeds. */
+export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], limit: number): Promise<FeedDesigns> {
+    const titles = [...new Set(collectionTitles)];
+    if (!titles.length) return {designs: [], earliestListingAt: {}};
+    const safeLimit = Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 100));
+    const fetchLimit = Math.min(safeLimit * 3, 300);
+
+    const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
+        const designs = [...new Map(rows.map(design => [design.id, design])).values()]
+            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
+            .slice(0, safeLimit);
+        return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
+    };
+
+    if (getProvider() === "supabase") {
+        const client = getSupabase();
+        const run = async (legacy: boolean) => {
+            const base = legacy
+                ? client.from("designs").select("*").in("collection", titles)
+                : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
+                    .in("design_collections.collections.title", titles);
+            return base.or("props->>mockup_tshirt.not.is.null")
+                .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
+        };
+        const joined = await run(false);
+        const response = joined.error || !joined.data?.length ? await run(true) : joined;
+        if (response.error) {
+            console.error("Error fetching gift feed designs:", response.error);
+            return {designs: [], earliestListingAt: {}};
+        }
+        return finalize((response.data ?? []).map(row => mapSupabaseRowToDesign(row as Record<string, unknown>)));
+    }
+
+    try {
+        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+            `SELECT d.* FROM designs d
+             WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
+                           WHERE dc.designId = d.id AND c.title IN (?))
+               AND JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL
+             ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
+            [titles, fetchLimit],
+        );
+        return finalize(rows.map(mapRowToDesign));
+    } catch (err) {
+        console.error("Error fetching gift feed designs:", err);
+        return {designs: [], earliestListingAt: {}};
+    }
+}
+
 // Collection titles per design, for the one-feed-per-design rule. Fail-safe: when the
 // lookup fails, or a design has no join rows (legacy installs), its membership is just
 // its primary `collection` label — a design is never placed in more feeds than it was.

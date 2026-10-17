@@ -183,6 +183,44 @@ describe("fetchFeedCollections", () => {
     });
 });
 
+describe("fetchGiftFeedDesigns", () => {
+    it("unions section collections without duplicates, newest first, and caps at the limit", async () => {
+        responses = {
+            designs: {data: [
+                supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
+                supabaseRow({id: "a", createdAt: "2026-10-09T00:00:00.000Z"}),
+                supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
+                supabaseRow({id: "c", createdAt: "2026-10-07T00:00:00.000Z"}),
+                supabaseRow({id: "no-mockup", createdAt: "2026-10-10T00:00:00.000Z", props: {}}),
+            ], error: null},
+            design_listings: {data: [], error: null},
+        };
+        const {fetchGiftFeedDesigns} = await importFacade();
+        expect((await fetchGiftFeedDesigns(["Space", "Cats", "Space"], 100)).designs.map(design => design.id)).toEqual(["a", "b", "c"]);
+        expect((await fetchGiftFeedDesigns(["Space", "Cats"], 2)).designs.map(design => design.id)).toEqual(["a", "b"]);
+        const inStep = steps.designs.find(step => step.method === "in" && step.args[0] === "design_collections.collections.title");
+        expect(inStep?.args[1]).toEqual(["Space", "Cats"]);
+    });
+
+    it("returns nothing without querying when there are no collections", async () => {
+        const {fetchGiftFeedDesigns} = await importFacade();
+        expect(await fetchGiftFeedDesigns([], 100)).toEqual({designs: [], earliestListingAt: {}});
+        expect(steps.designs).toBeUndefined();
+    });
+
+    it("queries MySQL with an IN list over the section titles", async () => {
+        stubMySQLEnv();
+        mysqlQuery.mockImplementation(async (sql: unknown) =>
+            String(sql).includes("FROM designs d") ? [[mysqlDesignRow("m1", "Space")]] : [[]]);
+        const {fetchGiftFeedDesigns} = await importFacade();
+        const {designs} = await fetchGiftFeedDesigns(["Space", "Cats"], 100);
+        expect(designs.map(design => design.id)).toEqual(["m1"]);
+        const call = mysqlQuery.mock.calls.find(([sql]) => String(sql).includes("FROM designs d"));
+        expect(String(call?.[0])).toContain("c.title IN (?)");
+        expect(call?.[1]).toEqual([["Space", "Cats"], 300]);
+    });
+});
+
 describe("fetchCollectionFeedDesigns", () => {
     it("returns eligible designs newest first, with the limit applied", async () => {
         responses = {

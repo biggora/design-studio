@@ -196,6 +196,8 @@ export type CollectionFeedInput = {
   domain: string;
   designs: Design[];
   earliestListingAt: Record<string, string>;
+  /** Channel link override; defaults to the collection's catalog page. */
+  link?: string;
   now?: Date;
 };
 
@@ -205,6 +207,7 @@ export function buildCollectionFeedXml({
   domain,
   designs,
   earliestListingAt,
+  link,
   now = new Date(),
 }: CollectionFeedInput): string {
   const items = designs
@@ -216,7 +219,7 @@ export function buildCollectionFeedXml({
     '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">',
     "  <channel>",
     `    <title>${escapeXml(`${siteName} – ${collection.title}`)}</title>`,
-    `    <link>${escapeXml(`https://${domain}/designs?collection=${encodeURIComponent(collection.title)}`)}</link>`,
+    `    <link>${escapeXml(link ?? `https://${domain}/designs?collection=${encodeURIComponent(collection.title)}`)}</link>`,
     `    <description>${escapeXml(collection.description || `Designs from the ${collection.title} collection.`)}</description>`,
     "    <language>en</language>",
     `    <lastBuildDate>${escapeXml(toRfc822(now) ?? "")}</lastBuildDate>`,
@@ -235,24 +238,34 @@ export type FeedIndexEntry = {
 };
 
 /** A simple human/site index of every per-collection feed, for wiring boards in Pinterest. */
+/** Wording and URL base of an index; the defaults describe the Pinterest collection feeds. */
+export type FeedIndexLabels = {
+  basePath: string;
+  channelTitle: string;
+  channelDescription: string;
+  itemDescription: (feed: FeedIndexEntry) => string;
+};
+
 export function buildFeedIndexXml({
   siteName,
   domain,
   feeds,
+  labels,
   now = new Date(),
 }: {
   siteName: string;
   domain: string;
   feeds: FeedIndexEntry[];
+  labels?: FeedIndexLabels;
   now?: Date;
 }): string {
   const items = feeds.map(feed =>
     [
       "    <item>",
       `      <title>${escapeXml(`${siteName} – ${feed.title}`)}</title>`,
-      `      <link>${escapeXml(`https://${domain}/feeds/pinterest/${feed.slug}.xml`)}</link>`,
-      `      <guid isPermaLink="true">${escapeXml(`https://${domain}/feeds/pinterest/${feed.slug}.xml`)}</guid>`,
-      `      <description>${escapeXml(`${feed.itemCount} designs. Pinterest board: ${feed.title}. Board description: ${feed.description || `Designs from the ${feed.title} collection.`}`)}</description>`,
+      `      <link>${escapeXml(`https://${domain}${labels?.basePath ?? "/feeds/pinterest/"}${feed.slug}.xml`)}</link>`,
+      `      <guid isPermaLink="true">${escapeXml(`https://${domain}${labels?.basePath ?? "/feeds/pinterest/"}${feed.slug}.xml`)}</guid>`,
+      `      <description>${escapeXml(labels?.itemDescription(feed) ?? `${feed.itemCount} designs. Pinterest board: ${feed.title}. Board description: ${feed.description || `Designs from the ${feed.title} collection.`}`)}</description>`,
       `      <pubDate>${escapeXml(toRfc822(now) ?? "")}</pubDate>`,
       "    </item>",
     ].join("\n"),
@@ -262,9 +275,9 @@ export function buildFeedIndexXml({
     STYLESHEET_PI,
     '<rss version="2.0" xmlns:media="http://search.yahoo.com/mrss/">',
     "  <channel>",
-    `    <title>${escapeXml(`${siteName} – Pinterest feed index`)}</title>`,
+    `    <title>${escapeXml(labels?.channelTitle ?? `${siteName} – Pinterest feed index`)}</title>`,
     `    <link>${escapeXml(`https://${domain}/`)}</link>`,
-    `    <description>${escapeXml(`One RSS feed per collection, for Pinterest auto-publish. Each feed saves to the board named after its collection. Landing pages under /p lead to the marketplaces.`)}</description>`,
+    `    <description>${escapeXml(labels?.channelDescription ?? `One RSS feed per collection, for Pinterest auto-publish. Each feed saves to the board named after its collection. Landing pages under /p lead to the marketplaces.`)}</description>`,
     "    <language>en</language>",
     `    <lastBuildDate>${escapeXml(toRfc822(now) ?? "")}</lastBuildDate>`,
     ...items,

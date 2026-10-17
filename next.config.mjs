@@ -32,6 +32,10 @@ const nextConfig = {
         source: "/feeds/pinterest/:collectionSlug.xml",
         destination: "/feeds/pinterest/:collectionSlug",
       },
+      {
+        source: "/feeds/gifts/:giftSlug.xml",
+        destination: "/feeds/gifts/:giftSlug",
+      },
     ];
   },
   async headers() {
