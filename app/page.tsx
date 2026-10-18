@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages } from "@/utils/database";
 import { Design } from "@/types/design";
 import { SiteConfig, CarouselSlide } from "@/lib/store";
@@ -9,6 +8,11 @@ import "slick-carousel/slick/slick-theme.css";
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import {Input} from "@/components/ui/input";
 import {Button} from "@/components/ui/button";
+import { AccentLink } from "@/app/components/AccentLink";
+import { LinkChip } from "@/app/components/LinkChip";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 import {collectionPath} from "@/lib/collections";
 import {giftPath, orderGiftPages} from "@/lib/gifts";
 import defaultConfig from "@/config/config.json";
@@ -112,12 +116,15 @@ export default async function Home() {
   return (
     <>
       <Carousel carouselItems={resolveCarouselItems(config.slides)} />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-12">
+      <PageShell className="pt-6 sm:pt-8 pb-12">
         <section aria-labelledby="home-heading" className="mb-6 sm:mb-8">
-          <h1 id="home-heading" className="text-3xl sm:text-4xl font-bold mb-3 text-foreground">
-            {home.heading}
-          </h1>
-          <p className="text-muted-foreground max-w-2xl mb-4">{home.description}</p>
+          <PageHeader
+            id="home-heading"
+            title={home.heading}
+            intro={home.description}
+            className="text-3xl sm:text-4xl mb-3"
+            introClassName="max-w-2xl mb-4"
+          />
           <form action="/designs" method="get" role="search" aria-label="Search print catalog" className="max-w-2xl">
             <label htmlFor="home-search" className="block font-medium mb-2 text-foreground">Search prints</label>
             <div className="flex gap-2">
@@ -125,43 +132,43 @@ export default async function Home() {
               <Button type="submit" className="min-h-11">Search</Button>
             </div>
           </form>
-          <Link href="/designs" className="inline-flex items-center min-h-11 mt-2 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Browse all prints</Link>
+          <AccentLink href="/designs" className="inline-flex items-center min-h-11 mt-2">Browse all prints</AccentLink>
         </section>
         {collections.length > 0 && (
           <nav aria-label="Browse by interest" className="mb-8">
-            <h2 className="text-xl font-semibold mb-3 text-foreground">Browse by interest</h2>
+            <SectionHeading className="text-xl mb-3">Browse by interest</SectionHeading>
             <ul className="flex flex-wrap gap-2">
               {collections.map(collection => (
                 <li key={collection.collection}>
-                  <Link href={collectionPath(collection.collection)} className="inline-flex items-center min-h-11 border border-input rounded-md px-2 py-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <LinkChip href={collectionPath(collection.collection)}>
                     {collection.heading || collection.title}
-                  </Link>
+                  </LinkChip>
                 </li>
               ))}
               <li>
-                <Link href="/collections" className="inline-flex items-center min-h-11 px-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <AccentLink href="/collections" className="inline-flex items-center min-h-11 px-2 text-sm">
                   See all collections
-                </Link>
+                </AccentLink>
               </li>
             </ul>
           </nav>
         )}
         {giftPages.length > 0 && (
           <nav aria-label="Gift ideas" className="mb-8">
-            <h2 className="text-xl font-semibold mb-3 text-foreground">Gift ideas</h2>
+            <SectionHeading className="text-xl mb-3">Gift ideas</SectionHeading>
             <ul className="flex flex-wrap gap-2">
               {giftPages.map(page => (
                 <li key={page.slug}>
-                  <Link href={giftPath(page.slug)} className="inline-flex items-center min-h-11 border border-input rounded-md px-2 py-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <LinkChip href={giftPath(page.slug)}>
                     {page.heading || page.title}
-                  </Link>
+                  </LinkChip>
                 </li>
               ))}
             </ul>
           </nav>
         )}
         <FeaturedDesigns title="Latest Prints" designs={featuredDesigns} compactOnMobile />
-      </div>
+      </PageShell>
     </>
   );
 }

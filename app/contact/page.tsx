@@ -1,5 +1,4 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { SiteConfig } from "@/lib/store";
 import ContactForm from "../components/ContactForm";
 import SocialLinks from "../components/SocialLinks";
@@ -9,6 +8,10 @@ import {
   applyRedbubbleAffiliate,
   applyTeepublicReferral,
 } from "@/lib/affiliate";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -51,14 +54,12 @@ export default async function Contact() {
     config.representation?.tostaDora || config.representation?.tostadora || undefined;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <h1 className="text-4xl font-bold mb-8 text-foreground">Contact Us</h1>
+    <PageShell>
+      <PageHeader title="Contact Us" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
         <div>
-          <h2 className="text-2xl font-semibold mb-4 text-foreground">
-            Get in Touch
-          </h2>
+          <SectionHeading>Get in Touch</SectionHeading>
           <ContactForm />
         </div>
         <div>
@@ -73,21 +74,11 @@ export default async function Contact() {
             <p className="text-sm text-muted-foreground mt-3">
               Shop links may be affiliate links — we may earn a commission at no
               extra cost to you.{" "}
-              <Link
-                href="/disclosure"
-                className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                Affiliate disclosure
-              </Link>
+              <AccentLink href="/disclosure">Affiliate disclosure</AccentLink>
             </p>
           )}
-          {/*<div className="mt-6">*/}
-          {/*  <p className="text-[#212A31]">Email: {config.email}</p>*/}
-          {/*  {config.phone && <p className="text-[#212A31]">Phone: {config.phone}</p>}*/}
-          {/*  <p className="text-[#212A31]">Address: {config.address}</p>*/}
-          {/*</div>*/}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

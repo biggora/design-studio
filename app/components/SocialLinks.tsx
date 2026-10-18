@@ -9,71 +9,32 @@ import {
 } from "@icons-pack/react-simple-icons";
 import { useContext } from "react";
 import { ConfigContext } from "@/app/wrapper";
+import { IconLink } from "@/app/components/IconLink";
+import { SectionHeading } from "@/app/components/SectionHeading";
+
+const socialNetworks = [
+  { key: "facebook", name: "Facebook", Icon: SiFacebook },
+  { key: "twitter", name: "Twitter", Icon: SiX },
+  { key: "instagram", name: "Instagram", Icon: SiInstagram },
+  { key: "linkedin", name: "LinkedIn", Icon: SiLinkedin },
+  { key: "pinterest", name: "Pinterest", Icon: SiPinterest },
+] as const;
 
 export default function SocialLinks() {
   const config = useContext(ConfigContext);
 
   return (
     <>
-      <h2 className="text-2xl font-semibold mb-4 text-foreground">
-        Connect With Us
-      </h2>
+      <SectionHeading>Connect With Us</SectionHeading>
       <div className="flex justify-start space-x-4 mb-4">
-        {config.social.facebook && (
-          <a
-            href={config.social.facebook}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <SiFacebook size={24} />
-            <span className="sr-only">Facebook</span>
-          </a>
-        )}
-        {config.social.twitter && (
-          <a
-            href={config.social.twitter}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <SiX size={24} />
-            <span className="sr-only">Twitter</span>
-          </a>
-        )}
-        {config.social.instagram && (
-          <a
-            href={config.social.instagram}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <SiInstagram size={24} />
-            <span className="sr-only">Instagram</span>
-          </a>
-        )}
-        {config.social.linkedin && (
-          <a
-            href={config.social.linkedin}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <SiLinkedin size={24} />
-            <span className="sr-only">LinkedIn</span>
-          </a>
-        )}
-        {config.social.pinterest && (
-          <a
-            href={config.social.pinterest}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-muted-foreground hover:text-accent transition-colors"
-          >
-            <SiPinterest size={24} />
-            <span className="sr-only">Pinterest</span>
-          </a>
-        )}
+        {socialNetworks.map(({ key, name, Icon }) => {
+          const href = config.social?.[key];
+          return href ? (
+            <IconLink key={key} href={href} label={name}>
+              <Icon size={24} />
+            </IconLink>
+          ) : null;
+        })}
       </div>
     </>
   );

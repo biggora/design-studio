@@ -73,6 +73,7 @@ Collection profiles may also provide an optional short `heading`, used for the v
 
 - Colors and radii are HSL CSS variables in `app/globals.css` (`:root`), mapped to Tailwind semantic names in `tailwind.config.ts` (`bg-primary`, `text-accent`, `border-input`, …). Use those tokens, never literal color values — deployments re-skin by overriding the variables or via the `themeLink` config (validated by `isAllowedThemeUrl` in `app/layout.tsx`).
 - UI primitives are shadcn/ui ("new-york", `components/ui/`); site-specific components live in `app/components/`. Use `cn()` from `lib/utils.ts` for class merging.
+- Shared page primitives in `app/components/` encode the repeating roles — `AccentLink` (inline accent link with focus ring), `LinkChip`, `IconLink`, `PageShell`, `PageHeader`, `SectionHeading`; reuse them instead of re-rolling their class strings (see DESIGN.md "Shared page primitives").
 - `DESIGN.md` defines the palette names (Loom Ink, Indigo Thread as the single interactive hue, etc.), typography scale, and rules — follow it for any visual change.
 
 <!-- agent-memory:start -->

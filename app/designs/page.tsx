@@ -14,6 +14,8 @@ import {getCollectionPages, collectionPath} from "@/lib/collections";
 import {designPath} from "@/lib/slug";
 import {JsonLd} from "@/app/components/JsonLd";
 import {CollectionLinks} from "@/app/components/CollectionLinks";
+import {PageShell} from "@/app/components/PageShell";
+import {PageHeader} from "@/app/components/PageHeader";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -123,11 +125,10 @@ export default async function DesignFolio(
   } : null;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PageShell>
       {collectionJsonLd && <JsonLd data={collectionJsonLd} />}
       <TrackCatalogState />
-      <h1 className="text-4xl font-bold mb-4 text-foreground">{heading}</h1>
-      {intro && <p className="text-muted-foreground max-w-3xl mb-6">{intro}</p>}
+      <PageHeader title={heading} intro={intro || undefined} />
 
       <CatalogSearchBar
         searchQuery={searchQuery}
@@ -193,6 +194,6 @@ export default async function DesignFolio(
         </div>
       )}
       {selectedCollection && <div className="mt-8"><CollectionLinks collections={featuredCollections} selected={selectedCollection} /></div>}
-    </div>
+    </PageShell>
   );
 }

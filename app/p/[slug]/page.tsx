@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -18,6 +17,7 @@ import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import { pinImageUrl } from "@/lib/pinterest-feed";
 import { SiteConfig } from "@/lib/store";
 import BuyLink from "@/app/components/BuyLink";
+import { AccentLink } from "@/app/components/AccentLink";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
@@ -149,7 +149,7 @@ export default async function PinLandingPage(props: Props) {
             designSlug={design.slug || design.id}
             pageType="landing"
             position="secondary"
-            className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
           >
             {secondary.label}
             <span aria-hidden="true">&#8599;</span>
@@ -157,20 +157,12 @@ export default async function PinLandingPage(props: Props) {
         )}
         <p className="mt-3 text-center text-sm text-muted-foreground">
           Printed &amp; shipped by our marketplace partner. We may earn a commission —{" "}
-          <Link
-            href="/disclosure"
-            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            learn more
-          </Link>
+          <AccentLink href="/disclosure">learn more</AccentLink>
         </p>
         <p className="mt-6 text-center">
-          <Link
-            href={designPath(design)}
-            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
+          <AccentLink href={designPath(design)}>
             More about this design <span aria-hidden="true">&rarr;</span>
-          </Link>
+          </AccentLink>
         </p>
       </div>
     </main>

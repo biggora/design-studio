@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { AccentLink } from "@/app/components/AccentLink";
 import { useLastCatalogQuery } from "@/lib/catalog-state";
 
 type BackToCatalogProps = {
@@ -17,11 +17,8 @@ export default function BackToCatalog({ fallbackHref }: BackToCatalogProps) {
   const href = query !== null ? `/designs${query}` : fallbackHref;
 
   return (
-    <Link
-      href={href}
-      className="text-accent hover:underline mb-4 inline-block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
+    <AccentLink href={href} className="mb-4 inline-block">
       &larr; Back to Designs
-    </Link>
+    </AccentLink>
   );
 }

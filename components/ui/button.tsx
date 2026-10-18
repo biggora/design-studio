@@ -8,8 +8,10 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-accent text-accent-foreground hover:bg-secondary",
+        // DESIGN.md secondary/outline: Card White surface, accent label, light
+        // muted fill on hover — color shift only.
         outline:
-          "border border-input bg-background text-foreground hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-card text-accent hover:border-accent hover:bg-muted",
       },
       size: {
         default: "px-6 py-2",

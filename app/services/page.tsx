@@ -4,6 +4,10 @@ import { CheckCircle } from "lucide-react";
 import { getSiteConfig } from "@/utils/database";
 import { SiteConfig } from "@/lib/store";
 import { buttonVariants } from "@/components/ui/button";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -64,54 +68,46 @@ const services = [
 export default async function Services() {
   const config: SiteConfig = await getSiteConfig();
   return (
-    <>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-4xl font-bold mb-8 text-foreground">Our Services</h1>
-        <p className="text-muted-foreground mb-8">
-          {config.name} creates original designs and turns them into
-          print-on-demand apparel and merch, sold through our marketplace
-          partners.
-        </p>
+    <PageShell>
+      <PageHeader
+        title="Our Services"
+        intro={`${config.name} creates original designs and turns them into print-on-demand apparel and merch, sold through our marketplace partners.`}
+        introClassName="max-w-none"
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <div key={index} className="bg-card shadow-md rounded-lg p-6">
-              <h2 className="text-2xl font-semibold mb-4">{service.title}</h2>
-              <p className="text-muted-foreground mb-4">{service.description}</p>
-              <ul className="space-y-2">
-                {service.features.map((feature, featureIndex) => (
-                  <li key={featureIndex} className="flex items-center">
-                    <CheckCircle className="text-accent mr-2" size={20} />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-12">
-          <h2 className="text-2xl font-semibold mb-4">Where to Buy</h2>
-          <p className="text-muted-foreground mb-4">
-            Our designs are printed and shipped by our marketplace partners,
-            including Redbubble, TeePublic and Tostadora. Shop links may be
-            affiliate links for which we may earn a commission at no extra cost
-            to you — see our{" "}
-            <Link href="/disclosure" className="text-accent hover:underline">
-              affiliate disclosure
-            </Link>
-            .
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link href="/designs" className="text-accent hover:underline">
-              Browse our designs
-            </Link>
-            <Link href="/contact" className={buttonVariants()}>
-              Request a custom design
-            </Link>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {services.map((service, index) => (
+          <div key={index} className="bg-card shadow-md rounded-lg p-6">
+            <SectionHeading>{service.title}</SectionHeading>
+            <p className="text-muted-foreground mb-4">{service.description}</p>
+            <ul className="space-y-2">
+              {service.features.map((feature, featureIndex) => (
+                <li key={featureIndex} className="flex items-center">
+                  <CheckCircle className="text-accent mr-2" size={20} />
+                  <span>{feature}</span>
+                </li>
+              ))}
+            </ul>
           </div>
+        ))}
+      </div>
+
+      <div className="mt-12">
+        <SectionHeading>Where to Buy</SectionHeading>
+        <p className="text-muted-foreground mb-4">
+          Our designs are printed and shipped by our marketplace partners,
+          including Redbubble, TeePublic and Tostadora. Shop links may be
+          affiliate links for which we may earn a commission at no extra cost
+          to you — see our{" "}
+          <AccentLink href="/disclosure">affiliate disclosure</AccentLink>.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <AccentLink href="/designs">Browse our designs</AccentLink>
+          <Link href="/contact" className={buttonVariants()}>
+            Request a custom design
+          </Link>
         </div>
       </div>
-    </>
+    </PageShell>
   );
 }

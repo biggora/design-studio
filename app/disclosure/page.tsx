@@ -1,7 +1,10 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -28,10 +31,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function AffiliateDisclosure() {
   const config: SiteConfig = await getSiteConfig();
   return (
-    <div className="container mx-auto px-6 py-12">
-      <h1 className="text-4xl font-bold mb-8 text-foreground">
-        Affiliate Disclosure
-      </h1>
+    <PageShell>
+      <PageHeader title="Affiliate Disclosure" />
       <div className="prose prose-lg max-w-none text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
@@ -43,9 +44,7 @@ export default async function AffiliateDisclosure() {
           explains what that means.
         </p>
 
-        <h2 className="text-2xl font-semibold mt-8 mb-4">
-          How we earn commissions
-        </h2>
+        <SectionHeading className="mt-8">How we earn commissions</SectionHeading>
         <p className="mb-4">
           {config.name} participates in the Redbubble affiliate program
           (operated on the Impact platform) and in TeePublic&apos;s referral
@@ -54,9 +53,7 @@ export default async function AffiliateDisclosure() {
           same price either way — a commission never adds to your cost.
         </p>
 
-        <h2 className="text-2xl font-semibold mt-8 mb-4">
-          What we do not do
-        </h2>
+        <SectionHeading className="mt-8">What we do not do</SectionHeading>
         <ul className="list-disc pl-6 mb-4">
           <li>We do not sell, produce, or ship any products ourselves.</li>
           <li>
@@ -70,25 +67,14 @@ export default async function AffiliateDisclosure() {
           </li>
         </ul>
 
-        <h2 className="text-2xl font-semibold mt-8 mb-4">Questions</h2>
+        <SectionHeading className="mt-8">Questions</SectionHeading>
         <p className="mb-4">
           If you have questions about this disclosure, reach us through the{" "}
-          <Link
-            href="/contact"
-            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            contact page
-          </Link>
-          . See also our{" "}
-          <Link
-            href="/privacy-policy"
-            className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            privacy policy
-          </Link>{" "}
-          for how cookies and analytics are handled on this site.
+          <AccentLink href="/contact">contact page</AccentLink>. See also our{" "}
+          <AccentLink href="/privacy-policy">privacy policy</AccentLink> for how
+          cookies and analytics are handled on this site.
         </p>
       </div>
-    </div>
+    </PageShell>
   );
 }

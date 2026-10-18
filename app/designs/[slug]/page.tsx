@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 import { cache } from "react";
 import { getSiteConfig, getDesignById, getDesignBySlug } from "@/utils/database";
 import {
@@ -29,6 +28,8 @@ import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { JsonLd } from "@/app/components/JsonLd";
 import BuyLink from "@/app/components/BuyLink";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
 import { collectionPath, curatedCollectionTitles } from "@/lib/collections";
 import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
@@ -168,7 +169,7 @@ export default async function DesignDetails(
   return (
     <>
       <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd]} />
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <PageShell>
         <BackToCatalog fallbackHref={collectionUrl} />
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -198,12 +199,9 @@ export default async function DesignDetails(
                 {design.collection && (
                   <p className="text-muted-foreground mb-4">
                     Collection:&nbsp;
-                    <Link
-                      href={collectionUrl}
-                      className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
+                    <AccentLink href={collectionUrl}>
                       {design.collection}
-                    </Link>
+                    </AccentLink>
                   </p>
                 )}
                 {giftLinks.length > 0 && (
@@ -212,12 +210,9 @@ export default async function DesignDetails(
                     {giftLinks.map((page, index) => (
                       <span key={page.slug}>
                         {index > 0 && ", "}
-                        <Link
-                          href={giftPath(page.slug)}
-                          className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        >
+                        <AccentLink href={giftPath(page.slug)}>
                           {page.heading || page.title}
-                        </Link>
+                        </AccentLink>
                       </span>
                     ))}
                   </p>
@@ -242,12 +237,7 @@ export default async function DesignDetails(
               <p className="text-sm text-muted-foreground mt-2 text-center">
                 Printed &amp; shipped by our marketplace partner. We may earn a
                 commission —{" "}
-                <Link
-                  href="/disclosure"
-                  className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  learn more
-                </Link>
+                <AccentLink href="/disclosure">learn more</AccentLink>
               </p>
               {teePublicLink && (
                 <BuyLink
@@ -256,7 +246,7 @@ export default async function DesignDetails(
                   designSlug={design.slug || design.id}
                   pageType="design"
                   position="secondary"
-                  className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
                 >
                   Buy on TeePublic
                   <span aria-hidden="true">&#8599;</span>
@@ -272,14 +262,14 @@ export default async function DesignDetails(
             </div>
           </div>
         </div>
-      </div>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      </PageShell>
+      <PageShell>
         <FeaturedDesigns
           title="More from this collection"
           designs={relatedDesigns}
           showCollection={false}
         />
-      </div>
+      </PageShell>
     </>
   );
 }

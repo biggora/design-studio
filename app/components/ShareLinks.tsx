@@ -1,4 +1,5 @@
 import { SiFacebook, SiPinterest, SiX } from "@icons-pack/react-simple-icons";
+import { IconLink } from "@/app/components/IconLink";
 
 type ShareLinksProps = {
   shareUrl: string;
@@ -14,33 +15,24 @@ export default function ShareLinks({
   return (
     <>
       <span className="text-foreground font-semibold">Share:</span>
-      <a
+      <IconLink
         href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-muted-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-        aria-label="Share on Facebook"
+        label="Share on Facebook"
       >
         <SiFacebook size={24} />
-      </a>
-      <a
+      </IconLink>
+      <IconLink
         href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-muted-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-        aria-label="Share on X"
+        label="Share on X"
       >
         <SiX size={24} />
-      </a>
-      <a
+      </IconLink>
+      <IconLink
         href={`https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&media=${encodeURIComponent(imageUrl)}&description=${encodeURIComponent(shareText)}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-muted-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
-        aria-label="Share on Pinterest"
+        label="Share on Pinterest"
       >
         <SiPinterest size={24} />
-      </a>
+      </IconLink>
     </>
   );
 }

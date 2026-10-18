@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
+import { AccentLink } from "@/app/components/AccentLink";
 import { designPath } from "@/lib/slug";
 import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
 import { cn, safeHexColor } from "@/lib/utils";
@@ -20,10 +21,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
 
   return (
     <Card key={design.id}>
-      <Link
-        href={designPath(design)}
-        className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
+      <AccentLink href={designPath(design)}>
         <div
           className="relative w-full aspect-[3/4] overflow-hidden bg-muted"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
@@ -38,34 +36,31 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
             className="object-contain"
           />
         </div>
-      </Link>
+      </AccentLink>
       <CardContent className={cn("p-4 flex flex-col flex-grow", compactOnMobile && "p-3 sm:p-4")}>
-        <h2 className={cn("text-xl font-semibold mb-2 line-clamp-2", compactOnMobile && "text-sm sm:text-xl")}>
-          <Link
-            href={designPath(design)}
-            className="text-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            {design.title}
-          </Link>
-        </h2>
+          <h2 className={cn("text-xl font-semibold mb-2 line-clamp-2", compactOnMobile && "text-sm sm:text-xl")}>
+            <Link
+              href={designPath(design)}
+              className="text-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {design.title}
+            </Link>
+          </h2>
         <p className={cn("text-muted-foreground mb-4 line-clamp-3", compactOnMobile && "hidden sm:line-clamp-3")}>{design.description}</p>
         {showCollection && design.collection && (
           <p className={cn("text-muted-foreground mb-2", compactOnMobile && "hidden sm:block")}>
             Collection:&nbsp;
-            <Link
-              href={collectionPath(design.collection)}
-              className="text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
+            <AccentLink href={collectionPath(design.collection)}>
               {design.collection}
-            </Link>
+            </AccentLink>
           </p>
         )}
-        <Link
+        <AccentLink
           href={designPath(design)}
-          className={cn("text-accent hover:underline mt-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", compactOnMobile && "hidden sm:block")}
+          className={cn("mt-auto", compactOnMobile && "hidden sm:block")}
         >
           View Design Details
-        </Link>
+        </AccentLink>
       </CardContent>
     </Card>
   );

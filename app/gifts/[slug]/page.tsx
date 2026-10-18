@@ -1,11 +1,14 @@
 import { Metadata } from "next";
 import { cache } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getSiteConfig, fetchDesigns } from "@/utils/database";
 import { Design } from "@/types/design";
 import { DesignCard } from "@/app/components/DesignCard";
 import { JsonLd } from "@/app/components/JsonLd";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 import { getDesignDisplayImage } from "@/lib/image";
 import { designPath } from "@/lib/slug";
 import { collectionPath } from "@/lib/collections";
@@ -87,32 +90,31 @@ export default async function GiftPage(props: Props) {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PageShell>
       <JsonLd data={[breadcrumbJsonLd, itemListJsonLd]} />
-      <h1 className="text-4xl font-bold mb-4 text-foreground">{page.heading || page.title}</h1>
-      <p className="text-muted-foreground max-w-3xl mb-8">{page.intro}</p>
+      <PageHeader title={page.heading || page.title} intro={page.intro} />
 
       {sections.map((section) => (
         <section key={section.collection} className="mb-10">
-          <h2 className="text-2xl font-semibold mb-2 text-foreground">{section.heading}</h2>
+          <SectionHeading className="mb-2">{section.heading}</SectionHeading>
           {section.blurb && <p className="text-muted-foreground max-w-3xl mb-4">{section.blurb}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-4">
             {section.designs.map((design: Design) => (
               <DesignCard key={design.id} design={design} />
             ))}
           </div>
-          <Link
+          <AccentLink
             href={collectionPath(section.collection)}
-            className="inline-flex items-center min-h-11 text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="inline-flex items-center min-h-11"
           >
             See all {section.collection} designs
-          </Link>
+          </AccentLink>
         </section>
       ))}
 
       {page.faq && page.faq.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4 text-foreground">Questions</h2>
+          <SectionHeading>Questions</SectionHeading>
           {page.faq.map((item) => (
             <div key={item.question} className="mb-4 max-w-3xl">
               <h3 className="text-lg font-semibold mb-1 text-foreground">{item.question}</h3>
@@ -121,6 +123,6 @@ export default async function GiftPage(props: Props) {
           ))}
         </section>
       )}
-    </div>
+    </PageShell>
   );
 }

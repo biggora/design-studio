@@ -1,11 +1,13 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
+import { SectionHeading } from "@/app/components/SectionHeading";
+
 type ShopLinksProps = {
   title: string;
   redBubble?: string;
   teePublic?: string;
   tostaDora?: string;
-  styleTitle?: string;
 };
 
 // Redbubble/TeePublic links may be affiliate links (sponsored), Tostadora has
@@ -21,7 +23,6 @@ export default function ShopLinks({
   redBubble,
   teePublic,
   tostaDora,
-  styleTitle = "text-2xl mb-4",
 }: ShopLinksProps) {
   const links = { redbubble: redBubble, teePublic, tostaDora };
   const configured = marketplaceLinks.filter((m) => links[m.key]);
@@ -30,9 +31,7 @@ export default function ShopLinks({
 
   return (
     <>
-      {title.trim() && (
-        <h2 className={`${styleTitle} font-semibold text-foreground`}>{title}</h2>
-      )}
+      {title.trim() && <SectionHeading>{title}</SectionHeading>}
       <div className="flex flex-wrap justify-start gap-3">
         {configured.map(({ key, label, sponsored }) => (
           <a
@@ -40,7 +39,7 @@ export default function ShopLinks({
             href={links[key]}
             target="_blank"
             rel={sponsored ? "sponsored noopener noreferrer" : "noopener noreferrer"}
-            className="inline-flex items-center gap-2 rounded-md border border-input px-4 py-2 text-base text-accent transition-colors hover:border-accent hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "gap-2" })}
           >
             {label}
             <span aria-hidden="true">&#8599;</span>

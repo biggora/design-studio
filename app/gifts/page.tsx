@@ -2,6 +2,9 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getSiteConfig, fetchLiveGiftPages } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
+import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
 import { giftPath, orderGiftPages } from "@/lib/gifts";
 
 const DESCRIPTION = "Gift ideas by interest: find a print for the programmer, pet lover, photographer or traveller in your life.";
@@ -34,12 +37,12 @@ export default async function GiftsIndex() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <PageShell>
       <JsonLd data={breadcrumbJsonLd} />
-      <h1 className="text-4xl font-bold mb-4 text-foreground">Gift Ideas by Interest</h1>
-      <p className="text-muted-foreground max-w-3xl mb-8">
-        Pick an interest to see prints that suit the person you are shopping for.
-      </p>
+      <PageHeader
+        title="Gift Ideas by Interest"
+        intro="Pick an interest to see prints that suit the person you are shopping for."
+      />
       {pages.length > 0 ? (
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {pages.map((page) => (
@@ -57,9 +60,9 @@ export default async function GiftsIndex() {
       ) : (
         <p className="text-muted-foreground">
           Gift ideas are coming soon.{" "}
-          <Link href="/designs" className="text-accent hover:underline">Browse all prints</Link>
+          <AccentLink href="/designs">Browse all prints</AccentLink>
         </p>
       )}
-    </div>
+    </PageShell>
   );
 }

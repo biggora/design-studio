@@ -1,6 +1,9 @@
 import { SiteConfig, AboutConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import { Metadata } from "next";
+import { PageShell } from "@/app/components/PageShell";
+import { PageHeader } from "@/app/components/PageHeader";
+import { SectionHeading } from "@/app/components/SectionHeading";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -43,48 +46,44 @@ export default async function About() {
     String(text ?? "").replaceAll("{{name}}", config.name);
 
   return (
-    <>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-3">
-        <h1 className="text-4xl font-bold mb-8 text-foreground">
-          About {config.name}
-        </h1>
+    <PageShell className="pb-3">
+      <PageHeader title={`About ${config.name}`} />
 
-        {story.length > 0 && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-semibold mb-4">Our Story</h2>
-            <div className="space-y-4">
-              {story.map((paragraph, index) => (
-                <p key={index} className="text-foreground max-w-prose">
-                  {fill(paragraph)}
-                </p>
+      {story.length > 0 && (
+        <section className="mb-12">
+          <SectionHeading>Our Story</SectionHeading>
+          <div className="space-y-4">
+            {story.map((paragraph, index) => (
+              <p key={index} className="text-foreground max-w-prose">
+                {fill(paragraph)}
+              </p>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {(approachIntro || approachPoints.length > 0 || approachOutro) && (
+        <section className="pb-3">
+          <SectionHeading>Our Approach</SectionHeading>
+          {approachIntro && (
+            <p className="text-foreground mb-4 max-w-prose">
+              {fill(approachIntro)}
+            </p>
+          )}
+          {approachPoints.length > 0 && (
+            <ul className="list-disc list-inside text-foreground mb-4 max-w-prose">
+              {approachPoints.map((point, index) => (
+                <li key={index}>{fill(point)}</li>
               ))}
-            </div>
-          </section>
-        )}
-
-        {(approachIntro || approachPoints.length > 0 || approachOutro) && (
-          <section className="pb-3">
-            <h2 className="text-2xl font-semibold mb-4">Our Approach</h2>
-            {approachIntro && (
-              <p className="text-foreground mb-4 max-w-prose">
-                {fill(approachIntro)}
-              </p>
-            )}
-            {approachPoints.length > 0 && (
-              <ul className="list-disc list-inside text-foreground mb-4 max-w-prose">
-                {approachPoints.map((point, index) => (
-                  <li key={index}>{fill(point)}</li>
-                ))}
-              </ul>
-            )}
-            {approachOutro && (
-              <p className="text-foreground pb-5 max-w-prose">
-                {fill(approachOutro)}
-              </p>
-            )}
-          </section>
-        )}
-      </div>
-    </>
+            </ul>
+          )}
+          {approachOutro && (
+            <p className="text-foreground pb-5 max-w-prose">
+              {fill(approachOutro)}
+            </p>
+          )}
+        </section>
+      )}
+    </PageShell>
   );
 }

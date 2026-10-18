@@ -57,6 +57,11 @@ components:
     padding: "8px 16px"
   link-accent:
     textColor: "{colors.indigo-thread}"
+  link-chip:
+    textColor: "{colors.indigo-thread}"
+    borderColor: "{colors.warp-grey}"
+    rounded: "{rounded.md}"
+    minHeight: "44px"
   icon-link:
     textColor: "{colors.warp-grey}"
   icon-link-hover:
@@ -193,6 +198,18 @@ Full-bleed 60vh slides under the header; each slide is edge-to-edge imagery bene
 
 ### Cookie Banner
 Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist with an underlined privacy link, and a standard primary button for consent.
+
+### Shared page primitives (`app/components/`)
+The roles above are encoded once in reusable components — use them instead of re-rolling class strings, so a theme change lands everywhere at once:
+
+- **`AccentLink`** — the accent text link (Indigo Thread, underline on hover, 2px teal focus ring) for internal routes; the canonical "link-accent".
+- **`LinkChip`** — the interest chip into the catalog: bordered soft rectangle, 44px min tap target, `selected` marks the active collection with `aria-current`.
+- **`IconLink`** — the 24px social/share glyph: muted at rest, Indigo Thread on hover on the light field, Linen Mist on dark bands (`variant="band"`), sr-only label, http(s)-sanitized href.
+- **`PageShell`** — the page container: centered `container` with the responsive gutters (16 → 24 → 32px) and 32px vertical rhythm.
+- **`PageHeader`** — the page H1 in the Headline role with optional lead paragraph (32px clearance; 16px H1→intro, 32px intro→content).
+- **`SectionHeading`** — the section H2 in the Title role.
+
+Primary and secondary/outline buttons stay on `components/ui/button.tsx`; the outline variant is the documented quiet commerce action (Card White surface, Warp Grey border, Indigo Thread label, muted-fill hover).
 
 ## Do's and Don'ts
 
