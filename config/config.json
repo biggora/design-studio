@@ -52,35 +52,35 @@
     },
     {
       "image": "/images/slide_2.png",
-      "title": "Bespoke Creations",
-      "description": "Tailored solutions for your unique vision",
+      "title": "Made for People with a Thing",
+      "description": "From coding jokes to spooky season — designs grouped by what you love",
       "ctaLabel": "Browse designs",
       "ctaHref": "/designs"
     },
     {
       "image": "/images/slide_3.png",
-      "title": "Artistic Excellence",
-      "description": "Where creativity meets craftsmanship",
+      "title": "Original Art, Printed on Demand",
+      "description": "Designed here — printed and shipped by our marketplace partners when you order",
       "ctaLabel": "Browse designs",
       "ctaHref": "/designs"
     }
   ],
   "about": {
     "story": [
-      "{{name}} was founded in 2024 with a vision to revolutionize the world of design through the innovative use of AI tools. Our journey began with a small team of passionate designers who believed in the power of unconventional tools to create stunning visual narratives.",
-      "At {{name}}, we believe that fashion is more than just clothing—it's a reflection of your personality and passions. Our mission is to transform everyday apparel into bold statements of individuality and creativity.",
-      "We've assembled a talented team of designers who thrive on turning imaginative ideas into wearable art. Whether you're looking for a quirky design, a heartfelt message, or a bold statement piece, our collections are crafted to inspire and empower your unique style.",
-      "From versatile t-shirts and cozy hoodies to timeless polos, our wide range of products ensures there's something for everyone. With {{name}}, you're not just wearing clothes; you're wearing your story.",
-      "Dare to be different, celebrate your quirks, and let your fashion do the talking—because at {{name}}, individuality is always in style."
+      "{{name}} is a shop of original designs for people with a thing. Every print starts as original artwork and lives in a collection by interest — coding humour, pets, holidays, hobbies — so you can go straight to the aisle that fits.",
+      "There is no warehouse here. When you order, our marketplace partners — Redbubble, TeePublic and Tostadora — print and ship the piece to your door. We design; they handle the rest.",
+      "Concepts start as AI-assisted drafts and are refined by hand before a design goes live, and new designs are added regularly.",
+      "You'll find quirky slogans, heartfelt messages and bold statement pieces across t-shirts, hoodies and other everyday merch — something for the person who has everything and the person who is extremely specific.",
+      "Know your thing already? Browse a collection. Have an idea we don't? Tell us through the contact form — custom design requests are welcome."
     ],
-    "approachIntro": "At {{name}}, we believe that great design is born from a perfect blend of creativity, technical skill, and a deep understanding of our clients' needs. Our approach is rooted in:",
+    "approachIntro": "How designs at {{name}} come to life:",
     "approachPoints": [
-      "Collaborative ideation with our clients",
-      "Extensive research and experimentation with AI tools",
-      "Sustainable design practices",
-      "Continuous learning and adaptation to emerging trends"
+      "Original artwork first: AI-assisted concepts, refined by hand",
+      "Designed around real interests, from coding humour to holidays",
+      "Printed on demand by marketplace partners — no minimum order",
+      "New designs added regularly"
     ],
-    "approachOutro": "This approach allows us to create designs that are not only visually striking but also meaningful and impactful."
+    "approachOutro": "What you see is what ships: every design links to a marketplace listing where it is printed, packed and sent. Questions or a custom idea — the contact form reaches us directly."
   },
   "favicon": "/favicon/favicon.ico",
   "themeLink": ""

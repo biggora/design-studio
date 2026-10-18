@@ -18,6 +18,7 @@ import {giftPath, orderGiftPages} from "@/lib/gifts";
 import defaultConfig from "@/config/config.json";
 
 // Bundled fallback: shown when config.slides is absent, empty, or malformed.
+// Mirrors the default slides in config/config.json — keep them in sync.
 const defaultCarouselItems: CarouselSlide[] = [
   {
     image: "/images/slide_1.png",
@@ -28,15 +29,15 @@ const defaultCarouselItems: CarouselSlide[] = [
   },
   {
     image: "/images/slide_2.png",
-    title: "Bespoke Creations",
-    description: "Tailored solutions for your unique vision",
+    title: "Made for People with a Thing",
+    description: "From coding jokes to spooky season — designs grouped by what you love",
     ctaLabel: "Browse designs",
     ctaHref: "/designs",
   },
   {
     image: "/images/slide_3.png",
-    title: "Artistic Excellence",
-    description: "Where creativity meets craftsmanship",
+    title: "Original Art, Printed on Demand",
+    description: "Designed here — printed and shipped by our marketplace partners when you order",
     ctaLabel: "Browse designs",
     ctaHref: "/designs",
   },
