@@ -84,12 +84,15 @@ export async function GET(): Promise<NextResponse> {
     };
   });
 
-  const collectionEntries: SitemapEntry[] = (await fetchFeaturedCollections(config.collectionPages)).map(collection => ({
+  const featuredCollections = await fetchFeaturedCollections(config.collectionPages);
+  const collectionEntries: SitemapEntry[] = featuredCollections.map(collection => ({
     url: `https://${config.domain}${collectionPath(collection.collection)}`,
     priority: 0.8,
     changefreq: "monthly",
   }));
 
+  const collectionsIndexEntries: SitemapEntry[] = featuredCollections.length
+    ? [{ url: `https://${config.domain}/collections`, priority: 0.8, changefreq: "monthly" }] : [];
   const liveGiftPages = await fetchLiveGiftPages(config.giftPages);
   const giftEntries: SitemapEntry[] = liveGiftPages.length ? [
     { url: `https://${config.domain}/gifts`, priority: 0.8, changefreq: "monthly" },
@@ -104,7 +107,7 @@ export async function GET(): Promise<NextResponse> {
     '<?xml version="1.0" encoding="UTF-8"?>',
     `<?xml-stylesheet type="text/xsl" href="/sitemap.xsl"?>`,
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
-    ...[...staticRoutes, ...collectionEntries, ...giftEntries, ...designEntries].map(entryXml),
+    ...[...staticRoutes, ...collectionsIndexEntries, ...collectionEntries, ...giftEntries, ...designEntries].map(entryXml),
     "</urlset>",
     "",
   ].join("\n");

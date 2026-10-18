@@ -57,6 +57,12 @@ describe("/sitemap.xml", () => {
     expect(xml).toContain("<loc>https://threadquirk.test/designs?collection=Cats+%26+Dogs</loc>");
     expect(xml).not.toContain("?search=");
   });
+  it("lists /collections only when a featured collection exists", async () => {
+    const { GET } = await import("@/app/sitemap.xml/route");
+    expect(await (await GET()).text()).not.toContain("/collections</loc>");
+    fetchFeaturedCollections.mockResolvedValue([{ collection: "Cats", total: 2 }]);
+    expect(await (await GET()).text()).toContain("<loc>https://threadquirk.test/collections</loc>");
+  });
   it("serves the sitemap protocol document with the stylesheet PI", async () => {
     const { GET } = await import("@/app/sitemap.xml/route");
     const response = await GET();

@@ -35,6 +35,8 @@ describe("home catalog discovery", () => {
     expect(form.find('input[name="search"]').attr("id")).toBe($("label").attr("for"));
     expect(form.find('button[type="submit"]').text()).toBe("Search");
     expect($('nav[aria-label="Browse by interest"] a').attr("href")).toBe("/designs?collection=Pet+lovers");
+    expect($('nav[aria-label="Browse by interest"] a').last().attr("href")).toBe("/collections");
+    expect($('nav[aria-label="Browse by interest"] a').last().text().trim()).toBe("See all collections");
     expect($("h1")).toHaveLength(1);
     expect(html.indexOf('<form')).toBeLessThan(html.indexOf('data-testid="prints"'));
     expect(html.indexOf('Browse by interest')).toBeLessThan(html.indexOf('data-testid="prints"'));

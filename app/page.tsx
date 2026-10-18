@@ -138,6 +138,11 @@ export default async function Home() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link href="/collections" className="inline-flex items-center min-h-11 px-2 text-sm text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  See all collections
+                </Link>
+              </li>
             </ul>
           </nav>
         )}

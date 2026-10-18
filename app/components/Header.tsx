@@ -9,6 +9,7 @@ import { ConfigContext } from "@/app/wrapper";
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/designs", label: "Our Designs" },
+  { href: "/collections", label: "Collections" },
   { href: "/gifts", label: "Gift Ideas" },
   { href: "/about", label: "About Us" },
   { href: "/services", label: "Services" },
