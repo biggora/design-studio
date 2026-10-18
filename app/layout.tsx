@@ -1,6 +1,6 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Poppins } from "next/font/google";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import { CookieBanner } from "./components/CookieBanner";
@@ -15,7 +15,12 @@ import baseConfig from "@/config/config.json";
 // /api/revalidate/config for near-immediate invalidation.
 export const revalidate = 300;
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-display",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const newConfig: SiteConfig = await getSiteConfig();
@@ -66,7 +71,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const viewport: Viewport = {
-  themeColor: "#212A31",
+  themeColor: "#14181C",
 };
 
 function isAllowedThemeUrl(url?: string): boolean {
@@ -126,7 +131,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={`${inter.className} bg-background`}>
+      <body className={`${inter.variable} ${poppins.variable} font-sans bg-background`}>
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:inline-flex focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-primary-foreground"

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useContext, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ConfigContext } from "@/app/wrapper";
+import { BrandMark } from "@/app/components/BrandMark";
 
 const navItems = [
   { href: "/", label: "Home" },
@@ -32,17 +33,18 @@ export default function Header() {
     `${
       isActive(href)
         ? "font-semibold text-primary-foreground"
-        : "text-primary-foreground/70 hover:text-primary-foreground"
+        : "text-primary-foreground/70 hover:text-accent"
     } transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground`;
 
   return (
-    <header className="bg-primary/80 text-primary-foreground shadow-md fixed w-full z-10">
+    <header className="bg-primary/90 text-primary-foreground shadow-md fixed w-full z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link
             href="/"
-            className="text-2xl font-bold text-primary-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+            className="flex items-center gap-2.5 font-display text-xl font-bold text-primary-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
           >
+            <BrandMark siteLogo={config.siteLogo} name={config.name} />
             {config.name}
           </Link>
           <nav className="hidden md:flex space-x-6">

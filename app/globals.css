@@ -4,52 +4,123 @@
 
 /*
  * Design tokens — the theme layer (see DESIGN.md).
- * Single source of truth for color and radius; components consume these
- * through the Tailwind theme mapping (bg-primary, text-accent, border-input,
- * ring-ring, …), never literal values. A deployment re-skins the site by
- * overriding this block or pointing the `themeLink` config at a hosted
- * override stylesheet. Values are HSL triplets (Tailwind convention).
+ * World: "Ember on Graphite" — near-black graphite fields, panels one tonal
+ * step above the field, and a single ember orange owning every interactive
+ * moment. Single source of truth for color and radius; components consume
+ * these through the Tailwind theme mapping (bg-primary, text-accent,
+ * border-input, ring-ring, …), never literal values. A deployment re-skins
+ * the site by overriding this block or pointing the `themeLink` config at a
+ * hosted override stylesheet. Values are HSL triplets (Tailwind convention).
  */
 :root {
-  /* Loom Ink — structural dark: bands, headings, body text */
-  --primary: 206 20% 16%;
-  --primary-foreground: 132 8% 84%;
-  /* Thread Shadow — secondary dark: footer band, button hover */
-  --secondary: 210 19% 22%;
-  --secondary-foreground: 132 8% 84%;
-  /* Indigo Thread — the single interactive hue */
-  --accent: 197 70% 24%;
-  --accent-foreground: 132 8% 84%;
-  /* Warp Grey — muted text and borders; --muted is its light surface tint.
-     Deep step (34%) so muted text passes AA on white (6.9:1) and Linen Mist (4.8:1). */
-  --muted: 190 12% 90%;
-  --muted-foreground: 190 12% 34%;
-  /* Linen Mist field */
-  --background: 132 8% 84%;
-  --foreground: 206 20% 16%;
-  /* Card White surfaces */
-  --card: 0 0% 100%;
-  --card-foreground: 206 20% 16%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 206 20% 16%;
+  /* Graphite band dark: fixed header, hero overlays, skip link */
+  --primary: 210 18% 8%;
+  --primary-foreground: 200 12% 96%;
+  /* Deepest band: footer, values band */
+  --secondary: 210 16% 7%;
+  --secondary-foreground: 200 12% 96%;
+  /* Ember orange — the single interactive hue (dark warm text on it) */
+  --accent: 29 80% 54%;
+  --accent-foreground: 33 68% 8%;
+  /* Muted: subtle surface tint; text step readable on card and field (AA) */
+  --muted: 210 12% 19%;
+  --muted-foreground: 204 11% 64%;
+  /* Graphite field and light text */
+  --background: 210 15% 11%;
+  --foreground: 200 12% 96%;
+  /* Alt band one tonal step above the field (featured band) */
+  --surface: 210 15% 13%;
+  /* Panels and popovers, one step above the field */
+  --card: 212 15% 18%;
+  --card-foreground: 200 12% 96%;
+  --popover: 212 15% 18%;
+  --popover-foreground: 200 12% 96%;
   /* Semantic status, reserved for form feedback */
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
   /* Lines and focus */
-  --border: 190 12% 51%;
-  --input: 190 12% 51%;
-  --ring: 197 70% 24%;
-  --radius: 0.5rem;
+  --border: 210 14% 23%;
+  --input: 210 14% 23%;
+  --ring: 29 80% 54%;
+  --radius: 0.75rem;
   /* Chart ramp (mapped by Tailwind; no charts in the app yet) */
-  --chart-1: 197 70% 24%;
-  --chart-2: 190 12% 51%;
-  --chart-3: 210 19% 22%;
-  --chart-4: 206 20% 16%;
-  --chart-5: 132 8% 60%;
+  --chart-1: 29 80% 54%;
+  --chart-2: 204 11% 64%;
+  --chart-3: 210 16% 7%;
+  --chart-4: 210 18% 8%;
+  --chart-5: 210 12% 30%;
 }
 
 .main-container {
   min-height: calc(100vh - 160px);
+}
+
+/*
+ * Woven-thread texture for signature bands (hero, values): faint concentric
+ * thread rings plus one soft ember glow, both token-sourced and near-invisible
+ * on their own — they read as depth, never as decoration.
+ */
+.texture-weave {
+  background-image:
+    radial-gradient(640px 340px at 78% 4%, hsl(var(--accent) / 0.06), transparent 70%),
+    repeating-radial-gradient(circle at 14% 22%, hsl(var(--foreground) / 0.03) 0 1px, transparent 1px 88px),
+    repeating-radial-gradient(circle at 86% 82%, hsl(var(--foreground) / 0.02) 0 1px, transparent 1px 120px);
+}
+
+/* Browser chrome carries the world: dark native controls, ember caret and
+   selection, quiet scrollbars. */
+html {
+  color-scheme: dark;
+}
+
+::selection {
+  background-color: hsl(var(--accent) / 0.35);
+  color: hsl(var(--foreground));
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+/* Reduced motion collapses every transition and animation to a snap —
+   including the design-card hover zoom — instead of playing them. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+input,
+textarea,
+select {
+  caret-color: hsl(var(--accent));
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 /* Custom styles for the carousel */
@@ -92,5 +163,5 @@
 .slick-dots li button:focus-visible {
   outline: 2px solid hsl(var(--primary-foreground)) !important;
   outline-offset: 2px !important;
-  border-radius: 4px;
+  border-radius: 8px;
 }

@@ -15,8 +15,8 @@ export function CollectionLinks({collections, selected = ""}: {collections: Feat
               href={collectionPath(collection.collection)}
               selected={selected === collection.collection}
             >
-              {collection.heading || collection.title}{" "}
-              <span className="text-muted-foreground">({collection.total})</span>
+              {collection.heading || collection.title}
+              <span className="ml-1 tabular-nums text-muted-foreground">({collection.total})</span>
             </LinkChip>
           </li>
         ))}

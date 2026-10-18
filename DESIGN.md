@@ -1,29 +1,36 @@
 ---
 name: Design Studio
-description: Misty, low-chroma default theme for a white-label print-on-demand storefront — every token swappable per deployment.
+description: Ember on Graphite — a dark, woven-texture storefront world where one pumpkin-ember orange carries every interactive moment; all tokens swappable per deployment.
 colors:
-  loom-ink: "#212A31"
-  thread-shadow: "#2E3944"
-  indigo-thread: "#124E66"
-  warp-grey: "#748D92"
-  linen-mist: "#D3D9D4"
-  card-white: "#FFFFFF"
+  ember: "#E8862D"
+  ember-ash: "#1A1206"
+  graphite: "#171B1F"
+  basalt-band: "#111418"
+  coal-deep: "#0F1215"
+  slate-band: "#1C2126"
+  panel: "#262C33"
+  ash-surface: "#2B3036"
+  seam: "#333B43"
+  ash: "#9AA6AE"
+  bone: "#F2F4F5"
 typography:
   display:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
-    fontSize: "3rem"
+    fontFamily: "Poppins, Inter, system-ui, sans-serif"
+    fontSize: "clamp(2.25rem, 4.6vw, 3.75rem)"
     fontWeight: 700
-    lineHeight: 1
+    lineHeight: 1.05
+    letterSpacing: "-0.02em"
   headline:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, Inter, system-ui, sans-serif"
     fontSize: "2.25rem"
     fontWeight: 700
-    lineHeight: 1.11
+    lineHeight: 1.15
+    letterSpacing: "-0.02em"
   title:
-    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontFamily: "Poppins, Inter, system-ui, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 600
-    lineHeight: 1.33
+    lineHeight: 1.3
   body:
     fontFamily: "Inter, system-ui, -apple-system, sans-serif"
     fontSize: "1rem"
@@ -34,9 +41,16 @@ typography:
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.43
+  eyebrow:
+    fontFamily: "Inter, system-ui, -apple-system, sans-serif"
+    fontSize: "0.75rem"
+    fontWeight: 600
+    lineHeight: 1.4
+    letterSpacing: "0.14em"
 rounded:
-  md: "6px"
-  lg: "8px"
+  sm: "8px"
+  md: "10px"
+  lg: "12px"
 spacing:
   sm: "16px"
   md: "24px"
@@ -44,36 +58,36 @@ spacing:
   xl: "48px"
 components:
   button-primary:
-    backgroundColor: "{colors.indigo-thread}"
-    textColor: "{colors.linen-mist}"
+    backgroundColor: "{colors.ember}"
+    textColor: "{colors.ember-ash}"
     rounded: "{rounded.md}"
     padding: "8px 24px"
   button-primary-hover:
-    backgroundColor: "{colors.thread-shadow}"
-  button-secondary:
-    backgroundColor: "{colors.card-white}"
-    textColor: "{colors.indigo-thread}"
+    backgroundColor: "rgba(232, 134, 45, 0.9)"
+  button-outline:
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.ember}"
     rounded: "{rounded.md}"
     padding: "8px 16px"
+  button-outline-hover:
+    backgroundColor: "{colors.ash-surface}"
   link-accent:
-    textColor: "{colors.indigo-thread}"
-  link-chip:
-    textColor: "{colors.indigo-thread}"
-    borderColor: "{colors.warp-grey}"
+    textColor: "{colors.ember}"
+  chip:
+    textColor: "{colors.ember}"
+    backgroundColor: "{colors.graphite}"
+    borderColor: "{colors.seam}"
     rounded: "{rounded.md}"
     minHeight: "44px"
-  icon-link:
-    textColor: "{colors.warp-grey}"
-  icon-link-hover:
-    textColor: "{colors.indigo-thread}"
   card:
-    backgroundColor: "{colors.card-white}"
-    textColor: "{colors.loom-ink}"
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.bone}"
     rounded: "{rounded.lg}"
     padding: "16px"
   input:
-    backgroundColor: "{colors.card-white}"
-    textColor: "{colors.loom-ink}"
+    backgroundColor: "{colors.panel}"
+    textColor: "{colors.bone}"
+    borderColor: "{colors.seam}"
     rounded: "{rounded.md}"
     padding: "8px 12px"
 ---
@@ -82,147 +96,155 @@ components:
 
 ## Overview
 
-**Creative North Star: "The Misty Loom — a calm, atmospheric default skin stretched over a fully configurable chassis."**
+**Creative North Star: "Ember on Graphite — the catalog's own artwork glowing on woven graphite."**
 
-The shipped look is misty and atmospheric: a sage-tinted linen field, dark slate bands framing it above and below, white cards floating between them, and one saturated deep-teal thread reserved for every interactive moment. The light is cool and quiet; nothing shouts, and hierarchy comes from tonal steps and size rather than ornament. This is the calm default the product ships with.
+The world is a near-black graphite field in three tonal bands (field `#171B1F`, alt band `#1C2126`, deepest band `#111418`), framed above by a fixed basalt header and below by a coal footer. Panels sit one tonal step above the field behind 1px hairline seams; nothing is white. One saturated pumpkin-ember orange (#E8862D) does all the interactive work — eyebrows, links, focus rings, the primary button — and two signature textures give the dark its depth: faint concentric thread rings plus a single soft ember glow on the hero and philosophy bands (the `.texture-weave` utility), and a large-offset structural shadow under the framed artwork card. The hero puts the catalog's own product on the first screen: the latest synced design, framed like a gallery piece beside oversized display type.
 
-The system is a **default theme, not a brand**. Design Studio is a white-label product (see [PRODUCT.md](PRODUCT.md)): every deployment replaces name, logo, palette, and type through configuration. Token authority lives in the `:root` CSS custom properties in `app/globals.css`, consumed through the Tailwind theme mapping in `tailwind.config.ts`; per-deployment theming rides on `config/config.json` (or the `studio` table) and the allow-listed `themeLink` stylesheet hook. Anything visual that cannot be changed from that layer is a defect.
+The system is a **default theme, not a brand**. Design Studio is a white-label product (see [PRODUCT.md](PRODUCT.md)): every deployment replaces name, palette, type, and copy through configuration — the `home.*` studio rows drive the hero copy, philosophy band, and about teaser; the header monogram derives from the configured name's first letter. Token authority lives in the `:root` custom properties in `app/globals.css`, consumed through the Tailwind theme mapping in `tailwind.config.ts`; per-deployment theming rides on `config/config.json` (or the `studio` table) and the allow-listed `themeLink` stylesheet hook. Anything visual that cannot be changed from that layer is a defect.
 
-The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (`--primary`…`--chart-5`, including `--card`, `--border`, `--input`, `--ring`, `--radius`), the old `--muted` drift is closed (`--muted-foreground` is a deep step of the Warp Grey ramp at 34% lightness so muted text passes AA on white (6.8:1) and Linen Mist (4.8:1); muted text on dark bands uses `text-primary-foreground/70…95` instead of the muted token, which would invert the contrast), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) — literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Reusable primitives live in `components/ui/` (Button, Input, Textarea, Select, Card) on the shadcn convention `components.json` declares.
+The token layer is complete: every var the Tailwind mapping consumes is defined in `:root` (including `--surface` for the alt band, `--card`, `--border`, `--input`, `--ring`, `--radius`), and components consume token classes (`bg-primary`, `text-accent`, `border-input`, `ring-ring`). Literal colors survive only in three sanctioned places: the token definition file itself, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Browser chrome carries the world: `color-scheme: dark`, an ember-tinted text selection, an ember caret, and thin token-sourced scrollbars are part of the shipped global CSS. Fonts load through `next/font/google` (Inter as `--font-sans`, Poppins 600/700 as `--font-display`) and reach components through the `font-sans` / `font-display` Tailwind families.
 
 **Key Characteristics:**
 
-- Misty, low-chroma palette with a single saturated teal reserved for interaction
-- Dark bands (header, footer) frame a light field; white cards carry content
-- One type family (Inter by default); hierarchy by size and weight only
-- Flat surfaces; shadows are structural and constant, never reactive
-- Hover is a color shift only; focus is a 2px teal ring
+- Three graphite bands with hairline seams; panels one tonal step up, never white
+- One ember hue means interactive — links, buttons, rings, eyebrows, chips
+- Poppins display voice over an Inter body; hierarchy by face, size, and weight
+- Woven-thread texture bands and the framed artwork card are the signature surfaces
+- Hover and focus are color shifts only; focus is a 2px ember ring
 - Fully token-driven and theme-swappable; zero hardcoded brand assumptions
 
 ## Colors
 
-A muted, textile-adjacent palette: cool greys and sages in the field, one deep saturated teal doing all the interactive work.
+A dark, low-chroma graphite world with a single warm saturated accent doing every interactive job.
 
 ### Primary
-- **Indigo Thread** (#124E66): the single interactive color. Links, primary buttons, focus rings, carousel active dots, pagination controls. Its rarity is what makes it read as clickable. (Palette role "primary" is not the `--primary` Tailwind token: in the token layer Indigo Thread maps to `--accent`, while `--primary` carries Loom Ink.)
+- **Ember** (#E8862D): the single interactive color. Links, primary buttons, focus rings, chips, eyebrows, value-card numerals. Dark text sits on it (**Ember Ash** #1A1206); its rarity — under ~10% of any screen — is what keeps it readable as "clickable". (Palette role "primary" is not the `--primary` Tailwind token: in the token layer Ember maps to `--accent`/`--ring`, while `--primary` carries the Basalt band dark.)
 
 ### Secondary
-- **Thread Shadow** (#2E3944): the quieter second dark — footer band and the hover state of primary buttons. Steps between Loom Ink and Indigo Thread without competing with either.
+- **Coal Deep** (#0F1215): the deepest band — footer, philosophy band, and the darkest backdrop. Steps below the field without going pure black.
 
 ### Neutral
-- **Loom Ink** (#212A31): the structural dark. Header band, hero overlay, headings, and body text on light surfaces. The darkest value in the system.
-- **Warp Grey** (#748D92): the workhorse muted tone. Secondary text, input borders, icon links on light, and the hover color of links on dark bands.
-- **Linen Mist** (#D3D9D4): the page background and the light text on dark bands. A sage-tinted off-white that keeps the field from feeling sterile.
-- **Card White** (#FFFFFF): cards, inputs, and selects — pure white surfaces lifted off the Linen Mist field.
+- **Graphite** (#171B1F): the page field. Body background, chip surface, and the base the textures sit on.
+- **Basalt Band** (#111418): the structural dark — fixed header band (at 90% opacity), hero overlays, `--primary`.
+- **Slate Band** (#1C2126): the alt band one step above the field — the featured-prints band (`--surface`).
+- **Panel** (#262C33): cards, inputs, selects, the framed artwork card (`--card`).
+- **Ash Surface** (#2B3036): the muted fill — outline-button hover, scrollbar hover (`--muted`).
+- **Seam** (#333B43): hairline borders and input strokes (`--border`/`--input`).
+- **Ash** (#9AA6AE): secondary text and placeholder — deep enough to pass AA on Panel and Graphite (`--muted-foreground`).
+- **Bone** (#F2F4F5): headings and body text on dark surfaces, and the light text on dark bands (`--foreground`/`--primary-foreground`).
 
 Sanctioned exceptions: Tailwind `green-100/green-800` and `red-100/red-800` for contact-form success/error messaging (semantic status colors only, reserved by rule).
 
 ### Named Rules
 **The No-Hardcode Rule.** Colors enter components only through the token layer (`:root` custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly three places: the token definition file, the semantic green/red form-status pair, and the browser-chrome `themeColor` meta value in `app/layout.tsx` (which cannot consume a CSS variable). Nothing else may carry a literal color.
 
-**The One Thread Rule.** Indigo Thread is the only hue that means "interactive." Links, buttons, focus rings, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything is teal, nothing is clickable.
+**The One Ember Rule.** Ember is the only hue that means "interactive." Links, buttons, focus rings, chips, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything glows orange, nothing is clickable.
+
+**The Hairline Rule.** Dark surfaces separate by tonal step plus a 1px Seam border — never by white cards, never by thick strokes. A panel and its field must differ by exactly one step.
 
 ## Typography
 
-**Display Font:** Inter (with system-ui, -apple-system, sans-serif fallback)
-**Body Font:** Inter (same stack) — one family for everything
+**Display Font:** Poppins 600/700 (loaded via `next/font` as `--font-display`, with Inter and system fallbacks) — the geometric display voice for headings and card titles.
+**Body Font:** Inter (loaded as `--font-sans`, with system fallbacks) — every sentence, label, and control.
 
-**Character:** Neutral, quiet, and slightly cool — the type never performs; it measures. Hierarchy is built entirely from size and weight steps, so a deployment can swap the family (via the `themeLink` stylesheet hook) without breaking the scale.
+**Character:** Poppins gives the headlines their rounded, confident geometry; Inter keeps the reading quiet and precise. The pairing is two voices, strictly cast.
 
 ### Hierarchy
-- **Display** (700, 3rem, line-height 1): hero carousel titles over imagery; the largest voice on the site.
-- **Headline** (700, 2.25rem, line-height 1.11): page-level H1s ("Our Designs", "About …") on light fields.
-- **Title** (600–700, 1.5–1.875rem, line-height 1.33): section H2s and the design-detail H1.
-- **Body** (400, 1rem, line-height 1.5): descriptions, paragraphs, nav items; secondary body text steps up to 1.25rem for hero subtitles.
-- **Label** (400, 0.875rem, line-height 1.43): footer links, cookie-banner copy, copyright line.
+- **Display** (700, clamp(2.25rem → 3.75rem), line-height 1.05, tracking −0.02em): the hero H1 and page H1s; the largest voice on the site.
+- **Headline** (700, 2.25rem, line-height 1.15): section H2s on bands ("Featured Designs", "Driven by purpose").
+- **Title** (600–700, 1.5rem, line-height 1.3): card titles and secondary headings.
+- **Body** (400, 1rem, line-height 1.5): descriptions, paragraphs, nav items; secondary body text in Ash.
+- **Label** (400, 0.875rem, line-height 1.43): footer links, cookie-banner copy, captions, counts (tabular numerals).
+- **Eyebrow** (600, 0.75rem, letter-spacing 0.14em, uppercase, Ember): the small accent label above a display heading. Used sparingly — hero and section openers only, never on ordinary content.
 
 ### Named Rules
-**The Single Family Rule.** One family at a time across all roles. Weight and size do the differentiating; no secondary or accent face unless a deployment's theme config introduces one.
+**The Two-Voice Rule.** Poppins sings only in headings and card titles (`font-display`); Inter speaks all body copy, controls, and labels. No third family unless a deployment's theme config introduces one.
 
 ## Layout
 
-A fixed dark header (64px tall, full width, z-10) with `pt-16` compensation on the content container; content sits in a centered `container` with responsive gutters (16px → 24px at `sm` → 32px at `lg`). The home carousel is full-bleed with 60vh slides, a Loom Ink overlay at 60% opacity and centered display type. Autoplay respects `prefers-reduced-motion` (off by default for those visitors) and a visible play/pause toggle sits in the carousel's bottom-right corner.
-
-Catalog grids flow 1 column → 2 at `sm` (640px) → 3 at `md` (768px) → 4 at `lg` (1024px) → 5 at `xl` (1280px) with 24px gaps; featured and related sections share the same ladder and hold 5 items. The homepage starts with the carousel without a negative top offset, followed immediately by a compact heading and native search, then interest links and latest prints. Search has a stable position outside the rotating slides. Its mobile gallery uses two cards with 12px gaps, 12px content padding and 14px titles; descriptions, collection rows and repeated detail CTAs appear from `sm` upward. Artwork remains uncropped, and image/title links open the full detail page. The design-detail page splits into a 2-column card (image | 24px-padded content) at `md`. Vertical rhythm runs on 16/32/48px section spacing; the footer is a 3-column flex-wrap band. Content minimum height keeps the footer down-page (`calc(100vh − 160px)`).
+A fixed dark header (64px tall, full width, z-10, Basalt at 90% opacity) with `pt-16` compensation on the content container; content sits in a centered `container` with responsive gutters (16px → 24px at `sm` → 32px at `lg`). The homepage runs in vertical movements: **texture hero** (2-column at `lg` — copy column with eyebrow, display H1, muted paragraph, primary CTA + text link, labeled search form; framed artwork card right, caption strip under a hairline rule) → **chip band** (1px-seam-bordered strip holding the "Browse by interest" and "Gift ideas" navs, capped at six chips + "See all" links each) → **featured band** (Slate Band, centered eyebrow + headline, latest five designs in a 1 → 2 (`sm`) → 3 (`lg`) grid) → **philosophy band** (Coal Deep with texture, four numbered value cards in a 1 → 2 → 4 grid) → **about teaser** (field background, copy + bordered point tiles left, framed artwork right). Search keeps its stable position inside the hero column — never inside rotating or framed imagery. Catalog grids keep the ladder 1 → 2 (`sm`) → 3 (`md`) → 4 (`lg`) → 5 (`xl`) with 24px gaps. The design-detail page splits into a 2-column card (media on the design's baked background | vertically centered info column) at `md`. Vertical rhythm runs on 16/32/48px section spacing; band sections breathe at 64px top/bottom.
 
 ## Elevation & Depth
 
-Depth is tonal first: dark bands frame the light field, white cards lift off Linen Mist, and the hero sits under a dark scrim. Shadows exist but are structural and constant — attached to fixed chrome and card surfaces at rest, identical on hover. Nothing in the system lifts, scales, or gains shadow in response to the pointer.
+Depth is tonal first — bands step down (field → alt band → deepest band), panels step up — and structural second: shadows are large-offset, low-alpha, and constant, never reactive.
 
 ### Shadow Vocabulary
-- **Structural card** (`box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)`, Tailwind `shadow-md`): cards and the fixed header — the baseline material shadow.
-- **Overlay bar** (`box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)`, Tailwind `shadow-lg`): the cookie banner, the one element that floats above everything.
+- **Structural card** (Tailwind `shadow-md`): cards and the fixed header — the baseline material shadow.
+- **Framed artwork** (Tailwind `shadow-xl`, `0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)`): the framed artwork card only — the one element allowed to lift like a gallery piece.
+- **Overlay bar** (Tailwind `shadow-lg`): the cookie banner, the only element floating above everything.
 
 ### Named Rules
-**The Color-Only Hover Rule.** Hover and focus change color, underline, or opacity — never shadow, scale, or transform. All interactive transitions are `transition-colors` at ~150ms with default easing; the only motion beyond that is the hero carousel (500ms slide, 5s autoplay).
+**The Color-Only Hover Rule.** Hover and focus change color, fill, or underline — never shadow. The single sanctioned transform is the design-card image zoom: hovering a card scales its media to 140% inside the clipped tile (300ms ease-out, collapsed under `prefers-reduced-motion`). Everything else stays a color shift; all other interactive transitions are `transition-colors` at ~150ms; the primary button dims to 90% ember, the outline button fills to Ash Surface, links underline.
 
 ## Shapes
 
-Gently rounded, quiet geometry: cards at 8px radius, controls (buttons, inputs, selects, status banners) at 6px. Icons render as square 24px glyphs, inputs carry 1px Warp Grey borders, and catalog media sits in a portrait 3:4 frame with `object-contain` over the design's baked background color (nothing is cropped — the Classic T-Shirt mockup fills the frame nearly edge-to-edge, square artwork letterboxes top and bottom). No pills, no circles (carousel dots excepted), no sharp-0 radicalism — the soft rectangle is the system's silhouette.
+Quiet geometry, one notch softer than the old default: cards and framed media at 12px (`--radius`), buttons/inputs/chips at 10px, small focus plates at 8px. Icons render as 16–24px glyphs; inputs carry 1px Seam borders. The framed artwork card wraps its media in a padded, 12px-rounded inset tile — media itself is never cropped. No pills, no circles (header monogram tile and carousel dots excepted) — the soft rectangle is the system's silhouette, and hairlines do the outlining.
 
 ## Components
 
 For each: character first, then shape, color assignment, states, and behavior.
 
 ### Buttons
-- **Shape:** softly rounded (6px)
-- **Primary:** Indigo Thread background, Linen Mist text, 8px/24px padding — used for form submits, pagination, cookie consent
-- **Hover / Focus:** background shifts to Thread Shadow on hover (`transition-colors`); 2px Indigo Thread focus ring; disabled fades to 50% opacity
-- **Secondary / Outline:** quiet labeled action for external commerce links (e.g. "Buy on Redbubble ↗"): Card White surface, 1px Warp Grey border, 6px radius, Indigo Thread label with a 20px marketplace glyph; hover shifts label and border to Indigo Thread emphasis over a light muted fill — color shift only
-- **Trust line:** a one-line muted caption sits under any outbound commerce CTA ("Printed & shipped by our partner — opens in a new tab"); it names the handoff so the exit never surprises
+- **Shape:** softly rounded (10px)
+- **Primary:** Ember background, Ember Ash text, 8px/24px padding — hero CTA, form submits, pagination, cookie consent
+- **Hover / Focus:** background dims to 90% ember (`transition-colors`); 2px Ember focus ring; disabled fades to 50% opacity
+- **Secondary / Outline:** the quiet commerce and card action ("Buy on TeePublic ↗", "View design →"): Panel surface, 1px Seam border, 10px radius, Ember label with a 16–20px glyph; hover shifts border to Ember emphasis over an Ash Surface fill — color shift only
+- **Trust line:** a one-line muted caption sits under any outbound commerce CTA ("Printed & shipped by our marketplace partner…"); it names the handoff so the exit never surprises
 
 ### Links
-- **Text links:** Indigo Thread, underline on hover ("View Design Details", collection links, back-links)
-- **On dark bands:** Linen Mist text hovering to Warp Grey (header nav, footer links)
-- **Icon links:** Warp Grey at rest, Indigo Thread (light field) or Linen Mist (dark bands) on hover; 24px glyphs, `sr-only` labels
+- **Text links:** Ember, underline on hover with 3px underline offset
+- **On dark bands:** Bone at 70% resting, Ember or full Bone on hover/active
+- **Icon links:** Ash at rest, Ember on hover on the field, Bone on dark bands (`variant="band"`); 24px glyphs, `sr-only` labels
+
+### Chips
+- **Style:** Graphite fill, 1px Seam border, 10px radius, 44px min tap target, Ember label; collection counts follow in Ash with tabular numerals and a real gap (flex layouts eat whitespace — use `ml-1`)
+- **State:** `selected` marks the active collection with `aria-current`
 
 ### Cards / Containers
-- **Corner Style:** 8px radius
-- **Background:** Card White, on the Linen Mist field
-- **Shadow Strategy:** structural card shadow, constant (see Elevation & Depth)
-- **Border:** none — shadow and tonal contrast do the separation
+- **Corner Style:** 12px radius, 1px Seam border (the border is part of the card language now)
+- **Background:** Panel, on the field or band it sits on
+- **Shadow Strategy:** structural `shadow-md`, constant; the framed artwork card alone lifts with `shadow-xl`
 - **Internal Padding:** 16px; detail pages step to 24px
-- **Catalog card anatomy:** portrait 3:4 image top, Title-weight name (line-clamped to 2), Warp Grey description and collection line (clamped to 3), Indigo Thread "View Design Details" anchored to the card bottom (`mt-auto`)
+- **Design-card anatomy:** padded inset media tile (portrait 3:4, `object-contain` over the design's baked background color, never cropped at rest), Poppins title (2-line clamp), Ash collection caption, Ash description (3-line clamp), outline "View design →" action anchored to the card bottom (`mt-auto`). Hovering the card zooms the media to 140% inside the clipped tile. The image tile is decorative (`aria-hidden`, non-focusable); the title and action are the accessible links.
 
 ### Inputs / Fields
-- **Style:** Card White background, 1px Warp Grey border, 6px radius, 8px/12–16px padding; select shares the treatment
-- **Focus:** 2px Indigo Thread ring, outline suppressed
+- **Style:** Panel background, 1px Seam border, 10px radius, 8px/12–16px padding; select shares the treatment
+- **Focus:** 2px Ember ring, outline suppressed; ember caret in all fields
 - **Error / Disabled:** reserved semantic status colors (green/red pairs) exist only in form feedback banners
 
 ### Navigation
-- **Header:** fixed Loom Ink band at 80% opacity with structural shadow; brand at Title weight on the left; light links hover to Warp Grey; collapses to a hamburger menu below `md` with a near-opaque Loom Ink panel; 2px teal focus-visible rings throughout
-- **Footer:** Thread Shadow band, three flex-wrap columns (brand, quick links, social icons), Warp Grey links hovering to Linen Mist
+- **Header:** fixed Basalt band at 90% opacity with structural shadow; brand is the configured `siteLogo` asset in the standard tile (falling back to a monogram tile from the configured name's first letter — never a hardcoded mark) plus the name in Poppins; light links rest at 70% Bone and hover to Ember; collapses to a hamburger menu below `md` with a near-opaque Basalt panel; 2px focus-visible rings throughout
+- **Footer:** Coal Deep band, three flex-wrap columns (brand + tagline, quick links, social icons), links at 70% Bone hovering to full Bone
 
-### Hero Carousel (signature)
-Full-bleed 60vh slides under the header; each slide is edge-to-edge imagery beneath a 60% Loom Ink scrim carrying centered Display and Body type in Linen Mist / Linen Mist-95. Pagination dots rest at the muted ramp, active at Indigo Thread; arrows at Indigo Thread. A circular scrim play/pause toggle (44px tap target, bottom-right) controls autoplay; autoplay is disabled by default under `prefers-reduced-motion`. When it runs: 5-second cadence, 500ms slide.
-
-### Cookie Banner
-Fixed-bottom Loom Ink bar with the overlay shadow; Body-size copy in Linen Mist with an underlined privacy link, and a standard primary button for consent.
+### Framed Artwork Card (signature)
+A Panel frame (12px radius, Seam border, `shadow-xl`) holding a rounded inset tile of the design's baked background color with the mockup contained uncropped, closed by a hairline rule and a centered Ash caption. One per hero; it links to the design detail (decorative link, title carried by context). This is the world's proof that the catalog is the storefront.
 
 ### Shared page primitives (`app/components/`)
 The roles above are encoded once in reusable components — use them instead of re-rolling class strings, so a theme change lands everywhere at once:
 
-- **`AccentLink`** — the accent text link (Indigo Thread, underline on hover, 2px teal focus ring) for internal routes; the canonical "link-accent".
+- **`AccentLink`** — the accent text link (Ember, underline on hover, 2px ember focus ring) for internal routes.
 - **`LinkChip`** — the interest chip into the catalog: bordered soft rectangle, 44px min tap target, `selected` marks the active collection with `aria-current`.
-- **`IconLink`** — the 24px social/share glyph: muted at rest, Indigo Thread on hover on the light field, Linen Mist on dark bands (`variant="band"`), sr-only label, http(s)-sanitized href.
+- **`IconLink`** — the 24px social/share glyph: Ash at rest, Ember on hover on the field, Bone on dark bands (`variant="band"`), sr-only label, http(s)-sanitized href.
+- **`Eyebrow`** — the uppercase letter-spaced Ember label above display headings; hero and section openers only.
 - **`PageShell`** — the page container: centered `container` with the responsive gutters (16 → 24 → 32px) and 32px vertical rhythm.
-- **`PageHeader`** — the page H1 in the Headline role with optional lead paragraph (32px clearance; 16px H1→intro, 32px intro→content).
-- **`SectionHeading`** — the section H2 in the Title role.
+- **`PageHeader`** — the page H1 in the Display role with optional lead paragraph.
+- **`SectionHeading`** — the section H2 in the Headline role.
 
-Primary and secondary/outline buttons stay on `components/ui/button.tsx`; the outline variant is the documented quiet commerce action (Card White surface, Warp Grey border, Indigo Thread label, muted-fill hover).
+Primary and secondary/outline buttons stay on `components/ui/button.tsx`; the outline variant is the documented quiet commerce and card action.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`) or the primitives in `components/ui/`.
-- **Do** keep every deployment-specific value (name, logo, favicon, social links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
-- **Do** give every interactive element a visible 2px Indigo Thread focus ring (`focus-visible`).
-- **Do** frame catalog media in a portrait 3:4 (the Classic T-Shirt mockup's native shape) with `object-contain` over the baked background color and lazy-load below the fold.
-- **Do** treat Inter and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
+- **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`, `bg-surface`) or the primitives in `components/ui/`.
+- **Do** keep every deployment-specific value (name, logo via `siteLogo`, hero copy, philosophy band, buy links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
+- **Do** give every interactive element a visible 2px Ember focus ring (`focus-visible`), and let the global CSS carry the browser chrome: `color-scheme: dark`, ember selection and caret, thin token scrollbars.
+- **Do** frame catalog media in a portrait 3:4 inset tile with `object-contain` over the design's baked background color — nothing is ever cropped.
+- **Do** treat Poppins, Inter, and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 
 ### Don't:
 - **Don't** write a literal hex, rgb, or palette-utility color into a component — the token definition file, the form-status pair, and the `themeColor` meta value are the only sanctioned exceptions.
-- **Don't** introduce hues outside the token set; green/red pairs are reserved for form success/error semantics only.
-- **Don't** animate hover with elevation, scale, or transform — color shifts and underlines only.
-- **Don't** letter-space or uppercase labels; the family runs at natural spacing in sentence case.
-- **Don't** bake any single deployment's brand (name, logo, shop, imagery) into a component — the product is white-label and every brand touchpoint is configuration.
+- **Don't** introduce hues outside the token set; Ember is the only interactive hue, and green/red pairs are reserved for form success/error semantics only.
+- **Don't** animate hover with elevation, shadow, or decorative transforms — color shifts, fills, underlines, and the single sanctioned design-card image zoom only.
+- **Don't** put Poppins into body copy, controls, or labels — the display voice sings only in headings and card titles.
+- **Don't** sprinkle eyebrows onto ordinary content or stack white surfaces on the graphite field — panels are Panel-colored, one step up, behind a hairline.
+- **Don't** bake any single deployment's brand (name, monogram text, shop, imagery, hero copy) into a component — the product is white-label and every brand touchpoint is configuration.

@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import baseConfig from "@/config/config.json";
 
 const getSiteConfig = vi.fn();
-vi.mock("next/font/google", () => ({ Inter: () => ({ className: "inter" }) }));
+vi.mock("next/font/google", () => ({
+  Inter: () => ({ className: "inter", variable: "--font-sans" }),
+  Poppins: () => ({ className: "poppins", variable: "--font-display" }),
+}));
 vi.mock("@/utils/database", () => ({ getSiteConfig: () => getSiteConfig() }));
 vi.mock("./globals.css", () => ({}));
 vi.mock("./components/Header", () => ({ default: () => null }));

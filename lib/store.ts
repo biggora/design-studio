@@ -69,8 +69,36 @@ export interface SiteConfig {
   collectionPages?: CollectionPage[] | string;
   /** Curated gift landing pages (/gifts/<slug>), optionally JSON-encoded in the studio table. */
   giftPages?: GiftPage[] | string;
-  /** Home discovery copy; studio rows can override home.title/heading/description. */
-  home?: {title: string; heading: string; description: string};
+  /** Home discovery copy; studio rows can override any field below. */
+  home?: HomeConfig;
+}
+
+export interface HomeValue {
+  title: string;
+  description: string;
+}
+
+export interface HomeConfig {
+  title: string;
+  heading: string;
+  description: string;
+  /** Ember eyebrow label above the hero H1; hidden when empty. */
+  eyebrow?: string;
+  /** Accent-colored word appended to the hero H1. Unset: the heading's last
+      word takes the accent automatically; empty string disables the accent. */
+  headingAccent?: string;
+  /** Caption strip inside the framed hero artwork card. */
+  heroCaption?: string;
+  /** Philosophy band; the section hides when values is empty. */
+  valuesEyebrow?: string;
+  valuesTitle?: string;
+  valuesIntro?: string;
+  values?: HomeValue[] | string;
+  /** About teaser; the section hides when both strings are empty. */
+  aboutEyebrow?: string;
+  aboutTitle?: string;
+  aboutText?: string;
+  aboutPoints?: HomeValue[] | string;
 }
 
 interface SiteConfigStore {

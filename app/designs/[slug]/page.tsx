@@ -199,8 +199,8 @@ export default async function DesignDetails(
                 className="object-contain w-full h-full"
               />
             </div>
-            <div className="p-6">
-              <h1 className="text-3xl font-bold mb-4 text-foreground">
+            <div className="p-6 flex flex-col justify-center">
+              <h1 className="font-display text-3xl font-bold tracking-[-0.02em] mb-4 text-foreground">
                 {design.title}
               </h1>
               <p className="text-muted-foreground mb-6">

@@ -11,7 +11,24 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: [
+          "var(--font-sans)",
+          "Inter",
+          "system-ui",
+          "-apple-system",
+          "sans-serif",
+        ],
+        display: [
+          "var(--font-display)",
+          "var(--font-sans)",
+          "Inter",
+          "system-ui",
+          "sans-serif",
+        ],
+      },
       colors: {
+        surface: "hsl(var(--surface))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         card: {

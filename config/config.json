@@ -8,7 +8,51 @@
   "home": {
     "title": "Print Designs & Gifts by Interest",
     "heading": "Find your next print",
-    "description": "Search artwork by title, topic or phrase, or explore a collection."
+    "description": "Search artwork by title, topic or phrase, or explore a collection.",
+    "eyebrow": "Original print-on-demand artwork",
+    "heroCaption": "Original artwork, printed on demand by our marketplace partner",
+    "valuesEyebrow": "Our philosophy",
+    "valuesTitle": "Driven by purpose",
+    "valuesIntro": "The values that guide the artwork and this storefront.",
+    "values": [
+      {
+        "title": "Individuality",
+        "description": "Original visual statements that let people express their genuine selves through everyday apparel."
+      },
+      {
+        "title": "Creativity",
+        "description": "Witty, whimsical concepts and pop-culture mashups that go beyond generic graphics."
+      },
+      {
+        "title": "Sustainable design",
+        "description": "Print on demand: every item is produced only once it is ordered — less overproduction, less waste."
+      },
+      {
+        "title": "Community-specific",
+        "description": "Designs built around real communities — developers, gamers, pet lovers — and their in-jokes."
+      }
+    ],
+    "aboutEyebrow": "About the studio",
+    "aboutTitle": "Original designs with a point of view",
+    "aboutText": "",
+    "aboutPoints": [
+      {
+        "title": "Accessible identity",
+        "description": "Bold graphics that make an outfit stand out at a fair price."
+      },
+      {
+        "title": "Expressive design",
+        "description": "Distinctive artwork with strong visual impact and sharp humor."
+      },
+      {
+        "title": "Differentiated innovation",
+        "description": "Artwork made to stand apart from mainstream pop-culture merchandise."
+      },
+      {
+        "title": "Peer-culture specific",
+        "description": "Designs created for niche communities and the jokes only they get."
+      }
+    ]
   },
   "siteLogo": "https://via.placeholder.com/200x200",
   "siteBanner": "https://via.placeholder.com/400x200",

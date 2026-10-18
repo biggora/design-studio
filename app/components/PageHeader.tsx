@@ -21,7 +21,7 @@ export function PageHeader({ title, intro, id, className, introClassName }: Page
       <h1
         id={id}
         className={cn(
-          "text-4xl font-bold text-foreground",
+          "font-display text-4xl font-bold tracking-[-0.02em] text-foreground",
           intro ? "mb-4" : "mb-8",
           className,
         )}

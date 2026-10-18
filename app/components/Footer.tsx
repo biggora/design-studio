@@ -11,6 +11,7 @@ import {
 import { useContext } from "react";
 import { ConfigContext } from "@/app/wrapper";
 import { IconLink } from "@/app/components/IconLink";
+import { BrandMark } from "@/app/components/BrandMark";
 
 // Shared by the quick links and the social icons: Linen Mist at 70% hovering
 // to full Linen Mist on the Thread Shadow band.
@@ -43,7 +44,10 @@ export default function Footer() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex flex-wrap justify-between items-center">
           <div className="w-full md:w-1/3 text-center md:text-left">
-            <p className="text-lg font-semibold">{config.name}</p>
+            <p className="flex items-center justify-center gap-2.5 md:justify-start text-lg font-semibold">
+              <BrandMark siteLogo={config.siteLogo} name={config.name} className="h-7 w-7" />
+              {config.name}
+            </p>
             {config.tagline && (
               <p className="mt-2 text-sm text-primary-foreground/70">
                 {config.tagline}
