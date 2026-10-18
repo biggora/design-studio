@@ -46,6 +46,12 @@ const defaultCarouselItems: CarouselSlide[] = [
 const DEFAULT_CTA_LABEL = "Browse designs";
 const DEFAULT_CTA_HREF = "/designs";
 
+// The interest navs are a teaser, not a directory: the operator's config order
+// is the curation, and everything past the first few chips lives behind the
+// "See all" links — the full walls (26 collections + 15 gift pages here) push
+// the first print several screens down, worst on mobile.
+const HOME_CHIP_LIMIT = 6;
+
 function resolveCarouselItems(slides: SiteConfig["slides"]): CarouselSlide[] {
   const configured = (Array.isArray(slides) ? slides : []).filter(
     (slide) =>
@@ -138,7 +144,7 @@ export default async function Home() {
           <nav aria-label="Browse by interest" className="mb-8">
             <SectionHeading className="text-xl mb-3">Browse by interest</SectionHeading>
             <ul className="flex flex-wrap gap-2">
-              {collections.map(collection => (
+              {collections.slice(0, HOME_CHIP_LIMIT).map(collection => (
                 <li key={collection.collection}>
                   <LinkChip href={collectionPath(collection.collection)}>
                     {collection.heading || collection.title}
@@ -157,13 +163,18 @@ export default async function Home() {
           <nav aria-label="Gift ideas" className="mb-8">
             <SectionHeading className="text-xl mb-3">Gift ideas</SectionHeading>
             <ul className="flex flex-wrap gap-2">
-              {giftPages.map(page => (
+              {giftPages.slice(0, HOME_CHIP_LIMIT).map(page => (
                 <li key={page.slug}>
                   <LinkChip href={giftPath(page.slug)}>
                     {page.heading || page.title}
                   </LinkChip>
                 </li>
               ))}
+              <li>
+                <AccentLink href="/gifts" className="inline-flex items-center min-h-11 px-2 text-sm">
+                  See all gift ideas
+                </AccentLink>
+              </li>
             </ul>
           </nav>
         )}
