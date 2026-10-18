@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { cache } from "react";
-import { getSiteConfig, getDesignById, getDesignBySlug } from "@/utils/database";
+import { getSiteConfig, getDesignById, getDesignBySlug, fetchRandomDesigns } from "@/utils/database";
 import {
   getDesignDisplayImage,
   designCardHeight,
@@ -95,10 +95,21 @@ export default async function DesignDetails(
     notFound();
   }
 
-  const { design, relatedDesigns } = data;
+  const { design } = data;
 
   if (UUID_PATTERN.test(slug) && design.slug) {
     permanentRedirect(designPath(design));
+  }
+
+  // Designs without collection memberships (or alone in theirs) would
+  // otherwise dead-end into the footer; fall back to random catalog picks.
+  let relatedDesigns = data.relatedDesigns;
+  let relatedTitle = "More from this collection";
+  if (relatedDesigns.length === 0) {
+    relatedDesigns = (await fetchRandomDesigns(6))
+      .filter((candidate) => candidate.id !== design.id)
+      .slice(0, 5);
+    relatedTitle = "More prints";
   }
 
   const collectionParams = new URLSearchParams();
@@ -192,10 +203,10 @@ export default async function DesignDetails(
               <h1 className="text-3xl font-bold mb-4 text-foreground">
                 {design.title}
               </h1>
-              <p className="text-muted-foreground min-h-[200px] mb-6">
+              <p className="text-muted-foreground mb-6">
                 {design.description}
               </p>
-              <div className={`grid grid-cols-1 md:grid-cols-2`}>
+              <div className="grid grid-cols-1 md:grid-cols-2">
                 {design.collection && (
                   <p className="text-muted-foreground mb-4">
                     Collection:&nbsp;
@@ -217,9 +228,6 @@ export default async function DesignDetails(
                     ))}
                   </p>
                 )}
-                <p className="text-muted-foreground mb-4 lg:text-right">
-                  Created on: {formatDate(design.createdAt)}
-                </p>
               </div>
               {buyUrl !== "#" && (
                 <BuyLink
@@ -259,13 +267,16 @@ export default async function DesignDetails(
                   imageUrl={displayImage}
                 />
               </div>
+              <p className="text-sm text-muted-foreground mt-4">
+                Created on: {formatDate(design.createdAt)}
+              </p>
             </div>
           </div>
         </div>
       </PageShell>
       <PageShell>
         <FeaturedDesigns
-          title="More from this collection"
+          title={relatedTitle}
           designs={relatedDesigns}
           showCollection={false}
         />

@@ -13,11 +13,14 @@ const design: Design = {
   backgroundColor: "#000000", backgroundColors: "", createdAt: "2026-10-07T08:10:00Z", updatedAt: "",
   props: { teepublicLink: "https://teepublic.com/t-shirt/123-space-cat" },
 };
+const fetchRandomDesigns = vi.fn();
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   getDesignBySlug: async () => ({ design, relatedDesigns: [] }),
   getDesignById: async () => ({ design, relatedDesigns: [] }),
+  fetchRandomDesigns: (...args: unknown[]) => fetchRandomDesigns(...args),
 }));
+fetchRandomDesigns.mockResolvedValue([]);
 vi.mock("next/image", () => ({ default: ({ src, alt }: { src: string; alt: string }) => createElement("img", { src, alt }) }));
 vi.mock("@/app/components/FeaturedDesigns", () => ({ default: () => null }));
 vi.mock("@/app/components/BackToCatalog", () => ({ default: () => null }));
@@ -95,6 +98,12 @@ describe("non-Redbubble design page", () => {
     expect(html).toContain('alt="Space cat design"');
     expect(html).not.toContain("Gift ideas:");
     expect(html).toContain('"name":"Designs"');
+  });
+  it("fills the related row from random picks when the design has no related designs", async () => {
+    fetchRandomDesigns.mockClear();
+    fetchRandomDesigns.mockResolvedValue([{ ...design, id: "999", title: "Other print" }]);
+    await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
+    expect(fetchRandomDesigns).toHaveBeenCalledWith(6);
   });
   it("generates metadata with the stable design path", async () => {
     const metadata = await generateMetadata({ params: Promise.resolve({ slug: "space-cat" }) });
