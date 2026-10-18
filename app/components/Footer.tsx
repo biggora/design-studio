@@ -43,7 +43,7 @@ export default function Footer() {
       <div className="container mx-auto px-6 py-4">
         <div className="flex flex-wrap justify-between items-center">
           <div className="w-full md:w-1/3 text-center md:text-left">
-            <h3 className="text-lg font-semibold">{config.name}</h3>
+            <p className="text-lg font-semibold">{config.name}</p>
             {config.tagline && (
               <p className="mt-2 text-sm text-primary-foreground/70">
                 {config.tagline}
@@ -51,7 +51,7 @@ export default function Footer() {
             )}
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0">
-            <h4 className="text-lg font-semibold mb-2">Quick Links</h4>
+            <h2 className="text-lg font-semibold mb-2">Quick Links</h2>
             <ul className="text-sm">
               {quickLinks.map(({ href, label }) => (
                 <li key={href}>
@@ -63,7 +63,7 @@ export default function Footer() {
             </ul>
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0 text-center md:text-right">
-            <h4 className="text-lg font-semibold mb-2">Connect With Us</h4>
+            <h2 className="text-lg font-semibold mb-2">Connect With Us</h2>
             <div className="flex justify-center md:justify-end space-x-4">
               {socialNetworks.map(({ key, name, Icon }) => {
                 const href = config.social?.[key];

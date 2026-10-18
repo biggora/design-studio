@@ -16,10 +16,12 @@ export function CookieBanner() {
     <div
       role="region"
       aria-label="Cookie consent"
-      className="fixed bottom-0 left-0 right-0 z-50 bg-primary text-primary-foreground p-4 shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-primary text-primary-foreground py-2.5 shadow-lg"
     >
-      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-        <p className="text-sm">
+      {/* Compact single row on sm+ so the home search stays above the fold;
+        text and buttons stack tightly below sm. Same gutters as PageShell. */}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <p className="text-sm leading-snug">
           We use cookies to understand how visitors use this site. Analytics
           load only after you accept.{" "}
           <Link
@@ -29,7 +31,7 @@ export function CookieBanner() {
             Learn more
           </Link>
         </p>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           <Button size="sm" onClick={() => saveCookieConsent("accepted")}>
             Accept
           </Button>

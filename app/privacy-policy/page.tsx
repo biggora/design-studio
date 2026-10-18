@@ -33,7 +33,7 @@ export default async function PrivacyPolicy() {
   return (
     <PageShell>
       <PageHeader title="Privacy Policy" />
-      <div className="prose prose-lg max-w-none text-foreground">
+      <div className="prose prose-lg max-w-prose text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
         <SectionHeading className="mt-8">1. Introduction</SectionHeading>

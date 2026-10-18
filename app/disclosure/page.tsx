@@ -33,7 +33,7 @@ export default async function AffiliateDisclosure() {
   return (
     <PageShell>
       <PageHeader title="Affiliate Disclosure" />
-      <div className="prose prose-lg max-w-none text-foreground">
+      <div className="prose prose-lg max-w-prose text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
         <p className="mb-4">

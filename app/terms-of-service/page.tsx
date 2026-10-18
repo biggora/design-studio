@@ -32,7 +32,7 @@ export default async function TermsOfService() {
   return (
     <PageShell>
       <PageHeader title="Terms of Service" />
-      <div className="prose prose-lg max-w-none text-foreground">
+      <div className="prose prose-lg max-w-prose text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
         <SectionHeading className="mt-8">1. Acceptance of Terms</SectionHeading>
