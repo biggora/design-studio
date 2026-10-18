@@ -15,6 +15,7 @@ vi.mock("@/utils/database", async () => {
     getSiteConfig: async () => ({name: "Example Studio", domain: "example.test", giftPages}),
     fetchLiveGiftPages: async (value: unknown) =>
       getGiftPages(value).filter(page => page.sections.some(section => !emptyCollections.has(section.collection))),
+    fetchDesigns: async () => ({designs: [], total: 0}),
   };
 });
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));

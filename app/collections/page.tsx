@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getSiteConfig, fetchFeaturedCollections } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
+import { DesignThumbs } from "@/app/components/DesignThumbs";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { collectionPath } from "@/lib/collections";
@@ -60,6 +61,7 @@ export default async function CollectionsIndex() {
                 href={collectionPath(collection.collection)}
                 className="block h-full rounded-lg border border-input bg-card p-4 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
+                <DesignThumbs designs={collection.designs} className="mb-3" />
                 <span className="block text-xl font-semibold mb-2 text-foreground">{collection.heading || collection.title}</span>
                 <span className="block text-muted-foreground">{collection.description}</span>
                 <span className="block text-sm text-muted-foreground mt-2">

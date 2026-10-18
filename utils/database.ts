@@ -683,7 +683,7 @@ export async function fetchCollections(): Promise<string[]> {
 
 /** `size` is the collection's design_collections membership count (absent on legacy installs). */
 export type FeedCollection = { title: string; description: string; size?: number };
-export type FeaturedCollection = CollectionPage & {total: number};
+export type FeaturedCollection = CollectionPage & {total: number; designs: Design[]};
 
 /** Only explicitly prepared, existing, nonempty themes are promoted/indexed. */
 export async function fetchFeaturedCollections(value: SiteConfig["collectionPages"]): Promise<FeaturedCollection[]> {
@@ -691,8 +691,9 @@ export async function fetchFeaturedCollections(value: SiteConfig["collectionPage
     if (!pages.length) return [];
     const available = new Set((await fetchFeedCollections()).map(collection => collection.title));
     const results = await Promise.all(pages.filter(page => available.has(page.collection)).map(async page => {
-        const {total} = await fetchDesigns(1, "", page.collection, 1);
-        return {...page, total};
+        // Three designs ride along so index cards can preview the collection.
+        const {designs, total} = await fetchDesigns(1, "", page.collection, 3);
+        return {...page, total, designs};
     }));
     return results.filter(page => page.total > 0);
 }

@@ -1,8 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { getSiteConfig, fetchLiveGiftPages } from "@/utils/database";
+import { getSiteConfig, fetchLiveGiftPages, fetchDesigns } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
+import { DesignThumbs } from "@/app/components/DesignThumbs";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { giftPath, orderGiftPages } from "@/lib/gifts";
@@ -24,7 +25,15 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function GiftsIndex() {
   const config = await getSiteConfig();
-  const pages = orderGiftPages(await fetchLiveGiftPages(config.giftPages));
+  const ordered = orderGiftPages(await fetchLiveGiftPages(config.giftPages));
+  // Thumbs come from each page's first section — the primary interest — so the
+  // index card previews the artwork instead of listing text alone.
+  const pages = await Promise.all(ordered.map(async (page) => ({
+    ...page,
+    thumbs: page.sections[0]
+      ? (await fetchDesigns(1, "", page.sections[0].collection, 3)).designs
+      : [],
+  })));
   const siteUrl = `https://${config.domain}`;
 
   const breadcrumbJsonLd = {
@@ -51,6 +60,7 @@ export default async function GiftsIndex() {
                 href={giftPath(page.slug)}
                 className="block h-full rounded-lg border border-input bg-card p-4 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
+                <DesignThumbs designs={page.thumbs} className="mb-3" />
                 <span className="block text-xl font-semibold mb-2 text-foreground">{page.heading || page.title}</span>
                 <span className="block text-muted-foreground">{page.description}</span>
               </Link>
