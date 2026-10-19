@@ -135,64 +135,74 @@ export default async function DesignFolio(
         selectedCollection={selectedCollection}
         collections={collections.map(collection => collection.title)}
       />
-      {!selectedCollection && <CollectionLinks collections={featuredCollections} />}
+      {/* Mobile reads count → grid → interests (order utilities); desktop keeps
+          the DOM order: interests → count → grid → pagination. */}
+      <div className="flex flex-col">
+        {!selectedCollection && (
+          <div className="order-3 md:order-none">
+            <CollectionLinks collections={featuredCollections} limit={8} />
+          </div>
+        )}
 
-      {designs.length > 0 && (
-        <p className="text-sm text-muted-foreground mb-4">
-          {total} {total === 1 ? "design" : "designs"}
-          {searchQuery ? ` matching "${searchQuery}"` : ""}
-          {selectedCollection ? ` in "${selectedCollection}"` : ""}
-        </p>
-      )}
-
-      {designs.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-          {designs.map((design: Design) => (
-            <DesignCard key={design.id} design={design} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-16 space-y-6">
-          <p className="text-muted-foreground">
-            No designs found
-            {searchQuery ? ` for "${searchQuery}"` : ""}
-            {selectedCollection ? ` in "${selectedCollection}"` : ""}. Try
-            adjusting your search or filter.
+        {designs.length > 0 && (
+          <p className="order-1 md:order-none text-sm text-muted-foreground mb-4">
+            {total} {total === 1 ? "design" : "designs"}
+            {searchQuery ? ` matching "${searchQuery}"` : ""}
+            {selectedCollection ? ` in "${selectedCollection}"` : ""}
           </p>
-          {(searchQuery || selectedCollection) && (
-            <Link
-              href="/designs"
-              className={buttonVariants({ variant: "outline" })}
-            >
-              Clear search &amp; filters
-            </Link>
-          )}
-        </div>
-      )}
+        )}
 
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-4 mt-8">
-          {currentPage > 1 && (
-            <Link
-              href={createPageUrl(currentPage - 1)}
-              className={buttonVariants({ size: "sm" })}
-            >
-              Previous
-            </Link>
-          )}
-          <span className="text-foreground">
-            Page {currentPage} of {totalPages}
-          </span>
-          {currentPage < totalPages && (
-            <Link
-              href={createPageUrl(currentPage + 1)}
-              className={buttonVariants({ size: "sm" })}
-            >
-              Next
-            </Link>
-          )}
-        </div>
-      )}
+        {designs.length > 0 ? (
+          <div className="order-2 md:order-none">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
+              {designs.map((design: Design) => (
+                <DesignCard key={design.id} design={design} />
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="order-2 md:order-none text-center py-16 space-y-6">
+            <p className="text-muted-foreground">
+              No designs found
+              {searchQuery ? ` for "${searchQuery}"` : ""}
+              {selectedCollection ? ` in "${selectedCollection}"` : ""}. Try
+              adjusting your search or filter.
+            </p>
+            {(searchQuery || selectedCollection) && (
+              <Link
+                href="/designs"
+                className={buttonVariants({ variant: "outline" })}
+              >
+                Clear search &amp; filters
+              </Link>
+            )}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="order-4 md:order-none flex justify-center items-center space-x-4 mt-8">
+            {currentPage > 1 && (
+              <Link
+                href={createPageUrl(currentPage - 1)}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Previous
+              </Link>
+            )}
+            <span className="text-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+            {currentPage < totalPages && (
+              <Link
+                href={createPageUrl(currentPage + 1)}
+                className={buttonVariants({ size: "sm" })}
+              >
+                Next
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
       {selectedCollection && <div className="mt-8"><CollectionLinks collections={featuredCollections} selected={selectedCollection} /></div>}
     </PageShell>
   );
