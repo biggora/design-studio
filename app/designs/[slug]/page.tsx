@@ -31,7 +31,7 @@ import BuyLink from "@/app/components/BuyLink";
 import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
-import { collectionPath, curatedCollectionTitles } from "@/lib/collections";
+import { collectionPath, curatedCollectionTitles, collectionDisplayNames } from "@/lib/collections";
 import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
 
 type Props = {
@@ -101,6 +101,14 @@ export default async function DesignDetails(
     permanentRedirect(designPath(design));
   }
 
+  // Canonical display name for the raw collection value (chips/labels use the
+  // curated heading); URLs keep the raw value. Collection-less designs keep
+  // the plain "Designs" breadcrumb.
+  const collectionNames = collectionDisplayNames(config.collectionPages);
+  const collectionDisplayName = design.collection
+    ? collectionNames.get(design.collection) ?? design.collection
+    : "Designs";
+
   // Designs without collection memberships (or alone in theirs) would
   // otherwise dead-end into the footer; fall back to random catalog picks.
   let relatedDesigns = data.relatedDesigns;
@@ -150,7 +158,7 @@ export default async function DesignDetails(
       {
         "@type": "ListItem",
         position: 2,
-        name: design.collection || "Designs",
+        name: collectionDisplayName,
         item: `https://${config.domain}${design.collection ? collectionPath(design.collection) : "/designs"}`,
       },
       {
@@ -211,7 +219,7 @@ export default async function DesignDetails(
                   <p className="text-muted-foreground mb-4">
                     Collection:&nbsp;
                     <AccentLink href={collectionUrl}>
-                      {design.collection}
+                      {collectionDisplayName}
                     </AccentLink>
                   </p>
                 )}
@@ -279,6 +287,7 @@ export default async function DesignDetails(
           title={relatedTitle}
           designs={relatedDesigns}
           showCollection={false}
+          collectionLabels={collectionNames}
         />
       </PageShell>
     </>

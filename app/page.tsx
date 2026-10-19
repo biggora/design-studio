@@ -17,7 +17,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { AccentLink } from "@/app/components/AccentLink";
 import { LinkChip } from "@/app/components/LinkChip";
 import { Eyebrow } from "@/app/components/Eyebrow";
-import { collectionPath } from "@/lib/collections";
+import { collectionPath, collectionDisplayNames } from "@/lib/collections";
 import { giftPath, orderGiftPages } from "@/lib/gifts";
 import { designPath } from "@/lib/slug";
 import { safeHexColor } from "@/lib/utils";
@@ -123,6 +123,7 @@ export default async function Home() {
 
   const values = parseHomeValues(home.values);
   const aboutPoints = parseHomeValues(home.aboutPoints);
+  const collectionNames = collectionDisplayNames(config.collectionPages);
   const heroDesign = featuredDesigns[0];
   const teaserDesign = featuredDesigns[1];
   const aboutText =
@@ -255,7 +256,7 @@ export default async function Home() {
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {featuredDesigns.map((design) => (
-                <DesignCard key={design.id} design={design} />
+                <DesignCard key={design.id} design={design} collectionLabels={collectionNames} />
               ))}
             </div>
           </div>

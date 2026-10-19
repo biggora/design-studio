@@ -10,6 +10,8 @@ type FeaturedDesignsProps = {
   /** Passed down to cards: hide the collection row when the section title already names it. */
   showCollection?: boolean;
   compactOnMobile?: boolean;
+  /** Raw collection name → canonical display name for card captions. */
+  collectionLabels?: Map<string, string>;
 };
 
 export default function FeaturedDesigns({
@@ -17,6 +19,7 @@ export default function FeaturedDesigns({
   designs,
   showCollection = true,
   compactOnMobile = false,
+  collectionLabels,
 }: FeaturedDesignsProps) {
   return designs && designs.length > 0 ? (
     <section className="mb-12">
@@ -28,6 +31,7 @@ export default function FeaturedDesigns({
             design={design}
             showCollection={showCollection}
             compactOnMobile={compactOnMobile}
+            collectionLabels={collectionLabels}
           />
         ))}
       </div>

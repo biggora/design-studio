@@ -9,7 +9,8 @@ import { Select } from "@/components/ui/select";
 type CatalogSearchBarProps = {
   searchQuery: string;
   selectedCollection: string;
-  collections: string[];
+  /** Filter values with their canonical display labels (value = URL param). */
+  collections: {value: string; label: string}[];
 };
 
 export function CatalogSearchBar({
@@ -89,9 +90,9 @@ export function CatalogSearchBar({
         className="w-full md:w-auto"
       >
         <option value="">All Collections</option>
-        {collections.map((c) => (
-          <option key={c} value={c}>
-            {c}
+        {collections.map(({value, label}) => (
+          <option key={value} value={value}>
+            {label}
           </option>
         ))}
       </Select>

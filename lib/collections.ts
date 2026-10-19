@@ -34,3 +34,10 @@ export function curatedCollectionTitles(props: unknown): string[] {
         ? [...new Set(value.filter((title): title is string => typeof title === "string" && !!title.trim()))]
         : [];
 }
+
+/** One display name per collection: the curated short heading, else the
+    curated metadata title. URLs keep the raw collection value — only display
+    layers (chips, select, count lines, card captions) resolve through this. */
+export function collectionDisplayNames(value: unknown): Map<string, string> {
+    return new Map(getCollectionPages(value).map(page => [page.collection, page.heading || page.title]));
+}

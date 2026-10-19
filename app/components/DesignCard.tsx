@@ -15,11 +15,15 @@ type DesignCardProps = {
   /** Hide the collection caption (e.g. inside a section already titled by that collection). */
   showCollection?: boolean;
   compactOnMobile?: boolean;
+  /** Raw collection name → canonical display name (curated heading). */
+  collectionLabels?: Map<string, string>;
 };
 
-export function DesignCard({ design, showCollection = true, compactOnMobile = false }: DesignCardProps) {
+export function DesignCard({ design, showCollection = true, compactOnMobile = false, collectionLabels }: DesignCardProps) {
   const imageUrl =
     getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
+  const collectionLabel =
+    (design.collection && collectionLabels?.get(design.collection)) || design.collection;
 
   return (
     <Card className="group border border-border">
@@ -63,7 +67,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
         {showCollection && design.collection && (
           <p className={cn("text-xs text-muted-foreground", compactOnMobile && "hidden sm:block")}>
             <AccentLink href={collectionPath(design.collection)}>
-              {design.collection}
+              {collectionLabel}
             </AccentLink>
           </p>
         )}

@@ -10,7 +10,7 @@ import { getDesignDisplayImage } from "@/lib/image";
 import TrackCatalogState from "@/app/components/TrackCatalogState";
 import { buttonVariants } from "@/components/ui/button";
 import { parsePageParam } from "@/lib/utils";
-import {getCollectionPages, collectionPath} from "@/lib/collections";
+import {getCollectionPages, collectionPath, collectionDisplayNames} from "@/lib/collections";
 import {designPath} from "@/lib/slug";
 import {JsonLd} from "@/app/components/JsonLd";
 import {CollectionLinks} from "@/app/components/CollectionLinks";
@@ -26,7 +26,7 @@ const loadCatalog = cache(async (page: number, search: string, collection: strin
   const theme = collections.find(item => item.title === collection);
   const prepared = getCollectionPages(config.collectionPages).find(item => item.collection === collection);
   const featuredCollections = await fetchFeaturedCollections(config.collectionPages);
-  return {config, ...result, collections, featuredCollections,
+  return {config, ...result, collections, featuredCollections, collectionNames: collectionDisplayNames(config.collectionPages),
     heading: theme ? prepared?.heading || prepared?.title || theme.title : "Our Designs",
     metadataTitle: theme ? prepared?.title || theme.title : "Our Designs",
     intro: theme ? prepared?.intro || theme.description : "",
@@ -88,9 +88,12 @@ export default async function DesignFolio(
   const searchQuery = searchParams.search || "";
   const selectedCollection = searchParams.collection || "";
 
-  const {config, designs, total, collections, featuredCollections, heading, intro, description, knownCollection} =
+  const {config, designs, total, collections, featuredCollections, collectionNames, heading, intro, description, knownCollection} =
     await loadCatalog(currentPage, searchQuery, selectedCollection);
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
+  // One display name per collection everywhere: chips, select, count line,
+  // captions. URLs keep the raw collection value.
+  const selectedCollectionName = collectionNames.get(selectedCollection) ?? selectedCollection;
 
   const createPageUrl = (targetPage: number) => {
     const params = new URLSearchParams();
@@ -133,7 +136,10 @@ export default async function DesignFolio(
       <CatalogSearchBar
         searchQuery={searchQuery}
         selectedCollection={selectedCollection}
-        collections={collections.map(collection => collection.title)}
+        collections={collections.map(collection => ({
+          value: collection.title,
+          label: collectionNames.get(collection.title) ?? collection.title,
+        }))}
       />
       {/* Mobile reads count → grid → interests (order utilities); desktop keeps
           the DOM order: interests → count → grid → pagination. */}
@@ -148,7 +154,7 @@ export default async function DesignFolio(
           <p className="order-1 md:order-none text-sm text-muted-foreground mb-4">
             {total} {total === 1 ? "design" : "designs"}
             {searchQuery ? ` matching "${searchQuery}"` : ""}
-            {selectedCollection ? ` in "${selectedCollection}"` : ""}
+            {selectedCollection ? ` in "${selectedCollectionName}"` : ""}
           </p>
         )}
 
@@ -156,7 +162,7 @@ export default async function DesignFolio(
           <div className="order-2 md:order-none">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
               {designs.map((design: Design) => (
-                <DesignCard key={design.id} design={design} />
+                <DesignCard key={design.id} design={design} collectionLabels={collectionNames} />
               ))}
             </div>
           </div>
@@ -165,7 +171,7 @@ export default async function DesignFolio(
             <p className="text-muted-foreground">
               No designs found
               {searchQuery ? ` for "${searchQuery}"` : ""}
-              {selectedCollection ? ` in "${selectedCollection}"` : ""}. Try
+              {selectedCollection ? ` in "${selectedCollectionName}"` : ""}. Try
               adjusting your search or filter.
             </p>
             {(searchQuery || selectedCollection) && (
