@@ -8,7 +8,6 @@ import { ConfigContext } from "@/app/wrapper";
 import { BrandMark } from "@/app/components/BrandMark";
 
 const navItems = [
-  { href: "/", label: "Home" },
   { href: "/designs", label: "Our Designs" },
   { href: "/collections", label: "Collections" },
   { href: "/gifts", label: "Gift Ideas" },

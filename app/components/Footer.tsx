@@ -31,6 +31,7 @@ const quickLinks = [
   { href: "/collections", label: "Collections" },
   { href: "/gifts", label: "Gift Ideas" },
   { href: "/about", label: "About Us" },
+  { href: "/contact", label: "Contact" },
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/terms-of-service", label: "Terms of Service" },
   { href: "/disclosure", label: "Affiliate Disclosure" },

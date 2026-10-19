@@ -28,7 +28,10 @@ import defaultConfig from "@/config/config.json";
 // "See all" links — the full walls (26 collections + 15 gift pages here) push
 // the first print several screens down, worst on mobile.
 const HOME_CHIP_LIMIT = 6;
-const FEATURED_LIMIT = 5;
+// Two of the fetched designs lead the page (hero card, about teaser); the
+// featured band shows the next five, so no design appears twice on home.
+const FEATURED_FETCH_LIMIT = 7;
+const FEATURED_COUNT = 5;
 
 function parseHomeValues(value: HomeConfig["values"]): HomeValue[] {
   let raw: unknown = value;
@@ -114,7 +117,7 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
 }
 
 export default async function Home() {
-  const { designs } = await fetchDesigns(1, "", "", FEATURED_LIMIT);
+  const { designs } = await fetchDesigns(1, "", "", FEATURED_FETCH_LIMIT);
   const featuredDesigns: Design[] = designs || [];
   const config: SiteConfig = await getSiteConfig();
   const home: HomeConfig = {...defaultConfig.home, ...config.home};
@@ -126,6 +129,7 @@ export default async function Home() {
   const collectionNames = collectionDisplayNames(config.collectionPages);
   const heroDesign = featuredDesigns[0];
   const teaserDesign = featuredDesigns[1];
+  const featured = featuredDesigns.slice(2, 2 + FEATURED_COUNT);
   const aboutText =
     home.aboutText?.trim() ||
     config.about?.story?.[0]?.replaceAll("{{name}}", config.name) ||
@@ -239,11 +243,11 @@ export default async function Home() {
       )}
 
       {/* Featured prints on the alt band, three up on desktop. */}
-      {featuredDesigns.length > 0 && (
+      {featured.length > 0 && (
         <section className="bg-surface" aria-labelledby="featured-heading">
           <div className="container mx-auto px-4 py-16 sm:px-6 lg:px-8">
             <div className="mx-auto mb-10 max-w-xl text-center">
-              <Eyebrow className="mb-3">Original collections</Eyebrow>
+              <Eyebrow className="mb-3">Just added</Eyebrow>
               <h2
                 id="featured-heading"
                 className="font-display text-3xl font-bold tracking-[-0.02em] text-foreground sm:text-4xl"
@@ -251,11 +255,11 @@ export default async function Home() {
                 Featured Designs
               </h2>
               <p className="mt-3 text-muted-foreground">
-                Fresh from the catalog — witty, original designs grouped by what you love.
+                The newest prints from the studio — original artwork, printed on demand.
               </p>
             </div>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {featuredDesigns.map((design) => (
+              {featured.map((design) => (
                 <DesignCard key={design.id} design={design} collectionLabels={collectionNames} />
               ))}
             </div>

@@ -34,7 +34,11 @@ beforeEach(() => {
 
 describe("home catalog discovery", () => {
   it("leads with the artwork hero, followed by native search, crawlable themes and prints", async () => {
-    designs = [designFixture(), designFixture({id: "d2", slug: "dog-design", title: "Dog Design"})];
+    designs = [
+      designFixture(),
+      designFixture({id: "d2", slug: "dog-design", title: "Dog Design"}),
+      designFixture({id: "d3", slug: "bat-design", title: "Bat Design"}),
+    ];
     const {default: Home} = await import("./page");
     const html = renderToStaticMarkup(await Home());
     const $ = load(html);
@@ -51,9 +55,11 @@ describe("home catalog discovery", () => {
     expect(html.indexOf('aria-labelledby="home-heading"')).toBeLessThan(html.indexOf("<form"));
     expect(html.indexOf("<form")).toBeLessThan(html.indexOf('aria-labelledby="featured-heading"'));
     expect(html.indexOf("Browse by interest")).toBeLessThan(html.indexOf('aria-labelledby="featured-heading"'));
-    // The hero frames the latest design; the featured band lists every design.
+    // The hero frames the latest design; the featured band shows the rest,
+    // without repeating the hero or teaser pieces.
     expect($('section[aria-labelledby="home-heading"] img')).toHaveLength(1);
-    expect($('section[aria-labelledby="featured-heading"] h2')).toHaveLength(3);
+    expect($('section[aria-labelledby="featured-heading"] h2')).toHaveLength(2);
+    expect($('section[aria-labelledby="featured-heading"]').text()).not.toContain("Cat Design");
   });
 
   it("uses configurable catalog copy in the heading and metadata with the deployment brand", async () => {
