@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     const affiliate = getAffiliateOptions(config);
     const listings = await fetchPublicListings(designs.map(design => design.id));
     return jsonResponse(request, {
-      items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate, listings[design.id] || [])),
+      items: designs.map(design => toPublicPrint(design, bg || undefined, affiliate, listings[design.id] || [], config.domain)),
       page,
       limit,
       total,

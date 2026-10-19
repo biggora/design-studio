@@ -26,7 +26,7 @@ export async function GET(
     }
     const listings = await fetchPublicListings([result.design.id]);
     return jsonResponse(request, {
-      item: toPublicPrint(result.design, bg || undefined, getAffiliateOptions(config), listings[result.design.id] || []),
+      item: toPublicPrint(result.design, bg || undefined, getAffiliateOptions(config), listings[result.design.id] || [], config.domain),
     });
   } catch (err) {
     console.error("Error fetching print:", err);

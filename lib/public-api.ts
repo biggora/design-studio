@@ -4,6 +4,8 @@ import { applyBackground } from "@/lib/background";
 import { getMockupUrl } from "@/lib/image";
 import { getTeepublicLink } from "@/lib/utils";
 import { ListingPlatform } from "@/lib/listings";
+import { designPath } from "@/lib/slug";
+import { pinLandingUrl } from "@/lib/pinterest-feed";
 import {
   AffiliateOptions,
   applyRedbubbleAffiliate,
@@ -16,6 +18,8 @@ export type PublicPrint = {
   description: string;
   imageUrl: string;
   mockupUrl: string | null;
+  url: string | null;
+  shortUrl: string | null;
   link: string;
   teepublicLink: string | null;
   collection: string | null;
@@ -29,11 +33,15 @@ export type PublicPrint = {
 // of the stored ones; otherwise the design is returned unchanged.
 // `affiliate` wraps `link`/`teepublicLink` with the configured tracking
 // (Impact template / TeePublic ref_id) at response time; stored URLs stay canonical.
+// `domain` (site config `domain`) adds this site's own pages to the response: `url` is the
+// full design page and `shortUrl` the compact /p/ landing — both absolute, never
+// affiliate-wrapped; they stay null when no domain is configured.
 export function toPublicPrint(
   design: Design,
   bg?: string,
   affiliate: AffiliateOptions = {},
   listings?: { platform: ListingPlatform; url: string }[],
+  domain?: string,
 ): PublicPrint {
   const collection =
     design.collection && design.collection !== "no_collection" ? design.collection : null;
@@ -53,6 +61,8 @@ export function toPublicPrint(
     description: design.description,
     imageUrl: overridden?.externalImageUrl ?? design.externalImageUrl,
     mockupUrl: getMockupUrl(design),
+    url: domain ? `https://${domain}${designPath(design)}` : null,
+    shortUrl: domain ? pinLandingUrl(domain, design) : null,
     link: applyRedbubbleAffiliate(design.externalLink, affiliate.redbubbleTemplate || ""),
     teepublicLink: applyTeepublicReferral(
       getTeepublicLink(design),

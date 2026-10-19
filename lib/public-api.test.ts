@@ -57,6 +57,24 @@ describe("toPublicPrint", () => {
     expect(result.teepublicLink).toBe("https://www.teepublic.com/t-shirt/123-cat");
   });
 
+  it("builds absolute design-page and short /p/ URLs from the domain and slug", () => {
+    const result = toPublicPrint(makeDesign({ slug: "cat-design" }), undefined, {}, undefined, "example.com");
+    expect(result.url).toBe("https://example.com/designs/cat-design");
+    expect(result.shortUrl).toBe("https://example.com/p/cat-design");
+  });
+
+  it("falls back to the design id in url/shortUrl when no slug is set", () => {
+    const result = toPublicPrint(makeDesign(), undefined, {}, undefined, "example.com");
+    expect(result.url).toBe("https://example.com/designs/d1");
+    expect(result.shortUrl).toBe("https://example.com/p/d1");
+  });
+
+  it("returns null url/shortUrl when no domain is configured", () => {
+    const result = toPublicPrint(makeDesign());
+    expect(result.url).toBeNull();
+    expect(result.shortUrl).toBeNull();
+  });
+
   it("wraps link and teepublicLink with affiliate tracking when configured", () => {
     const result = toPublicPrint(makeDesign(), undefined, {
       redbubbleTemplate: "https://shop.pxf.io/c/1/2/3?u={url}",

@@ -152,6 +152,8 @@ When `bg` resolves to a usable token for a given print, `imageUrl` and `backgrou
 | `description` | string | Design description (may be an empty string). |
 | `imageUrl` | string | Full-artwork image URL, hosted on the Redbubble CDN. |
 | `mockupUrl` | string \| null | Classic T-Shirt mockup image URL (`props.mockup_tshirt`), or `null` if not available. |
+| `url` | string \| null | This site's full design page (absolute, e.g. `https://threadquirk.lv/designs/<slug>`), or `null` when no domain is configured. Falls back to the design `id` in the path for designs synced before slugs existed. Never affiliate-wrapped. |
+| `shortUrl` | string \| null | Compact landing page for the same print (absolute, e.g. `https://threadquirk.lv/p/<slug>`), or `null` when no domain is configured. Same `id` fallback as `url`. Never affiliate-wrapped. |
 | `link` | string | Redbubble product page URL, or `""` when no Redbubble listing exists. Use `teepublicLink` or `listings` when empty. Existing Redbubble links keep the same affiliate wrapping. |
 | `teepublicLink` | string \| null | TeePublic product page URL (`props.teepublicLink`, validated to `teepublic.com`), or `null` if the design has no TeePublic match. See §4.1 for referral wrapping. |
 | `listings` | `{ platform, url }[]` | Additive link projection from ingested marketplace listings; `[]` for designs with only scraper/legacy data. Redbubble/TeePublic URLs use the same affiliate wrappers as the legacy fields. Account names and other listing metadata are omitted. |
