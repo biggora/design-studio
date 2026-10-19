@@ -9,6 +9,7 @@ import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
+import { CardGrid } from "@/app/components/CardGrid";
 import { getDesignDisplayImage } from "@/lib/image";
 import { designPath } from "@/lib/slug";
 import { collectionPath } from "@/lib/collections";
@@ -98,11 +99,11 @@ export default async function GiftPage(props: Props) {
         <section key={section.collection} className="mb-10">
           <SectionHeading className="mb-2">{section.heading}</SectionHeading>
           {section.blurb && <p className="text-muted-foreground max-w-3xl mb-4">{section.blurb}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-4">
+          <CardGrid className="mb-4">
             {section.designs.map((design: Design) => (
               <DesignCard key={design.id} design={design} />
             ))}
-          </div>
+          </CardGrid>
           <AccentLink
             href={collectionPath(section.collection)}
             className="inline-flex items-center min-h-11"

@@ -16,6 +16,7 @@ import {JsonLd} from "@/app/components/JsonLd";
 import {CollectionLinks} from "@/app/components/CollectionLinks";
 import {PageShell} from "@/app/components/PageShell";
 import {PageHeader} from "@/app/components/PageHeader";
+import {CardGrid} from "@/app/components/CardGrid";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -160,11 +161,11 @@ export default async function DesignFolio(
 
         {designs.length > 0 ? (
           <div className="order-2 md:order-none">
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
+            <CardGrid className="mb-8">
               {designs.map((design: Design) => (
                 <DesignCard key={design.id} design={design} collectionLabels={collectionNames} />
               ))}
-            </div>
+            </CardGrid>
           </div>
         ) : (
           <div className="order-2 md:order-none text-center py-16 space-y-6">

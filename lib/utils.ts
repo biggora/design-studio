@@ -2,6 +2,10 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Design } from "@/types/design";
 
+/** The shared 2px ember focus ring (DESIGN.md) — compose onto any interactive element. */
+export const focusRingClasses =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

@@ -18,6 +18,7 @@ import { pinImageUrl } from "@/lib/pinterest-feed";
 import { SiteConfig } from "@/lib/store";
 import BuyLink from "@/app/components/BuyLink";
 import { AccentLink } from "@/app/components/AccentLink";
+import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
 
 /**
@@ -111,7 +112,7 @@ export default async function PinLandingPage(props: Props) {
   const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
 
   return (
-    <main className="container mx-auto px-4 pb-8 pt-6">
+    <PageShell as="main" className="pt-6">
       <div className="mx-auto w-full max-w-md">
         <div
           className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md"
@@ -165,6 +166,6 @@ export default async function PinLandingPage(props: Props) {
           </AccentLink>
         </p>
       </div>
-    </main>
+    </PageShell>
   );
 }

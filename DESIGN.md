@@ -226,9 +226,14 @@ The roles above are encoded once in reusable components — use them instead of 
 - **`LinkChip`** — the interest chip into the catalog: bordered soft rectangle, 44px min tap target, `selected` marks the active collection with `aria-current`.
 - **`IconLink`** — the 24px social/share glyph: Ash at rest, Ember on hover on the field, Bone on dark bands (`variant="band"`), sr-only label, http(s)-sanitized href.
 - **`Eyebrow`** — the uppercase letter-spaced Ember label above display headings; hero and section openers only.
+- **`Band`** — the full-width graphite band: `tone` maps field/alt/deep onto the band colors, `texture` adds the woven glow, `contentClassName` overrides the section rhythm (default `py-16`) over the PageShell container.
 - **`PageShell`** — the page container: centered `container` with the responsive gutters (16 → 24 → 32px) and 32px vertical rhythm.
 - **`PageHeader`** — the page H1 in the Display role with optional lead paragraph.
-- **`SectionHeading`** — the section H2 in the Headline role.
+- **`SectionHeading`** — the section H2: `title` voice (default, 1.5rem/600) for catalog sections, `headline` variant for the home band openers (spacing owned by the wrapper).
+- **`CardGrid`** — the card grid rhythm: 24px gaps over a responsive column ladder (`columns={3|4|5}`; 5, the default, is the catalog ladder) with `as="ul"` for index lists.
+- **`IndexCard`** — the collections/gifts index link card: DesignThumbs, title, description, optional meta line, panel skin with hover border and the shared focus ring.
+
+The 2px ember focus ring itself is the shared `focusRingClasses` string (`lib/utils.ts`) — compose it onto any interactive element instead of re-rolling the three focus-visible utilities.
 
 Primary and secondary/outline buttons stay on `components/ui/button.tsx`; the outline variant is the documented quiet commerce and card action.
 

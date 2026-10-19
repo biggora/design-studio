@@ -13,6 +13,7 @@ import Slider from "react-slick";
 import Image from "next/image";
 import { ArrowRight, Pause, Play } from "lucide-react";
 import { CarouselSlide } from "@/lib/store";
+import { focusRingClasses } from "@/lib/utils";
 
 const defaultSettings = {
   dots: true,
@@ -127,7 +128,7 @@ export function Carousel({
         onClick={toggleAutoplay}
         aria-label={autoplay ? "Pause carousel" : "Play carousel"}
         aria-pressed={!autoplay}
-        className="absolute right-4 bottom-14 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/60 text-primary-foreground transition-colors hover:bg-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className={`absolute right-4 bottom-14 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/60 text-primary-foreground transition-colors hover:bg-primary/80 ${focusRingClasses}`}
       >
         {autoplay ? <Pause size={20} /> : <Play size={20} />}
       </button>

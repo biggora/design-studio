@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { FeaturedCollection } from "@/utils/database";
 import { collectionPath } from "@/lib/collections";
+import { focusRingClasses } from "@/lib/utils";
 import { LinkChip } from "@/app/components/LinkChip";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
@@ -40,7 +41,7 @@ export function CollectionLinks({collections, selected = "", limit}: CollectionL
       </ul>
       {collapsed.length > 0 && (
         <details className="group mt-3">
-          <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium text-accent hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+          <summary className={`inline-flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-md text-sm font-medium text-accent hover:underline ${focusRingClasses} [&::-webkit-details-marker]:hidden`}>
             Browse all {collections.length} interests
             <ChevronDown size={16} aria-hidden="true" className="transition-transform group-open:rotate-180" />
           </summary>

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AccentLink } from "@/app/components/AccentLink";
 import { designPath } from "@/lib/slug";
 import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
-import { cn, safeHexColor } from "@/lib/utils";
+import { cn, focusRingClasses, safeHexColor } from "@/lib/utils";
 import { collectionPath } from "@/lib/collections";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -30,7 +30,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
       <div className={cn("p-4 pb-0", compactOnMobile && "p-3 sm:p-4 sm:pb-0")}>
         <AccentLink
           href={designPath(design)}
-          className="block overflow-hidden rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className={cn("block overflow-hidden rounded-md", focusRingClasses)}
           tabIndex={-1}
           aria-hidden="true"
         >
@@ -59,7 +59,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
         >
           <Link
             href={designPath(design)}
-            className="text-foreground hover:text-accent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className={cn("text-foreground hover:text-accent transition-colors", focusRingClasses)}
           >
             {design.title}
           </Link>

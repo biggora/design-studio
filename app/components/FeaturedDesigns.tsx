@@ -1,6 +1,7 @@
 import React from "react";
 import { Design } from "@/types/design";
 import { DesignCard } from "@/app/components/DesignCard";
+import { CardGrid } from "@/app/components/CardGrid";
 import { SectionHeading } from "@/app/components/SectionHeading";
 import {cn} from "@/lib/utils";
 
@@ -24,7 +25,7 @@ export default function FeaturedDesigns({
   return designs && designs.length > 0 ? (
     <section className="mb-12">
       <SectionHeading>{title}</SectionHeading>
-      <div className={cn("grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6", compactOnMobile && "grid-cols-2 gap-3 sm:gap-6")}>
+      <CardGrid className={cn(compactOnMobile && "grid-cols-2 gap-3 sm:gap-6")}>
         {designs.map((design) => (
           <DesignCard
             key={design.id}
@@ -34,7 +35,7 @@ export default function FeaturedDesigns({
             collectionLabels={collectionLabels}
           />
         ))}
-      </div>
+      </CardGrid>
     </section>
   ) : null;
 }

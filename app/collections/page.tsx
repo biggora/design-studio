@@ -1,11 +1,11 @@
 import { Metadata } from "next";
-import Link from "next/link";
 import { getSiteConfig, fetchFeaturedCollections } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
-import { DesignThumbs } from "@/app/components/DesignThumbs";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
+import { CardGrid } from "@/app/components/CardGrid";
+import { IndexCard } from "@/app/components/IndexCard";
 import { collectionPath } from "@/lib/collections";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -54,23 +54,19 @@ export default async function CollectionsIndex() {
         intro={`Browse every ${config.name} theme, from coding humour to pets, hobbies and holidays.`}
       />
       {collections.length > 0 ? (
-        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <CardGrid as="ul" columns={3}>
           {collections.map((collection) => (
             <li key={collection.collection}>
-              <Link
+              <IndexCard
                 href={collectionPath(collection.collection)}
-                className="block h-full rounded-lg border border-input bg-card p-4 hover:border-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              >
-                <DesignThumbs designs={collection.designs} className="mb-3" />
-                <span className="block text-xl font-semibold mb-2 text-foreground">{collection.heading || collection.title}</span>
-                <span className="block text-muted-foreground">{collection.description}</span>
-                <span className="block text-sm text-muted-foreground mt-2">
-                  {collection.total} {collection.total === 1 ? "design" : "designs"}
-                </span>
-              </Link>
+                title={collection.heading || collection.title}
+                description={collection.description}
+                thumbs={collection.designs}
+                meta={`${collection.total} ${collection.total === 1 ? "design" : "designs"}`}
+              />
             </li>
           ))}
-        </ul>
+        </CardGrid>
       ) : (
         <p className="text-muted-foreground">
           Collections are coming soon.{" "}

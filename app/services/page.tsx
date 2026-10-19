@@ -8,6 +8,7 @@ import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
+import { CardGrid } from "@/app/components/CardGrid";
 
 export async function generateMetadata(): Promise<Metadata> {
   const config: SiteConfig = await getSiteConfig();
@@ -75,7 +76,7 @@ export default async function Services() {
         introClassName="max-w-none"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <CardGrid columns={3}>
         {services.map((service, index) => (
           <div key={index} className="bg-card shadow-md rounded-lg p-6">
             <SectionHeading>{service.title}</SectionHeading>
@@ -90,7 +91,7 @@ export default async function Services() {
             </ul>
           </div>
         ))}
-      </div>
+      </CardGrid>
 
       <div className="mt-12">
         <SectionHeading>Where to Buy</SectionHeading>
