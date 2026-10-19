@@ -32,7 +32,9 @@ export function isAllowedPinSourceImage(url: string): boolean {
 }
 
 const FALLING_BACKGROUND = "#FFFFFF";
-const LIGHT_TEXT = "#212A31"; // Loom Ink
+// Pins take their color from the artwork, not the brand (DESIGN.md, Social
+// cards): a near-black neutral keeps the title legible over light backgrounds.
+const LIGHT_TEXT = "#212A31";
 const DARK_TEXT = "#FFFFFF";
 
 /** Dark text on light backgrounds and vice versa, so the title is legible over any design colour. */

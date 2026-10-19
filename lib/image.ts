@@ -24,9 +24,10 @@ export function getDesignDisplayImage(
 }
 
 /**
- * Subtle Linen-Mist shimmer for next/image `placeholder="blur"` on remote
+ * Subtle light shimmer for next/image `placeholder="blur"` on remote
  * artwork, so cards and heroes show a soft block instead of a dark slab
- * while the image loads.
+ * while the image loads. Light by design — a sanctioned literal (DESIGN.md,
+ * Colors); it reads as "photograph loading", never as a UI surface.
  */
 export const imageBlurPlaceholder =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 8'%3E%3Crect width='8' height='8' fill='%23d3d9d4'/%3E%3C/svg%3E";

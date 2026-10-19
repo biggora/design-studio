@@ -13,13 +13,16 @@ import { truncateAtWord } from "@/lib/utils";
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 
 // Literal hex on purpose: satori cannot read CSS variables. These mirror the
-// palette in app/globals.css / DESIGN.md (the same exception as `themeColor`).
-const INK = "#212A31"; // Loom Ink
-const ACCENT = "#124E66"; // Indigo Thread, the single interactive hue
-const MUTED = "#748D92"; // Warp Grey
-const MIST = "#D3D9D4"; // Linen Mist
-const WHITE = "#FFFFFF"; // Card White
-const MUTED_TEXT = "#4F5F66"; // Warp Grey darkened to keep body text readable on white
+// Ember on Graphite token block in app/globals.css / DESIGN.md (the same
+// sanctioned exception as `themeColor`) — re-sync them when the tokens change.
+const FIELD = "#181C20"; // Graphite field (hsl(210 15% 11%)) — the card background
+const SURFACE = "#1C2126"; // Slate Band (hsl(210 15% 13%)) — the visual panel
+const PANEL = "#272D35"; // Panel (hsl(212 15% 18%)) — framed tile, chip surface
+const SEAM = "#323B43"; // Seam (hsl(210 14% 23%)) — hairline borders
+const BONE = "#F4F5F6"; // Bone (hsl(200 12% 96%)) — headings and body text
+const ASH = "#99A5AD"; // Ash (hsl(204 11% 64%)) — secondary text
+const EMBER = "#E8872C"; // Ember (hsl(29 80% 54%)) — the single interactive hue
+const EMBER_ASH = "#221607"; // Ember Ash (hsl(33 68% 8%)) — dark text on Ember
 
 const MAX_DESCRIPTION = 140;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -35,15 +38,17 @@ export type OgFont = {
 
 let fontsPromise: Promise<OgFont[]> | undefined;
 
-/** Inter Regular/Bold from the committed .woff files (satori cannot read woff2). Memoized. */
+/** Inter Regular/Bold and Poppins Bold from the committed .woff files (satori cannot read woff2). Memoized. */
 export function loadOgFonts(): Promise<OgFont[]> {
   fontsPromise ??= Promise.all([
     readFile(join(FONT_DIR, "Inter-Regular.woff")),
     readFile(join(FONT_DIR, "Inter-Bold.woff")),
+    readFile(join(FONT_DIR, "Poppins-Bold.woff")),
   ])
-    .then(([regular, bold]): OgFont[] => [
-      { name: "Inter", data: regular, weight: 400, style: "normal" },
-      { name: "Inter", data: bold, weight: 700, style: "normal" },
+    .then(([interRegular, interBold, poppinsBold]): OgFont[] => [
+      { name: "Inter", data: interRegular, weight: 400, style: "normal" },
+      { name: "Inter", data: interBold, weight: 700, style: "normal" },
+      { name: "Poppins", data: poppinsBold, weight: 700, style: "normal" },
     ])
     .catch((error) => {
       fontsPromise = undefined; // do not cache a failure
@@ -89,7 +94,7 @@ export async function fetchImageDataUrl(url: string, timeoutMs = 4000): Promise<
 
 function Wordmark({ siteName, logoDataUrl }: { siteName: string; logoDataUrl: string | null }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", fontSize: 28, fontWeight: 700, color: ACCENT, letterSpacing: -0.5 }}>
+    <div style={{ display: "flex", alignItems: "center", fontSize: 28, fontWeight: 700, color: BONE, letterSpacing: -0.5, fontFamily: "Poppins" }}>
       {logoDataUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>; next/image does not apply
         <img src={logoDataUrl} alt="" width={48} height={48} style={{ borderRadius: 10, marginRight: 14 }} />
@@ -105,9 +110,10 @@ function Chip({ label }: { label: string }) {
       style={{
         display: "flex",
         padding: "6px 16px",
-        borderRadius: 999,
-        backgroundColor: MIST,
-        color: INK,
+        borderRadius: 10,
+        backgroundColor: PANEL,
+        border: `1px solid ${SEAM}`,
+        color: EMBER,
         fontSize: 20,
         fontWeight: 700,
       }}
@@ -123,9 +129,9 @@ function Button({ label }: { label: string }) {
       style={{
         display: "flex",
         padding: "16px 40px",
-        borderRadius: 999,
-        backgroundColor: ACCENT,
-        color: WHITE,
+        borderRadius: 10,
+        backgroundColor: EMBER,
+        color: EMBER_ASH,
         fontSize: 26,
         fontWeight: 700,
       }}
@@ -152,7 +158,7 @@ function Circle({ size, top, left, color, opacity }: { size: number; top: number
   );
 }
 
-/** Right panel: tinted background, two soft circles, and a rounded white card around `children`. */
+/** Right panel: tinted background, two soft circles, and a framed tile around `children`. */
 function VisualPanel({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -161,14 +167,14 @@ function VisualPanel({ children }: { children: React.ReactNode }) {
         position: "relative",
         width: 528,
         height: "100%",
-        backgroundColor: "#E9ECE9",
+        backgroundColor: SURFACE,
         alignItems: "center",
         justifyContent: "center",
         overflow: "hidden",
       }}
     >
-      <Circle size={320} top={-90} left={290} color={MIST} opacity={0.9} />
-      <Circle size={240} top={430} left={-60} color={ACCENT} opacity={0.12} />
+      <Circle size={320} top={-90} left={290} color={PANEL} opacity={0.9} />
+      <Circle size={240} top={430} left={-60} color={EMBER} opacity={0.08} />
       <div
         style={{
           display: "flex",
@@ -176,9 +182,10 @@ function VisualPanel({ children }: { children: React.ReactNode }) {
           justifyContent: "center",
           width: 340,
           height: 452,
-          borderRadius: 24,
-          backgroundColor: WHITE,
-          boxShadow: "0 20px 50px rgba(33, 42, 49, 0.18)",
+          borderRadius: 12,
+          backgroundColor: PANEL,
+          border: `1px solid ${SEAM}`,
+          boxShadow: "0 20px 50px rgba(0, 0, 0, 0.4)",
           overflow: "hidden",
         }}
       >
@@ -188,7 +195,7 @@ function VisualPanel({ children }: { children: React.ReactNode }) {
   );
 }
 
-/** Right panel showing the site logo (or the site-name initial when it is unavailable) in the white card; used by BrandCard and as DesignCard's no-image fallback. */
+/** Right panel showing the site logo (or the site-name initial when it is unavailable) in the framed tile; used by BrandCard and as DesignCard's no-image fallback. */
 function InitialPanel({ siteName, logoDataUrl }: { siteName: string; logoDataUrl: string | null }) {
   const initial = Array.from(siteName.trim())[0]?.toUpperCase() ?? "";
   return (
@@ -197,7 +204,7 @@ function InitialPanel({ siteName, logoDataUrl }: { siteName: string; logoDataUrl
         // eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>; next/image does not apply
         <img src={logoDataUrl} alt="" width={300} height={300} style={{ borderRadius: 16 }} />
       ) : (
-        <div style={{ display: "flex", fontSize: 180, fontWeight: 700, color: ACCENT }}>{initial}</div>
+        <div style={{ display: "flex", fontSize: 180, fontWeight: 700, color: EMBER, fontFamily: "Poppins" }}>{initial}</div>
       )}
     </VisualPanel>
   );
@@ -211,11 +218,11 @@ function Frame({ children }: { children: React.ReactNode }) {
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        backgroundColor: WHITE,
+        backgroundColor: FIELD,
         fontFamily: "Inter",
       }}
     >
-      <div style={{ display: "flex", width: "100%", height: 10, backgroundColor: ACCENT }} />
+      <div style={{ display: "flex", width: "100%", height: 10, backgroundColor: EMBER }} />
       <div style={{ display: "flex", flex: 1 }}>{children}</div>
     </div>
   );
@@ -260,7 +267,8 @@ function Copy({
             fontWeight: 700,
             lineHeight: 1.1,
             letterSpacing: -1.5,
-            color: INK,
+            color: BONE,
+            fontFamily: "Poppins",
             lineClamp: 3,
           }}
         >
@@ -272,7 +280,7 @@ function Copy({
             marginTop: 20,
             fontSize: 24,
             lineHeight: 1.4,
-            color: MUTED_TEXT,
+            color: ASH,
             lineClamp: 3,
           }}
         >
@@ -282,7 +290,7 @@ function Copy({
           <Button label={cta} />
         </div>
       </div>
-      <div style={{ display: "flex", fontSize: 20, color: MUTED }}>{domain}</div>
+      <div style={{ display: "flex", fontSize: 20, color: ASH }}>{domain}</div>
     </div>
   );
 }

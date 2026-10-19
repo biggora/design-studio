@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { cn, focusRingClasses } from "@/lib/utils";
 
 /**
- * Accent text link (DESIGN.md "link-accent"): Indigo Thread label, underline on
+ * Accent text link (DESIGN.md "link-accent"): Ember label, underline on
  * hover, 2px focus ring. The single shared class string for inline links —
  * compose extras (layout, spacing) through className.
  */

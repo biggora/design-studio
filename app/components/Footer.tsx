@@ -13,8 +13,8 @@ import { ConfigContext } from "@/app/wrapper";
 import { IconLink } from "@/app/components/IconLink";
 import { BrandMark } from "@/app/components/BrandMark";
 
-// Shared by the quick links and the social icons: Linen Mist at 70% hovering
-// to full Linen Mist on the Thread Shadow band.
+// Shared by the quick links and the social icons: Bone at 70% hovering
+// to full Bone on the Coal Deep band.
 const bandLinkClasses =
   "text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground";
 
