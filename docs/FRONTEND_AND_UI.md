@@ -157,14 +157,14 @@ Note the two SEO guards: `?search=…` result pages are marked `noindex, follow`
 #### Single design page (`app/designs/[slug]/page.tsx`):
 - Builds a precise `title` combining the work's name and the brand (`${design.title} - ${config.name}`).
 - Generates a `description` (`${design.title} by ${config.name}. …`) capped at 155 characters at a word boundary (`truncateAtWord`).
-- Social cards are generated, not hotlinked: `app/designs/[slug]/opengraph-image.tsx` (and `twitter-image.tsx`) render a 1200×630 PNG with `next/og` — brand, collection chip, title, short description, a "Shop now" pill and the T-shirt mockup in a rounded card (`lib/og.tsx`, Inter fonts committed in `assets/fonts/`, logo from `assets/logo-og.png` — a 600×600 copy of `public/logo.png`; regenerate it when the logo changes). The mockup is fetched server-side (allow-listed hosts, png/jpeg only, 4 s timeout); if that fails the right panel shows the site logo instead, and an unknown slug gets the site brand card. `app/opengraph-image.tsx` is the default brand card for pages without their own image. The metadata therefore omits `images`. `alternates.canonical` points at the `designPath(design)` URL (`lib/slug.ts`) — the slug when set, else the UUID.
+- Social cards are generated, not hotlinked: `app/designs/[slug]/opengraph-image.tsx` (and `twitter-image.tsx`) render a 1200×630 PNG with `next/og` — brand, collection chip, title, short description, a "Shop now" button and the T-shirt mockup in a framed card (`lib/og.tsx`, Inter and Poppins fonts committed in `assets/fonts/`, logo from `assets/logo-og.png` — a 600×600 copy of `public/logo.png`; regenerate it when the logo changes; colors are literal mirrors of the token block, since satori cannot read CSS variables). The mockup is fetched server-side (allow-listed hosts, png/jpeg only, 4 s timeout); if that fails the right panel shows the site logo instead, and an unknown slug gets the site brand card. `app/opengraph-image.tsx` is the default brand card for pages without their own image. The metadata therefore omits `images`. `alternates.canonical` points at the `designPath(design)` URL (`lib/slug.ts`) — the slug when set, else the UUID.
 - Missing records return `title: "Design Not Found"` with `robots: { index: false }` before the page itself calls `notFound()`.
 
 #### Root layout (`app/layout.tsx`):
 - `metadataBase` from the configured domain, default title `${config.name} - ${config.intro}`, favicon: a configured `favicon` wins, else a configured `siteLogo`, else the bundled generic set (16/32/apple + `site.webmanifest`).
 - Pinterest domain verification (`p:domain_verify`) injected when `verification.pinterest` is set.
 - Google Analytics (`@next/third-parties/google`) loaded only when `analytics.google` is configured.
-- `viewport.themeColor` set to `#212A31` (Loom Ink) for browser chrome.
+- `viewport.themeColor` set to `#14181C` (dark graphite) for browser chrome.
 
 ### 3.2 Dynamic Sitemap (`app/sitemap.ts`)
 `app/sitemap.ts` compiles into a standard sitemap XML:
@@ -195,43 +195,45 @@ Generated per deployment from the configured domain:
 
 ## 4. Design System and Styling
 
-The visual language is a restrained, content-first aesthetic: dark bands framing a light field, white cards, and a single interactive hue. **This section documents the mechanism; the semantics (token names, roles, named rules) live in [DESIGN.md](../DESIGN.md) — the design system of record.** Nothing below is brand identity: the product is white-label and every visual value is swappable per deployment (see [PRODUCT.md](../PRODUCT.md)).
+The visual language is a restrained, content-first aesthetic: near-black graphite bands, panels one tonal step above the field behind hairline seams, and a single warm interactive hue. **This section documents the mechanism; the semantics (token names, roles, named rules) live in [DESIGN.md](../DESIGN.md) — the design system of record.** Nothing below is brand identity: the product is white-label and every visual value is swappable per deployment (see [PRODUCT.md](../PRODUCT.md)).
 
 ### 4.1 The Design-Token Layer (`app/globals.css`)
 All color and radius authority lives in one `:root` block of HSL-triplet custom properties (Tailwind's `hsl(var(--token))` convention):
 
 ```css
 :root {
-  /* Loom Ink — structural dark: bands, headings, body text */
-  --primary: 206 20% 16%;
-  --primary-foreground: 132 8% 84%;
-  /* Thread Shadow — secondary dark: footer band, button hover */
-  --secondary: 210 19% 22%;
-  --secondary-foreground: 132 8% 84%;
-  /* Indigo Thread — the single interactive hue */
-  --accent: 197 70% 24%;
-  --accent-foreground: 132 8% 84%;
-  /* Warp Grey — muted text and borders; --muted is its light surface tint */
-  --muted: 190 12% 90%;
-  --muted-foreground: 190 12% 51%;
-  /* Linen Mist field */
-  --background: 132 8% 84%;
-  --foreground: 206 20% 16%;
-  /* Card White surfaces */
-  --card: 0 0% 100%;
-  --card-foreground: 206 20% 16%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 206 20% 16%;
+  /* Graphite band dark: fixed header, hero overlays, skip link */
+  --primary: 210 18% 8%;
+  --primary-foreground: 200 12% 96%;
+  /* Deepest band: footer, values band */
+  --secondary: 210 16% 7%;
+  --secondary-foreground: 200 12% 96%;
+  /* Ember orange — the single interactive hue (dark warm text on it) */
+  --accent: 29 80% 54%;
+  --accent-foreground: 33 68% 8%;
+  /* Muted: subtle surface tint; text step readable on card and field (AA) */
+  --muted: 210 12% 19%;
+  --muted-foreground: 204 11% 64%;
+  /* Graphite field and light text */
+  --background: 210 15% 11%;
+  --foreground: 200 12% 96%;
+  /* Alt band one tonal step above the field (featured band) */
+  --surface: 210 15% 13%;
+  /* Panels and popovers, one step above the field */
+  --card: 212 15% 18%;
+  --card-foreground: 200 12% 96%;
+  --popover: 212 15% 18%;
+  --popover-foreground: 200 12% 96%;
   /* Semantic status, reserved for form feedback */
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
   /* Lines and focus */
-  --border: 190 12% 51%;
-  --input: 190 12% 51%;
-  --ring: 197 70% 24%;
-  --radius: 0.5rem;
+  --border: 210 14% 23%;
+  --input: 210 14% 23%;
+  --ring: 29 80% 54%;
+  --radius: 0.75rem;
   /* Chart ramp (mapped by Tailwind; no charts in the app yet) */
-  --chart-1: 197 70% 24%;
+  --chart-1: 29 80% 54%;
   /* … --chart-2 … --chart-5 */
 }
 ```
@@ -258,8 +260,8 @@ Real usage examples from the codebase:
 
 ```tsx
 // app/components/Header.tsx — dark band, light links, token-based focus ring
-<header className="bg-primary/80 text-primary-foreground shadow-md fixed w-full z-10">
-  <Link href="/" className="text-primary-foreground hover:text-muted-foreground …">
+<header className="bg-primary/90 text-primary-foreground shadow-md fixed w-full z-10">
+  <Link href="/" className="text-primary-foreground/70 hover:text-accent …">
   <button className="… focus-visible:ring-2 focus-visible:ring-ring">
 
 // app/components/DesignCard.tsx — accent link on a card

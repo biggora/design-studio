@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-18T15:30:00Z",
+  "generatedAt": "2026-10-19T12:00:00Z",
   "title": "Design System: Design Studio",
   "extensions": {
     "colorMeta": {
@@ -38,55 +38,57 @@
         "role": "neutral",
         "displayName": "Slate Band",
         "canonical": "hsl(210 15% 13%)",
-        "tonalRamp": ["#0C0E10", "#1C2126", "#2A3036", "#3A4249", "#4D5760", "#657280", "#8E9BA8", "#BDC7D1"]
+        "tonalRamp": ["#0D0F11", "#1C2126", "#2B3138", "#3B434B", "#4D5761", "#66727E", "#909DAA", "#BFCAD5"]
       },
       "panel": {
         "role": "neutral",
         "displayName": "Panel",
         "canonical": "hsl(212 15% 18%)",
-        "tonalRamp": ["#101317", "#262C33", "#3A424B", "#4E5862", "#63707D", "#7E8D9C", "#A3B2C0", "#CCD8E2"]
+        "tonalRamp": ["#12161A", "#262C33", "#3C454E", "#525D68", "#6A7683", "#84909D", "#A5B0BC", "#CBD3DB"]
       },
       "ash-surface": {
         "role": "neutral",
         "displayName": "Ash Surface",
         "canonical": "hsl(210 12% 19%)",
-        "tonalRamp": ["#111417", "#2B3036", "#3D444B", "#505964", "#657080", "#7D8998", "#9CA8B6", "#C4CEDA"]
+        "tonalRamp": ["#121517", "#2B3036", "#43494F", "#5B6269", "#747B83", "#8E949B", "#AEB3B9", "#D2D5D9"]
       },
       "seam": {
         "role": "neutral",
         "displayName": "Seam",
         "canonical": "hsl(210 14% 23%)",
-        "tonalRamp": ["#141719", "#333B43", "#48525C", "#5D6975", "#74828F", "#8DA0AD", "#AEBFCB", "#D3E0E9"]
+        "tonalRamp": ["#15181B", "#333B43", "#4C565F", "#66717B", "#818C96", "#9DA7B0", "#BCC4CB", "#DEE2E6"]
       },
       "ash": {
         "role": "neutral",
         "displayName": "Ash",
         "canonical": "hsl(204 11% 64%)",
-        "tonalRamp": ["#2A3033", "#454F54", "#606E75", "#7B8C95", "#9AA6AE", "#B3BFC6", "#CCD5DA", "#E4EAEE"]
+        "tonalRamp": ["#2E373D", "#5A6871", "#74848E", "#8DA0AB", "#9AA6AE", "#AEB9C0", "#C4CDD3", "#DEE4E8"]
       },
       "bone": {
         "role": "neutral",
         "displayName": "Bone",
         "canonical": "hsl(200 12% 96%)",
-        "tonalRamp": ["#B9BFC2", "#C4C9CC", "#CFD3D6", "#DADDE0", "#E4E7E9", "#ECEFF0", "#F2F4F5", "#FAFBFB"]
+        "tonalRamp": ["#373F45", "#68737B", "#8A939A", "#ADB4BA", "#C9CED3", "#DFE2E5", "#EAEDEF", "#F2F4F5"]
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Hero H1 and page H1s — Poppins 700, the largest voice on the site." },
-      "headline": { "displayName": "Headline", "purpose": "Section H2s on bands (Featured Designs, Driven by purpose)." },
-      "title": { "displayName": "Title", "purpose": "Card titles and secondary headings." },
-      "body": { "displayName": "Body", "purpose": "Descriptions, paragraphs, nav items; secondary text in Ash." },
+      "display": { "displayName": "Display", "purpose": "Hero H1 and every page H1 (PageHeader); the largest voice on the site." },
+      "headline": { "displayName": "Headline", "purpose": "Home band openers (SectionHeading headline variant) and the design-detail H1." },
+      "title": { "displayName": "Title", "purpose": "Section H2s and card titles; cards scale it to 1.25rem (index) and 1.125rem (design cards)." },
+      "body": { "displayName": "Body", "purpose": "Descriptions, paragraphs, nav items; secondary body text in Ash." },
       "label": { "displayName": "Label", "purpose": "Footer links, cookie-banner copy, captions, counts (tabular numerals)." },
       "eyebrow": { "displayName": "Eyebrow", "purpose": "Uppercase letter-spaced Ember label above display headings; hero and section openers only." }
     },
     "shadows": [
-      { "name": "structural-card", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Cards and the fixed header; constant at rest and on hover (Tailwind shadow-md)." },
-      { "name": "framed-artwork", "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)", "purpose": "The framed artwork card alone lifts like a gallery piece (Tailwind shadow-xl)." },
-      { "name": "overlay-bar", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "The cookie banner, the only element floating above everything (Tailwind shadow-lg)." }
+      { "name": "structural-card", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "Baseline shadow (Tailwind shadow-md): cards and the fixed header. Constant, never reactive." },
+      { "name": "framed-artwork", "value": "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)", "purpose": "Tailwind shadow-xl: the framed artwork card only — the one element allowed to lift like a gallery piece." },
+      { "name": "overlay-bar", "value": "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)", "purpose": "Tailwind shadow-lg: the cookie banner and the mobile buy bar — the only floating elements." }
     ],
     "motion": [
-      { "name": "color-shift", "value": "color 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default transition for all interactive state changes; hover and focus are color, fill, and underline only." },
-      { "name": "primary-dim", "value": "background-color 150ms to rgba(232,134,45,0.9)", "purpose": "Primary button hover dims the ember fill." }
+      { "name": "color-shift", "value": "colors 150ms cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default interactive transition (transition-colors): hovers, fills, underlines. Never shadow or transform." },
+      { "name": "card-zoom", "value": "transform 300ms ease-out (scale to 1.4)", "purpose": "The single sanctioned transform: design-card media zoom inside the clipped tile on hover." },
+      { "name": "buybar-fade", "value": "opacity 200ms", "purpose": "Mobile buy bar enters/exits by opacity only." },
+      { "name": "reduced-motion", "value": "all durations 0.01ms, iterations 1", "purpose": "prefers-reduced-motion collapses every transition and animation, including the card zoom." }
     ],
     "breakpoints": [
       { "name": "sm", "value": "640px" },
@@ -97,78 +99,81 @@
   },
   "components": [
     {
-      "name": "Primary Button",
+      "name": "Button Primary",
       "kind": "button",
       "refersTo": "button-primary",
-      "description": "Ember fill with dark warm text; hover dims to 90% ember. Hero CTA, submits, pagination, consent.",
-      "html": "<button class=\"ds-btn-primary\">Browse designs</button>",
-      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 8px; background: #E8862D; color: #1A1206; padding: 8px 24px; border: none; border-radius: 10px; font-family: Inter, system-ui, sans-serif; font-size: 16px; font-weight: 500; line-height: 1.5; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: rgba(232, 134, 45, 0.9); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px #E8862D; } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+      "description": "The one loud action on a surface: hero CTA, search submit, form submits, pagination, cookie consent, full-width buy CTAs.",
+      "html": "<button class='ds-btn-primary'>Browse designs</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; gap: 8px; background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); border: none; border-radius: 10px; padding: 8px 24px; font: 500 1rem/1.5 Inter, system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: hsl(var(--accent) / 0.9); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); } .ds-btn-primary:disabled { opacity: 0.5; pointer-events: none; }"
     },
     {
-      "name": "Outline Button",
+      "name": "Button Outline",
       "kind": "button",
       "refersTo": "button-outline",
-      "description": "Quiet commerce and card action: Panel surface, Seam border, Ember label; hover fills to Ash Surface.",
-      "html": "<a class=\"ds-btn-outline\" href=\"#\">View design <span aria-hidden=\"true\">&#8594;</span></a>",
-      "css": ".ds-btn-outline { display: inline-flex; align-items: center; gap: 8px; background: #262C33; color: #E8862D; border: 1px solid #333B43; border-radius: 10px; padding: 8px 16px; font-family: Inter, system-ui, sans-serif; font-size: 16px; text-decoration: none; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { border-color: #E8862D; background: #2B3036; } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px #E8862D; }"
+      "description": "The quiet commerce and card action (\"View design →\", \"Buy on TeePublic ↗\"): Panel surface, Ember label, color-only hover.",
+      "html": "<button class='ds-btn-outline'>View design <span aria-hidden='true'>→</span></button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; gap: 8px; background: hsl(var(--card)); color: hsl(var(--accent)); border: 1px solid hsl(var(--input)); border-radius: 10px; padding: 8px 16px; font: 500 1rem/1.5 Inter, system-ui, sans-serif; cursor: pointer; transition: background 150ms cubic-bezier(0.4, 0, 0.2, 1), border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-outline:hover { border-color: hsl(var(--accent)); background: hsl(var(--muted)); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); }"
     },
     {
-      "name": "Search Input",
-      "kind": "input",
-      "refersTo": "input",
-      "description": "Catalog search field: Panel fill, Seam stroke, ember caret, ember focus ring.",
-      "html": "<div class=\"ds-input-wrap\"><input class=\"ds-input-search\" type=\"text\" placeholder=\"Search designs...\" aria-label=\"Search designs\" /></div>",
-      "css": ".ds-input-wrap { position: relative; } .ds-input-search { width: 100%; padding: 8px 16px; border: 1px solid #333B43; border-radius: 10px; background: #262C33; color: #F2F4F5; font-family: Inter, system-ui, sans-serif; font-size: 16px; caret-color: #E8862D; } .ds-input-search::placeholder { color: #9AA6AE; } .ds-input-search:focus { outline: none; box-shadow: 0 0 0 2px #E8862D; }"
-    },
-    {
-      "name": "Collection Select",
-      "kind": "input",
-      "refersTo": "input",
-      "description": "Collection filter select sharing the input treatment: Panel fill, Seam border, 10px radius.",
-      "html": "<select class=\"ds-select-collection\" aria-label=\"Filter by collection\"><option value=\"\">All Collections</option><option>Pet Lover Prints</option><option>Programming Prints</option></select>",
-      "css": ".ds-select-collection { padding: 8px 16px; border: 1px solid #333B43; border-radius: 10px; background: #262C33; color: #F2F4F5; font-family: Inter, system-ui, sans-serif; font-size: 16px; } .ds-select-collection:focus { outline: none; box-shadow: 0 0 0 2px #E8862D; }"
+      "name": "Accent Link",
+      "kind": "custom",
+      "refersTo": "link-accent",
+      "description": "The accent text link for internal routes (AccentLink): Ember, underline on hover, 2px ember focus ring.",
+      "html": "<a class='ds-link-accent' href='#'>Our collections</a>",
+      "css": ".ds-link-accent { color: hsl(var(--accent)); text-decoration: none; text-underline-offset: 3px; } .ds-link-accent:hover { text-decoration: underline; } .ds-link-accent:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); border-radius: 2px; }"
     },
     {
       "name": "Interest Chip",
       "kind": "chip",
       "refersTo": "chip",
-      "description": "Catalog entry chip: Graphite fill, Seam border, Ember label, Ash tabular count with a real gap.",
-      "html": "<a class=\"ds-chip\" href=\"#\">Programming Prints <span class=\"ds-chip-count\">(109)</span></a>",
-      "css": ".ds-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; background: #171B1F; color: #E8862D; border: 1px solid #333B43; border-radius: 10px; font-family: Inter, system-ui, sans-serif; font-size: 14px; text-decoration: none; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-chip:hover { border-color: #E8862D; } .ds-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px #E8862D; } .ds-chip-count { margin-left: 4px; color: #9AA6AE; font-variant-numeric: tabular-nums; }"
+      "description": "LinkChip — the interest chip into the catalog: 44px touch target, Seam border, count in Ash tabular numerals.",
+      "html": "<a class='ds-chip' href='#'>Programming <span class='ds-chip-count'>(26)</span></a>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; min-height: 44px; border: 1px solid hsl(var(--input)); border-radius: 10px; padding: 8px 12px; color: hsl(var(--accent)); font: 400 0.875rem/1.43 Inter, system-ui, sans-serif; text-decoration: none; text-underline-offset: 3px; } .ds-chip:hover { text-decoration: underline; } .ds-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); } .ds-chip-count { margin-left: 4px; color: hsl(var(--muted-foreground)); font-variant-numeric: tabular-nums; }"
     },
     {
       "name": "Design Card",
       "kind": "card",
       "refersTo": "card",
-      "description": "Catalog card: Panel panel with Seam border, padded inset 3:4 media tile on the baked background, Poppins title, Ash caption and description, outline action pinned to the bottom.",
-      "html": "<article class=\"ds-card\"><div class=\"ds-card-media\"><div class=\"ds-card-art\"></div></div><div class=\"ds-card-body\"><h3 class=\"ds-card-title\">Our Family Tree Has a Bat Problem</h3><p class=\"ds-card-col\"><a class=\"ds-card-link\" href=\"#\">Halloween</a></p><p class=\"ds-card-desc\">Spooky-cute Halloween art for people whose decorations got out of hand.</p><a class=\"ds-btn-outline ds-card-cta\" href=\"#\">View design &#8594;</a></div></article>",
-      "css": ".ds-card { background: #262C33; border: 1px solid #333B43; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); display: flex; flex-direction: column; max-width: 360px; font-family: Inter, system-ui, sans-serif; } .ds-card-media { padding: 16px 16px 0; } .ds-card-art { aspect-ratio: 3 / 4; border-radius: 10px; background: #101010; } .ds-card-body { padding: 16px; display: flex; flex-direction: column; flex-grow: 1; } .ds-card-title { font-family: Poppins, Inter, sans-serif; font-size: 18px; font-weight: 600; line-height: 1.3; color: #F2F4F5; margin: 0 0 4px; } .ds-card-col { font-size: 12px; color: #9AA6AE; margin: 0; } .ds-card-link { color: #E8862D; text-decoration: none; } .ds-card-link:hover { text-decoration: underline; } .ds-card-desc { font-size: 14px; line-height: 1.5; color: #9AA6AE; margin: 8px 0 16px; } .ds-card-cta { margin-top: auto; align-self: flex-start; }"
+      "description": "The catalog card: portrait media tile over the baked background, Poppins title, Ash caption/description, outline action anchored to the bottom.",
+      "html": "<div class='ds-design-card'><div class='ds-design-card-media'><div class='ds-design-card-tile'></div></div><div class='ds-design-card-body'><h3 class='ds-design-card-title'>Retro New York City Sunset</h3><p class='ds-design-card-caption'>Cities</p><p class='ds-design-card-desc'>A warm vintage skyline…</p><button class='ds-btn-outline ds-design-card-action'>View design <span aria-hidden='true'>→</span></button></div></div>",
+      "css": ".ds-design-card { display: flex; flex-direction: column; overflow: hidden; background: hsl(var(--card)); color: hsl(var(--card-foreground)); border: 1px solid hsl(var(--border)); border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); } .ds-design-card-media { padding: 16px 16px 0; } .ds-design-card-tile { position: relative; width: 100%; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 10px; background: hsl(var(--muted)); } .ds-design-card-media:hover .ds-design-card-tile { transform: scale(1.04); } .ds-design-card-body { display: flex; flex-direction: column; flex-grow: 1; padding: 16px; } .ds-design-card-title { font-family: Poppins, Inter, system-ui, sans-serif; font-size: 1.125rem; font-weight: 600; line-height: 1.375; margin-bottom: 4px; color: hsl(var(--foreground)); } .ds-design-card-caption { font-size: 0.75rem; color: hsl(var(--muted-foreground)); } .ds-design-card-desc { margin: 8px 0 16px; font-size: 0.875rem; color: hsl(var(--muted-foreground)); } .ds-design-card-action { margin-top: auto; align-self: flex-start; }"
     },
     {
-      "name": "Header Navigation",
-      "kind": "nav",
-      "description": "Fixed Basalt band at 90% opacity: configured siteLogo asset in the tile (monogram fallback) plus name in Poppins, light links resting at 70% Bone and hovering to Ember.",
-      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-brand\"><img class=\"ds-nav-mark\" src=\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' fill='%23E8862D'/%3E%3C/svg%3E\" alt=\"\" />ThreadQuirk</span><nav class=\"ds-nav-links\"><a href=\"#\" class=\"ds-nav-link is-active\">Home</a><a href=\"#\" class=\"ds-nav-link\">Our Designs</a><a href=\"#\" class=\"ds-nav-link\">Collections</a><a href=\"#\" class=\"ds-nav-link\">About</a></nav></header>",
-      "css": ".ds-nav { background: rgba(17, 20, 24, 0.9); color: #F2F4F5; height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1); font-family: Inter, system-ui, sans-serif; } .ds-nav-brand { display: inline-flex; align-items: center; gap: 10px; font-family: Poppins, Inter, sans-serif; font-size: 20px; font-weight: 700; color: #F2F4F5; } .ds-nav-mark { width: 32px; height: 32px; border-radius: 10px; object-fit: cover; } .ds-nav-links { display: flex; gap: 24px; } .ds-nav-link { color: rgba(242, 244, 245, 0.7); text-decoration: none; font-size: 14px; transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-nav-link:hover { color: #E8862D; } .ds-nav-link.is-active { color: #F2F4F5; font-weight: 600; } .ds-nav-link:focus-visible { outline: none; box-shadow: 0 0 0 2px #F2F4F5; border-radius: 2px; }"
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Panel field with Seam stroke, Ember caret, 2px ember focus ring; the select shares the treatment.",
+      "html": "<input class='ds-input' type='text' placeholder='Try cat lover gift' />",
+      "css": ".ds-input { display: flex; width: 100%; background: hsl(var(--card)); color: hsl(var(--foreground)); border: 1px solid hsl(var(--input)); border-radius: 10px; padding: 8px 12px; font: 400 1rem/1.5 Inter, system-ui, sans-serif; caret-color: hsl(var(--accent)); } .ds-input::placeholder { color: hsl(var(--muted-foreground)); } .ds-input:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Icon Link",
+      "kind": "custom",
+      "refersTo": "link-accent",
+      "description": "IconLink — 24px social/share glyph: Ash at rest, Ember on hover on the field, sr-only label, color-only hover.",
+      "html": "<a class='ds-icon-link' href='#' aria-label='Share on Pinterest'><svg width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' aria-hidden='true'><path d='M7 7h10v10'/><path d='M7 17 17 7'/></svg></a>",
+      "css": ".ds-icon-link { display: inline-flex; border-radius: 8px; color: hsl(var(--muted-foreground)); transition: color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-icon-link:hover { color: hsl(var(--accent)); } .ds-icon-link:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); }"
     },
     {
       "name": "Framed Artwork Card",
-      "kind": "custom",
-      "description": "The signature hero piece: Panel frame with Seam border and shadow-xl, rounded inset tile on the design's baked background, hairline rule, centered Ash caption.",
-      "html": "<figure class=\"ds-artcard\"><div class=\"ds-artcard-tile\"></div><figcaption class=\"ds-artcard-cap\">Original artwork, printed on demand</figcaption></figure>",
-      "css": ".ds-artcard { background: #262C33; border: 1px solid #333B43; border-radius: 12px; padding: 12px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); max-width: 400px; margin: 0; font-family: Inter, system-ui, sans-serif; } .ds-artcard-tile { aspect-ratio: 4 / 3; border-radius: 12px; background: #101010; } .ds-artcard-cap { border-top: 1px solid #333B43; margin-top: 12px; padding: 12px 6px 4px; text-align: center; font-size: 14px; color: #9AA6AE; }"
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The signature surface: a Panel gallery frame holding the design's baked-background tile, closed by a hairline rule and an Ash caption.",
+      "html": "<div class='ds-art-card'><div class='ds-art-card-tile'></div><p class='ds-art-card-caption'>Latest print — woven stories</p></div>",
+      "css": ".ds-art-card { width: 100%; max-width: 448px; margin: 0 auto; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 12px; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1); } .ds-art-card-tile { position: relative; width: 100%; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: hsl(var(--muted)); } .ds-art-card-caption { margin-top: 12px; padding-top: 12px; border-top: 1px solid hsl(var(--border)); text-align: center; font-size: 0.875rem; line-height: 1.43; color: hsl(var(--muted-foreground)); }"
     },
     {
-      "name": "Cookie Banner",
-      "kind": "custom",
-      "description": "Fixed-bottom consent bar: Basalt surface, overlay shadow, inline privacy link, ember accept button.",
-      "html": "<div class=\"ds-cookie\"><p class=\"ds-cookie-text\">We use cookies to understand how visitors use this site. <a class=\"ds-cookie-link\" href=\"#\">Learn more</a></p><button class=\"ds-cookie-btn\">Accept</button></div>",
-      "css": ".ds-cookie { background: #111418; color: #F2F4F5; padding: 16px; box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1); display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: Inter, system-ui, sans-serif; } .ds-cookie-text { font-size: 14px; margin: 0; } .ds-cookie-link { color: rgba(242, 244, 245, 0.7); text-decoration: underline; text-underline-offset: 3px; } .ds-cookie-link:hover { color: #E8862D; } .ds-cookie-btn { background: #E8862D; color: #1A1206; padding: 8px 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: 500; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-cookie-btn:hover { background: rgba(232, 134, 45, 0.9); } .ds-cookie-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px #E8862D; }"
+      "name": "Index Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The collections/gifts directory card: three artwork thumbs over the panel skin, whole card is one link; border hovers to Ember.",
+      "html": "<a class='ds-index-card' href='#'><div class='ds-index-card-thumbs'><div></div><div></div><div></div></div><span class='ds-index-card-title'>Programming</span><span class='ds-index-card-desc'>Code humour for developers…</span><span class='ds-index-card-meta'>26 designs</span></a>",
+      "css": ".ds-index-card { display: block; height: 100%; background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 12px; padding: 16px; text-decoration: none; transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-index-card:hover { border-color: hsl(var(--accent)); } .ds-index-card:focus-visible { outline: none; box-shadow: 0 0 0 2px hsl(var(--ring)); } .ds-index-card-thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-bottom: 12px; } .ds-index-card-thumbs > div { aspect-ratio: 3 / 4; border-radius: 10px; background: hsl(var(--muted)); } .ds-index-card-title { display: block; font-family: Poppins, Inter, system-ui, sans-serif; font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; color: hsl(var(--foreground)); } .ds-index-card-desc { display: block; color: hsl(var(--muted-foreground)); } .ds-index-card-meta { display: block; margin-top: 8px; font-size: 0.875rem; color: hsl(var(--muted-foreground)); }"
     }
   ],
   "narrative": {
     "northStar": "Ember on Graphite — the catalog's own artwork glowing on woven graphite.",
-    "overview": "The world is a near-black graphite field in three tonal bands, framed above by a fixed basalt header and below by a coal footer. Panels sit one tonal step above the field behind 1px hairline seams; nothing is white. One saturated pumpkin-ember orange does all the interactive work — eyebrows, links, focus rings, the primary button — and two signature textures give the dark its depth: faint concentric thread rings plus a single soft ember glow on the hero and philosophy bands, and a large-offset structural shadow under the framed artwork card. The hero puts the catalog's own product on the first screen: the latest synced design, framed like a gallery piece beside oversized display type.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, palette, type, and copy through configuration — the home.* studio rows drive the hero copy, philosophy band, and about teaser; the header monogram derives from the configured name's first letter. Token authority lives in the :root custom properties in app/globals.css, consumed through the Tailwind theme mapping; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.",
+    "overview": "The world is a near-black graphite field in three tonal bands (field Graphite, alt band Slate Band, deepest band Coal Deep), framed above by a fixed Basalt header and below by a Coal Deep footer. Panels sit one tonal step above the field behind 1px hairline seams; nothing is white. One saturated pumpkin-ember orange does all the interactive work — eyebrows, links, focus rings, the primary button — and two signature textures give the dark its depth: faint concentric thread rings plus a single soft ember glow on the hero and philosophy bands (the .texture-weave utility), and a large-offset structural shadow under the framed artwork card. The hero puts the catalog's own product on the first screen: the latest synced design, framed like a gallery piece beside oversized display type with one ember accent word.\n\nThe system is a default theme, not a brand. Design Studio is a white-label product: every deployment replaces name, palette, type, and copy through configuration — the home.* studio rows drive the hero copy, philosophy band, and about teaser; the brand mark renders the configured siteLogo or falls back to a monogram tile derived from the configured name's first letter. Token authority lives in the :root custom properties in app/globals.css (HSL triplets, Tailwind convention), consumed through the Tailwind theme mapping in tailwind.config.ts; per-deployment theming rides on config/config.json (or the studio table) and the allow-listed themeLink stylesheet hook. Anything visual that cannot be changed from that layer is a defect.\n\nThe token layer is complete: every var the Tailwind mapping consumes is defined in :root, and components consume token classes (bg-primary, text-accent, border-input, ring-ring). Literal colors survive only in sanctioned places: the token definition file, the semantic green/red form-status pair, the light image-blur shimmer, the browser-chrome themeColor meta value, and the satori social-card renderers that must mirror the palette as literals. Browser chrome carries the world: color-scheme: dark, an ember-tinted text selection, an ember caret, and thin token-sourced scrollbars are part of the shipped global CSS. Fonts load through next/font/google (Inter as --font-sans, Poppins 600/700 as --font-display).",
     "keyCharacteristics": [
       "Three graphite bands with hairline seams; panels one tonal step up, never white",
       "One ember hue means interactive — links, buttons, rings, eyebrows, chips",
@@ -178,21 +183,42 @@
       "Fully token-driven and theme-swappable; zero hardcoded brand assumptions"
     ],
     "rules": [
-      { "name": "The No-Hardcode Rule", "body": "Colors enter components only through the token layer (:root custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly three places: the token definition file, the semantic green/red form-status pair, and the browser-chrome themeColor meta value in app/layout.tsx (which cannot consume a CSS variable). Nothing else may carry a literal color.", "section": "colors" },
-      { "name": "The One Ember Rule", "body": "Ember is the only hue that means interactive. Links, buttons, focus rings, chips, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything glows orange, nothing is clickable.", "section": "colors" },
-      { "name": "The Hairline Rule", "body": "Dark surfaces separate by tonal step plus a 1px Seam border — never by white cards, never by thick strokes. A panel and its field must differ by exactly one step.", "section": "colors" },
-      { "name": "The Two-Voice Rule", "body": "Poppins sings only in headings and card titles (font-display); Inter speaks all body copy, controls, and labels. No third family unless a deployment's theme config introduces one.", "section": "typography" },
-      { "name": "The Color-Only Hover Rule", "body": "Hover and focus change color, fill, or underline — never shadow. The single sanctioned transform is the design-card image zoom: hovering a card scales its media to 140% inside the clipped tile (300ms ease-out, collapsed under prefers-reduced-motion). Everything else stays a color shift; all other interactive transitions are transition-colors at ~150ms.", "section": "elevation" }
+      {
+        "name": "The No-Hardcode Rule",
+        "body": "Colors enter components only through the token layer (:root custom properties consumed via the Tailwind theme mapping). Literal color values are legal in exactly four places: the token definition file, the semantic green/red form-status pair, the light blur-shimmer + themeColor chrome values, and satori renderers that must mirror the token block as literals because they cannot read CSS variables. Nothing else may carry a literal color.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Ember Rule",
+        "body": "Ember is the only hue that means \"interactive.\" Links, buttons, focus rings, chips, and active states all draw from it; it should stay under ~10% of any screen's pixels. If everything glows orange, nothing is clickable.",
+        "section": "colors"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Dark surfaces separate by tonal step plus a 1px Seam border — never by white cards, never by thick strokes. A panel and its field must differ by exactly one step.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Voice Rule",
+        "body": "Poppins sings only in headings and card titles (font-display); Inter speaks all body copy, controls, and labels. No third family unless a deployment's theme config introduces one.",
+        "section": "typography"
+      },
+      {
+        "name": "The Color-Only Hover Rule",
+        "body": "Hover and focus change color, fill, or underline — never shadow. The single sanctioned transform is the design-card image zoom: hovering a card scales its media to 140% inside the clipped tile (300ms ease-out, collapsed under prefers-reduced-motion, as is every transition). Everything else stays a color shift; all other interactive transitions are transition-colors at ~150ms; the primary button dims to 90% ember, the outline button fills to Ash Surface with an Ember border, links underline. The mobile buy bar enters by opacity fade only (200ms).",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping (bg-primary, text-accent, border-input, ring-ring, bg-surface) or the primitives in components/ui/.",
-      "Do keep every deployment-specific value (name, monogram source, hero copy, philosophy band, buy links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
-      "Do give every interactive element a visible 2px Ember focus ring (focus-visible), and let the global CSS carry the browser chrome: color-scheme dark, ember selection and caret, thin token scrollbars.",
+      "Do keep every deployment-specific value (name, logo via siteLogo, hero copy, philosophy band, buy links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
+      "Do give every interactive element a visible 2px Ember focus ring (focus-visible), and let the global CSS carry the browser chrome: color-scheme: dark, ember selection and caret, thin token scrollbars.",
       "Do frame catalog media in a portrait 3:4 inset tile with object-contain over the design's baked background color — nothing is ever cropped.",
+      "Do mirror the token block as literal values inside any satori renderer (they cannot read CSS variables) and re-sync those literals whenever the tokens change.",
       "Do treat Poppins, Inter, and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values."
     ],
     "donts": [
-      "Don't write a literal hex, rgb, or palette-utility color into a component — the token definition file, the form-status pair, and the themeColor meta value are the only sanctioned exceptions.",
+      "Don't write a literal hex, rgb, or palette-utility color into a component — the token definition file, the form-status pair, the blur-shimmer/themeColor chrome values, and satori renderers' token mirrors are the only sanctioned exceptions.",
       "Don't introduce hues outside the token set; Ember is the only interactive hue, and green/red pairs are reserved for form success/error semantics only.",
       "Don't animate hover with elevation, shadow, or decorative transforms — color shifts, fills, underlines, and the single sanctioned design-card image zoom only.",
       "Don't put Poppins into body copy, controls, or labels — the display voice sings only in headings and card titles.",
