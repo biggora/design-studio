@@ -8,7 +8,9 @@ export type BuyLinkProps = {
   platform: "redbubble" | "teepublic";
   designSlug: string;
   pageType: "design" | "landing";
-  position: "primary" | "secondary";
+  /** Where the link sits: "primary" in-card, "secondary" below it,
+      "sticky" on the mobile buy bar. */
+  position: "primary" | "secondary" | "sticky";
   className?: string;
   children?: ReactNode;
 };

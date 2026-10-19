@@ -28,6 +28,7 @@ import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { JsonLd } from "@/app/components/JsonLd";
 import BuyLink from "@/app/components/BuyLink";
+import { MobileBuyBar } from "@/app/components/MobileBuyBar";
 import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
@@ -238,17 +239,19 @@ export default async function DesignDetails(
                 )}
               </div>
               {buyUrl !== "#" && (
-                <BuyLink
-                  href={buyUrl}
-                  platform="redbubble"
-                  designSlug={design.slug || design.id}
-                  pageType="design"
-                  position="primary"
-                  className={buttonVariants({ className: "w-full gap-2" })}
-                >
-                  Buy on Redbubble
-                  <span aria-hidden="true">&#8599;</span>
-                </BuyLink>
+                <div data-in-card-buy>
+                  <BuyLink
+                    href={buyUrl}
+                    platform="redbubble"
+                    designSlug={design.slug || design.id}
+                    pageType="design"
+                    position="primary"
+                    className={buttonVariants({ className: "w-full gap-2 min-h-11" })}
+                  >
+                    Buy on Redbubble
+                    <span aria-hidden="true">&#8599;</span>
+                  </BuyLink>
+                </div>
               )}
               <p className="text-sm text-muted-foreground mt-2 text-center">
                 Printed &amp; shipped by our marketplace partner. We may earn a
@@ -282,6 +285,7 @@ export default async function DesignDetails(
           </div>
         </div>
       </PageShell>
+      {buyUrl !== "#" && <MobileBuyBar href={buyUrl} designSlug={design.slug || design.id} />}
       <PageShell>
         <FeaturedDesigns
           title={relatedTitle}

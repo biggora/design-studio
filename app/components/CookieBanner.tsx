@@ -16,6 +16,9 @@ export function CookieBanner() {
     <div
       role="region"
       aria-label="Cookie consent"
+      // Stable hook: overlays that share the bottom edge (mobile buy bar)
+      // park above this banner while it is mounted.
+      data-cookie-banner
       className="fixed bottom-0 left-0 right-0 z-50 bg-primary text-primary-foreground py-2.5 shadow-lg"
     >
       {/* Compact single row on sm+ so the home search stays above the fold;
