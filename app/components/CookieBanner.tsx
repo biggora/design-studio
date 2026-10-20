@@ -24,7 +24,7 @@ export function CookieBanner() {
       {/* Compact single row on sm+ so the home search stays above the fold;
         text and buttons stack tightly below sm. Same gutters as PageShell. */}
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-        <p className="text-sm leading-snug">
+        <p className="max-w-prose text-sm leading-snug">
           We use cookies to understand how visitors use this site. Analytics
           load only after you accept.{" "}
           <Link

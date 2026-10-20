@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { ConfigContext } from "@/app/wrapper";
 import { BrandMark } from "@/app/components/BrandMark";
+import { cn, focusRingClasses } from "@/lib/utils";
 
 const navItems = [
   { href: "/designs", label: "Our Designs" },
@@ -21,6 +22,17 @@ export default function Header() {
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
+  // The open panel is fully opaque and locks body scroll, so page content
+  // never bleeds through the primary navigation.
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isMenuOpen]);
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
   };
@@ -29,11 +41,13 @@ export default function Header() {
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   const linkClassName = (href: string) =>
-    `${
+    cn(
+      focusRingClasses,
+      "transition-colors",
       isActive(href)
         ? "font-semibold text-primary-foreground"
-        : "text-primary-foreground/70 hover:text-accent"
-    } transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground`;
+        : "text-primary-foreground/70 hover:text-accent",
+    );
 
   return (
     <header className="bg-primary/90 text-primary-foreground shadow-md fixed w-full z-10">
@@ -41,7 +55,10 @@ export default function Header() {
         <div className="flex items-center justify-between h-16">
           <Link
             href="/"
-            className="flex items-center gap-2.5 font-display text-xl font-bold text-primary-foreground rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+            className={cn(
+              "flex items-center gap-2.5 font-display text-xl font-bold text-primary-foreground rounded-md",
+              focusRingClasses,
+            )}
           >
             <BrandMark siteLogo={config.siteLogo} name={config.name} />
             {config.name}
@@ -63,7 +80,7 @@ export default function Header() {
               onClick={toggleMenu}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMenuOpen}
-              className="text-primary-foreground hover:text-primary-foreground/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground"
+              className={cn("text-primary-foreground hover:text-primary-foreground/70", focusRingClasses)}
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -72,7 +89,7 @@ export default function Header() {
       </div>
       {/* Mobile menu */}
       {isMenuOpen && (
-        <nav className="md:hidden bg-primary/95">
+        <nav className="md:hidden bg-primary">
           <div className="container mx-auto px-4 py-4 space-y-4">
             {navItems.map(({ href, label }) => (
               <Link

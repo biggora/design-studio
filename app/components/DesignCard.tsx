@@ -68,9 +68,12 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
         </h2>
         {showCollection && design.collection && (
           <p className={cn("text-xs text-muted-foreground", compactOnMobile && "hidden sm:block")}>
-            <AccentLink href={collectionPath(design.collection)}>
+            <Link
+              href={collectionPath(design.collection)}
+              className={cn("transition-colors hover:text-accent", focusRingClasses)}
+            >
               {collectionLabel}
-            </AccentLink>
+            </Link>
           </p>
         )}
         <p

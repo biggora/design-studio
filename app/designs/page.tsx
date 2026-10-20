@@ -165,7 +165,13 @@ export default async function DesignFolio(
                 card drops description/CTA there so the title carries the tile. */}
             <CardGrid className="mb-8 grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {designs.map((design: Design) => (
-                <DesignCard key={design.id} design={design} compactOnMobile collectionLabels={collectionNames} />
+                <DesignCard
+                  key={design.id}
+                  design={design}
+                  compactOnMobile
+                  showCollection={!selectedCollection}
+                  collectionLabels={collectionNames}
+                />
               ))}
             </CardGrid>
           </div>
