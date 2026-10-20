@@ -51,9 +51,11 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
         </AccentLink>
       </div>
       <CardContent className={cn("flex flex-col flex-grow p-4", compactOnMobile && "p-3 sm:p-4")}>
+        {/* Unclamped below sm — the 2-up mobile catalog reads the full punchline;
+            desktop grids cap at three lines. */}
         <h2
           className={cn(
-            "font-display mb-1 text-lg font-semibold leading-snug line-clamp-2",
+            "font-display mb-1 text-lg font-semibold leading-snug sm:line-clamp-3",
             compactOnMobile && "mb-2 text-sm sm:mb-1 sm:text-lg",
           )}
         >
