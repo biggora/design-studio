@@ -55,6 +55,12 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 |---|---|---|---|
 | `NEXT_PUBLIC_IMAGES_CDN` | No | — (unset) | Base URL (https, no trailing slash needed) of the pod-uploader image CDN, e.g. `https://images.threadquirk.lv` (Cloudflare R2 origin; no credentials live on this deployment). When set, designs that carry a `cdnImage` (written by the listings ingest, see [docs/PUBLIC_API.md](./PUBLIC_API.md) § Ingest API) render their flat artwork from the CDN's immutable `thumb/card/main` WebP variants on cards, heroes and design pages, and the pre-flattened `share` JPEG on OG/Twitter cards, Pinterest pins, JSON-LD and the public API. Unset or empty → every reader keeps the Redbubble-hosted fallback exactly as before. `NEXT_PUBLIC_*` values are inlined at build time: set the variable, then redeploy, before pod-uploader starts sending `cdnImage`. CDN images intentionally bypass `/_next/image` (Vercel holds no CDN credentials and must not re-proxy those files), so no `remotePatterns` entry is added. |
 
+### 1.4.3 Watermark overlay
+
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `NEXT_PUBLIC_WATERMARK` | No | — (unset) | Text stamped as a small CSS overlay caption over rendered artwork previews (`lib/image.ts` `watermarkText()` → the overlay in `app/components/DesignImage.tsx`), e.g. `threadquirk.lv`. DOM-only: it deters casual copying/screenshots of previews and brands reposts, but is absent from OG/Twitter/Pinterest/JSON-LD/public-API image URLs and from the downloadable image files. Unset or empty = disabled. `NEXT_PUBLIC_*` values are inlined at build time: set the variable, then redeploy. |
+
 ### 1.5 Site config cache & Supabase webhook
 
 `getSiteConfig()` (`utils/database.ts`) is cached across requests with the Next.js Data Cache under the tag `site-config` and a 5-minute (`revalidate: 300`) safety TTL, on top of the existing per-render React `cache()` dedupe. Edits to the `studio` table are picked up within 5 minutes automatically, or immediately by calling `POST /api/revalidate/config` (authorized the same way as the sync endpoint, via `SYNC_SECRET`).

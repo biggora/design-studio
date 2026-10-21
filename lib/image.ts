@@ -23,6 +23,17 @@ export function imagesCdnBase(): string | null {
   return raw.startsWith("https://") ? raw : null;
 }
 
+/**
+ * Watermark text stamped over rendered artwork previews (`NEXT_PUBLIC_WATERMARK`,
+ * e.g. the domain), trimmed; null when unset/empty — the overlay stays off.
+ * Like imagesCdnBase, a NEXT_PUBLIC_* read: inlined at build time, so changing
+ * it means set, then redeploy.
+ */
+export function watermarkText(): string | null {
+  const raw = (process.env.NEXT_PUBLIC_WATERMARK ?? "").trim();
+  return raw || null;
+}
+
 /** Hostname of the CDN base (see imagesCdnBase), for server-side fetch allowlists. */
 export function imagesCdnHost(): string | null {
   const base = imagesCdnBase();

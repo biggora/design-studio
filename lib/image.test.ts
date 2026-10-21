@@ -8,6 +8,7 @@ import {
   hasPinImage,
   imagesCdnBase,
   normalizeCdnImage,
+  watermarkText,
 } from "@/lib/image";
 
 const CDN = "https://images.threadquirk.lv";
@@ -51,6 +52,20 @@ describe("imagesCdnBase", () => {
     expect(imagesCdnBase()).toBeNull();
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "http://images.threadquirk.lv");
     expect(imagesCdnBase()).toBeNull();
+  });
+});
+
+describe("watermarkText", () => {
+  it("returns the trimmed env value", () => {
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "  threadquirk.lv  ");
+    expect(watermarkText()).toBe("threadquirk.lv");
+  });
+
+  it("treats unset and empty as disabled", () => {
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "");
+    expect(watermarkText()).toBeNull();
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "   ");
+    expect(watermarkText()).toBeNull();
   });
 });
 

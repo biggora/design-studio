@@ -62,4 +62,38 @@ describe("DesignImage", () => {
     expect(html).toContain("https://ih1.redbubble.net/images/flat.png");
     vi.unstubAllEnvs();
   });
+
+  it("stamps the watermark caption over both branches when NEXT_PUBLIC_WATERMARK is set", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", cdnBase);
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "threadquirk.lv");
+    const cdnHtml = renderToStaticMarkup(
+      <DesignImage design={makeDesign({ cdnImage: { key, version: 2, width: 1600, height: 1920 } })} alt="Space cat" sizes="30vw" />,
+    );
+    expect(cdnHtml).toContain(">threadquirk.lv</span>");
+    expect(cdnHtml).toContain('aria-hidden="true"');
+    expect(cdnHtml).toContain("pointer-events-none");
+
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    const remoteHtml = renderToStaticMarkup(<DesignImage design={makeDesign()} alt="Space cat" />);
+    expect(remoteHtml).toContain(">threadquirk.lv</span>");
+    vi.unstubAllEnvs();
+  });
+
+  it("omits the watermark when the env is empty", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "   ");
+    const html = renderToStaticMarkup(<DesignImage design={makeDesign()} alt="Space cat" />);
+    expect(html).not.toContain("pointer-events-none");
+    vi.unstubAllEnvs();
+  });
+
+  it("skips the watermark on the no-image placeholder", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    vi.stubEnv("NEXT_PUBLIC_WATERMARK", "threadquirk.lv");
+    const html = renderToStaticMarkup(
+      <DesignImage design={makeDesign({ externalImageUrl: "  " })} alt="Space cat" />,
+    );
+    expect(html).not.toContain("threadquirk.lv");
+    vi.unstubAllEnvs();
+  });
 });
