@@ -74,8 +74,10 @@ export function loadOgLogo(path: string = LOGO_PATH): Promise<string | null> {
 
 /**
  * Fetches a design image server-side and returns it as a `data:` URL, or null
- * on any failure (blocked host, slow CDN, non-image, webp — satori cannot
- * decode it). Never throws, so a bad mockup degrades the card, not the route.
+ * on any failure (blocked host — the Redbubble allowlist plus the site's own
+ * image CDN, slow CDN, non-image, webp — satori cannot decode it, which is why
+ * CDN designs pass their pre-flattened share JPEG). Never throws, so a bad
+ * source degrades the card, not the route.
  */
 export async function fetchImageDataUrl(url: string, timeoutMs = 4000): Promise<string | null> {
   try {

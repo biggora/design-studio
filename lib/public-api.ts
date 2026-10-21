@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Design } from "@/types/design";
 import { applyBackground } from "@/lib/background";
-import { getMockupUrl } from "@/lib/image";
+import { cdnShareImageUrl, getMockupUrl } from "@/lib/image";
 import { getTeepublicLink } from "@/lib/utils";
 import { ListingPlatform } from "@/lib/listings";
 import { designPath } from "@/lib/slug";
@@ -31,6 +31,10 @@ export type PublicPrint = {
 // `bg` is an optional on-the-fly background override (see lib/background.ts) — when it
 // resolves for this design, imageUrl/backgroundColor reflect the requested background instead
 // of the stored ones; otherwise the design is returned unchanged.
+// For designs published to the pod-uploader CDN (`cdnImage` + NEXT_PUBLIC_IMAGES_CDN),
+// `imageUrl` is the share JPEG (already flattened onto the background color, no WebP or
+// transparency); with a `bg` override, or without a CDN image, it stays the stored
+// Redbubble artwork. `mockupUrl` is untouched by any of this.
 // `affiliate` wraps `link`/`teepublicLink` with the configured tracking
 // (Impact template / TeePublic ref_id) at response time; stored URLs stay canonical.
 // `domain` (site config `domain`) adds this site's own pages to the response: `url` is the
@@ -59,7 +63,7 @@ export function toPublicPrint(
     id: design.id,
     title: design.title,
     description: design.description,
-    imageUrl: overridden?.externalImageUrl ?? design.externalImageUrl,
+    imageUrl: overridden?.externalImageUrl ?? cdnShareImageUrl(design) ?? design.externalImageUrl,
     mockupUrl: getMockupUrl(design),
     url: domain ? `https://${domain}${designPath(design)}` : null,
     shortUrl: domain ? pinLandingUrl(domain, design) : null,

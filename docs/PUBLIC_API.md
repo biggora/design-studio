@@ -150,7 +150,7 @@ When `bg` resolves to a usable token for a given print, `imageUrl` and `backgrou
 | `id` | string | Internal design id (use this to fetch `/api/v1/prints/{id}`). |
 | `title` | string | Design title. |
 | `description` | string | Design description (may be an empty string). |
-| `imageUrl` | string | Full-artwork image URL, hosted on the Redbubble CDN. |
+| `imageUrl` | string | Full-artwork image URL. For designs published to the pod-uploader CDN this is the CDN's `share-v<version>.jpg` (the artwork pre-flattened onto the background color); with a `bg` override that resolves, the overridden Redbubble URL wins; otherwise the stored Redbubble artwork URL. |
 | `mockupUrl` | string \| null | Classic T-Shirt mockup image URL (`props.mockup_tshirt`), or `null` if not available. |
 | `url` | string \| null | This site's full design page (absolute, e.g. `https://threadquirk.lv/designs/<slug>`), or `null` when no domain is configured. Falls back to the design `id` in the path for designs synced before slugs existed. Never affiliate-wrapped. |
 | `shortUrl` | string \| null | Compact landing page for the same print (absolute, e.g. `https://threadquirk.lv/p/<slug>`), or `null` when no domain is configured. Same `id` fallback as `url`. Never affiliate-wrapped. |
@@ -314,7 +314,7 @@ Every site that renders prints from this API and links to `link`/`teepublicLink`
 
 Base URL: your Design Studio deployment, e.g. `http://localhost:3000` locally or `https://your-domain.com` in production. Set `LISTINGS_API_TOKEN` on the server and client; Supabase deployments also need the existing `SUPABASE_SERVICE_ROLE_KEY`. This token is independent of `SYNC_SECRET`. Both methods accept only `Authorization: Bearer <token>`; no query token or `x-sync-secret` fallback. Responses always use `Cache-Control: no-store`; the public API's cross-origin GET policy does not apply to this private CLI endpoint.
 
-Apply migration 003 before deployment (see [DATABASE.md](DATABASE.md)). No migration is applied automatically by the route.
+Apply migration 003, then migration 005 (the `designs.cdnImage` column and the matching ingest function), before deployment (see [DATABASE.md](DATABASE.md)). No migration is applied automatically by the route.
 
 ### POST /api/v1/listings
 
@@ -328,6 +328,7 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 | `design.description` | no | ≤ 5000 characters |
 | `design.tags` | no | ≤ 100 strings, each non-empty and ≤ 100 characters |
 | `design.backgroundColor` | no | #rgb or #rrggbb |
+| `design.cdnImage` | no | Object `{ key, version, width, height }` — see below |
 | `listing.platform` | yes | redbubble, teepublic, spreadshirt |
 | `listing.account` | yes | ≤ 100 characters |
 | `listing.externalId` | yes | ≤ 200 characters; digits for Redbubble/TeePublic; Redbubble must fit a JavaScript safe integer |
@@ -340,12 +341,22 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 
 The optional `extra.mockupTshirt`, when used for the legacy Redbubble image mirror, must be an HTTPS URL on a Redbubble image host supported by the existing image allowlist. Other thumbnail hosts are stored in the listing without adding them to that allowlist.
 
-Example: create a Redbubble listing, then add TeePublic for the same source design:
+`design.cdnImage` publishes the design's own artwork on the pod-uploader CDN (Cloudflare R2 behind `NEXT_PUBLIC_IMAGES_CDN`, e.g. `https://images.threadquirk.lv`) so the site can stop showing Redbubble-hosted images. Validation is strict:
+
+- `key` must be exactly `designs/` + the first 16 lowercase hex characters of the request's `design.sha256` — the derived address of that design's files (a mismatch is `400 VALIDATION`, field `design.cdnImage.key`);
+- `version`, `width`, `height` must be integers ≥ 1 (`400` with the field name otherwise); `width`/`height` describe the `main` variant and every variant shares that aspect ratio;
+- unknown nested keys are rejected like the rest of the schema.
+
+The uploader publishes four immutable files per key: `thumb-v<version>.webp` (400 px wide), `card-v<version>.webp` (800 px), `main-v<version>.webp` (1600 px, all transparent WebP) and `share-v<version>.jpg` (1200 px, flattened onto the design background — used for OG/Twitter cards, Pinterest pins, JSON-LD and the public API). Semantics inside the ingest transaction: **present** → store it, overwriting a different stored value (e.g. a higher `version` after a re-render); **absent** → keep the stored value; a design created by the request stores what it carries. There is **no way to clear the column through the API**. The field is only ever written here — the Redbubble/TeePublic scrapers and the background tooling never touch it. Note that `set-background` changes `designs.backgroundColor` but not the already-published `share` JPEG; re-send a new `version` through this API to refresh the flattened image.
+
+`NEXT_PUBLIC_IMAGES_CDN` (not a secret) enables CDN rendering site-wide; until it is set, or for designs without `cdnImage`, every image reader keeps the Redbubble fallback exactly as before. It is a `NEXT_PUBLIC_*` variable, so it is inlined at build time — set it, then redeploy, before the uploader starts sending the field. The deploy order is: migration 005 → code → `NEXT_PUBLIC_IMAGES_CDN` → only then enable `cdn.enabled` in pod-uploader (an older server answers 400 to the unknown field).
+
+Example: create a Redbubble listing with its CDN artwork, then add TeePublic for the same source design:
 
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/listings \
   -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
-  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design","tags":["astronaut art","space explorer"],"backgroundColor":"#ffffff"},"listing":{"platform":"redbubble","account":"redbubble:shop-a","externalId":"184507566","url":"https://www.redbubble.com/shop/ap/184507566","publishedAt":"2026-10-07T08:10:00Z"}}'
+  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design","tags":["astronaut art","space explorer"],"backgroundColor":"#ffffff","cdnImage":{"key":"designs/f45e5bc7a5342c2c","version":1,"width":1600,"height":1920}},"listing":{"platform":"redbubble","account":"redbubble:shop-a","externalId":"184507566","url":"https://www.redbubble.com/shop/ap/184507566","publishedAt":"2026-10-07T08:10:00Z"}}'
 
 curl -s -X POST http://localhost:3000/api/v1/listings \
   -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
@@ -362,7 +373,13 @@ Response:
     "title": "Look Past the Stars Astronaut Design",
     "externalId": 184507566,
     "sha256": "f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971",
-    "sourceImageId": 299
+    "sourceImageId": 299,
+    "cdnImage": {
+      "key": "designs/f45e5bc7a5342c2c",
+      "version": 1,
+      "width": 1600,
+      "height": 1920
+    }
   },
   "listing": {
     "id": "fe5b49a4-f3fb-4bd0-8a3e-a73364c99f70",
@@ -380,11 +397,13 @@ Response:
 }
 ```
 
+`design.cdnImage` is the stored object, or `null` when the design has none; a repeat request without the field leaves it untouched (the response above shows a design carrying one).
+
 New listing: **201**, even when attaching it to an existing design. Same listing repeat: **200**, updates the supplied fields and preserves omitted metadata (including publishedAt). Identity lookup uses hash, then sourceImageId; if absent, Redbubble externalId or legacy props.teepublicId can adopt a scraper row. It never joins designs by title or silently renames a title conflict. A known source ID/hash cannot be replaced with a different identity. Existing catalog values are only filled when NULL. The explicit marketplace mirrors update canonical legacy links and preserve other props; `extra.mockupTshirt` fills an empty Redbubble mockup prop. Multiple accounts per platform are allowed; the first legacy Redbubble ID stays stable and the legacy link reflects the latest ingested Redbubble listing. All changes occur in one transaction and successful POSTs revalidate the root layout, as the background mutation endpoint does.
 
 ### GET /api/v1/listings
 
-Provide exactly one `sha256` or `sourceImageId` query parameter. Hash matching is case-insensitive at validation and lowercase in storage. Unknown/repeated parameters or both identities are rejected. Returns **200** `{ "design": <same design shape>, "listings": [<same listing shape>, ...] }`, or **404** if absent. Listings are ordered by creation time, then ID.
+Provide exactly one `sha256` or `sourceImageId` query parameter. Hash matching is case-insensitive at validation and lowercase in storage. Unknown/repeated parameters or both identities are rejected. Returns **200** `{ "design": <same design shape, including `cdnImage`>, "listings": [<same listing shape>, ...] }`, or **404** if absent. Listings are ordered by creation time, then ID.
 
 ```bash
 curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \

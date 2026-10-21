@@ -1,11 +1,10 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { Design } from "@/types/design";
 import { Card, CardContent } from "@/components/ui/card";
 import { AccentLink } from "@/app/components/AccentLink";
+import { DesignImage } from "@/app/components/DesignImage";
 import { designPath } from "@/lib/slug";
-import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
 import { cn, focusRingClasses, safeHexColor } from "@/lib/utils";
 import { collectionPath } from "@/lib/collections";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,8 +19,6 @@ type DesignCardProps = {
 };
 
 export function DesignCard({ design, showCollection = true, compactOnMobile = false, collectionLabels }: DesignCardProps) {
-  const imageUrl =
-    getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
   const collectionLabel =
     (design.collection && collectionLabels?.get(design.collection)) || design.collection;
 
@@ -38,13 +35,11 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
             className="relative w-full aspect-[3/4]"
             style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
           >
-            <Image
-              src={imageUrl}
+            <DesignImage
+              design={design}
               alt=""
               fill
               sizes={`(max-width: 640px) ${compactOnMobile ? "50vw" : "100vw"}, (max-width: 768px) 50vw, (max-width: 1280px) 33vw, 30vw`}
-              placeholder="blur"
-              blurDataURL={imageBlurPlaceholder}
               className="object-contain transition-transform duration-300 ease-out group-hover:scale-[1.4]"
             />
           </div>

@@ -19,6 +19,8 @@ function input(overrides: Partial<IngestInput> = {}): IngestInput {
     ...overrides,
   });
 }
+const cdnKey = `designs/${"a".repeat(16)}`;
+const cdnImage = { key: cdnKey, version: 1, width: 1600, height: 1920 };
 function sqlString(value: string): string { return `'${value.replace(/'/g, "''")}'`; }
 async function pgSql(sql: string): Promise<string> {
   const { stdout } = await exec("docker", ["exec", pgContainer, "psql", "-X", "-qAt", "-U", "postgres", "-d", "listings_test", "-v", "ON_ERROR_STOP=1", "-c", sql]);
@@ -49,13 +51,15 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
   beforeAll(async () => {
     if (provider === "postgres") {
       await pgSql("DO $$ BEGIN CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;");
-      // Upgrade a pre-ingest install, then rerun the idempotent PG migration.
+      // Upgrade a pre-ingest install, then rerun the idempotent PG migrations.
       const schema = readFileSync("init/postgres_tables.sql", "utf8").split("CREATE TABLE IF NOT EXISTS public.design_listings")[0]
         .replace('"externalId" bigint null,', '"externalId" bigint not null,')
         .replace(/^.*(?:"sourceImageId" bigint|sha256 text|source text).*\r?\n/gm, "");
       await pgSql(schema);
       await pgSql(readFileSync("init/migrations/003_design_listings_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/003_design_listings_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
       await pgSql("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;");
     } else {
       pool = mysql.createPool({ host: "127.0.0.1", port: 33316, user: "root", password: "listings-test", database: "listings_test", dateStrings: true, multipleStatements: true });
@@ -66,6 +70,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
         .replace(/^.*(?:`sourceImageId` BIGINT|sha256 VARCHAR|source TEXT).*\r?\n/gm, "");
       await pool.query(schema);
       await pool.query(readFileSync("init/migrations/003_design_listings_mysql.sql", "utf8"));
+      await pool.query(readFileSync("init/migrations/005_design_cdn_image_mysql.sql", "utf8"));
     }
   }, 30000);
   beforeEach(async () => { await execute("DELETE FROM designs"); });
@@ -74,10 +79,38 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
   it("creates a design and listing and mirrors canonical Redbubble fields", async () => {
     const result = await ingest(input());
     expect(result.created).toEqual({ design: true, listing: true });
-    expect(result.design).toMatchObject({ title: "Space cat", externalId: 184507566, sha256: "a".repeat(64), sourceImageId: 299 });
+    expect(result.design).toMatchObject({ title: "Space cat", externalId: 184507566, sha256: "a".repeat(64), sourceImageId: 299, cdnImage: null });
     const [saved] = await designs();
     expect(saved).toMatchObject({ source: "pod-studio", keywords: "space,cat", backgroundColor: "#000000", externalLink: input().listing.url });
     expect(await listings()).toHaveLength(1);
+  });
+  it("stores cdnImage on create and returns it in the design response", async () => {
+    const body = input();
+    body.design.cdnImage = cdnImage;
+    const result = await ingest(body);
+    expect(result.design.cdnImage).toEqual(cdnImage);
+    const raw = (await designs())[0].cdnImage;
+    expect(typeof raw === "string" ? JSON.parse(raw) : raw).toEqual(cdnImage);
+  });
+  it("overwrites a changed cdnImage, keeps it when absent, and treats an identical repeat as a no-op", async () => {
+    const body = input();
+    body.design.cdnImage = cdnImage;
+    await ingest(body);
+    const stored = async (): Promise<unknown> => {
+      const raw = (await designs())[0].cdnImage;
+      return typeof raw === "string" ? JSON.parse(raw) : raw;
+    };
+    const bumped = input();
+    bumped.design.cdnImage = { ...cdnImage, version: 2 };
+    const second = await ingest(bumped);
+    expect(second.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
+    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
+    const absent = await ingest(input());
+    expect(absent.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
+    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
+    const identical = await ingest(bumped);
+    expect(identical.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
+    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
   });
   it("repeat updates only supplied listing fields; preserves publish time and curated design", async () => {
     const body = input();

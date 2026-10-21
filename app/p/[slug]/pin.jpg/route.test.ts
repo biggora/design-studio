@@ -82,6 +82,30 @@ describe("/p/[slug]/pin.jpg", () => {
     expect(metadata.format).toBe("jpeg");
   });
 
+  it("renders from the CDN share JPEG when the design has a cdnImage", async () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
+    const design = makeDesign({
+      cdnImage: { key: "designs/f45e5bc7a5342c2c", version: 2, width: 1600, height: 1920 },
+    });
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(await tinyImagePng(), { status: 200, headers: { "Content-Type": "image/jpeg" } }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await callRoute(design.slug as string);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://images.threadquirk.lv/designs/f45e5bc7a5342c2c/share-v2.jpg",
+      expect.anything(),
+    );
+    const metadata = await sharp(Buffer.from(await response.arrayBuffer())).metadata();
+    expect(metadata.width).toBe(1000);
+    expect(metadata.height).toBe(1500);
+    vi.unstubAllEnvs();
+  });
+
   it("answers 503 without caching when the upstream fetch fails", async () => {
     const design = makeDesign();
     getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });

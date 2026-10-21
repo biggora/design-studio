@@ -50,10 +50,12 @@ The page resolves a legacy UUID the same way `/designs/{slug}` does, so
 A 1000×1500 (2:3) JPEG rendered server-side per request:
 
 - 1000×1500 canvas filled with the design's `backgroundColor`;
-- the design's display image (`getDesignDisplayImage` — Classic T-Shirt mockup
-  when captured, else the flat artwork) fetched **server-side** from the
-  allow-listed Redbubble host, scaled to fit ~1000×1000, centred in the upper
-  part;
+- the design's share image (`getShareImageUrl` — the pod-uploader CDN's
+  pre-flattened `share-v<version>.jpg` when the design has `cdnImage` and
+  `NEXT_PUBLIC_IMAGES_CDN` is set, else the Classic T-Shirt mockup, else the
+  flat artwork) fetched **server-side** from an allow-listed host (the
+  Redbubble hosts plus the configured image CDN), scaled to fit ~1000×1000,
+  centred in the upper part;
 - the design title in the lower band (dark text on light backgrounds, white on
   dark), clamped to 3 lines. No prices, no third-party logos.
 
@@ -107,9 +109,11 @@ next itself; **no new dependency**.
 **Item eligibility** (enforced in `fetchCollectionFeedDesigns`,
 `utils/database.ts`):
 
-- the design has a Classic T-Shirt mockup (`props.mockup_tshirt`) — pins render
-  the mockup, and designs with only the flat artwork (which carries Redbubble's
-  anti-hotlink watermark) are skipped;
+- the design has a pin source: a Classic T-Shirt mockup (`props.mockup_tshirt`)
+  **or** a pod-uploader CDN image (`cdnImage`, whose `share` JPEG backs the pin
+  — counted only while `NEXT_PUBLIC_IMAGES_CDN` is configured). Designs with
+  only the flat artwork (which carries Redbubble's anti-hotlink watermark) are
+  skipped;
 - the design has a marketplace link (Redbubble `externalLink`/`externalId`, or
   a validated `props.teepublicLink`) — the same rule the landing page's 404
   uses;

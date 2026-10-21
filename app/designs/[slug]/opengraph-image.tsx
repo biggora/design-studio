@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 import { getDesignById, getDesignBySlug, getSiteConfig } from "@/utils/database";
-import { getDesignDisplayImage } from "@/lib/image";
+import { getShareImageUrl } from "@/lib/image";
 import { SLUG_PATTERN, UUID_PATTERN } from "@/lib/slug";
 import { BrandCard, DesignCard, OG_SIZE, fetchImageDataUrl, loadOgFonts, loadOgLogo } from "@/lib/og";
 
@@ -35,7 +35,9 @@ export default async function Image({ params }: { params: Promise<{ slug: string
   }
 
   const { design } = data;
-  const imageDataUrl = await fetchImageDataUrl(getDesignDisplayImage(design).trim());
+  // The share image: the CDN's pre-flattened JPEG when published (satori cannot
+  // decode the transparent WebP variants), else the Redbubble display image.
+  const imageDataUrl = await fetchImageDataUrl(getShareImageUrl(design));
   return new ImageResponse(
     (
       <DesignCard

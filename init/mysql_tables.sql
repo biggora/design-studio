@@ -23,6 +23,7 @@ CREATE TABLE designs (
   `backgroundColor` VARCHAR(255) NOT NULL DEFAULT '#FFFFFF',
   `backgroundColors` TEXT,
   shared BOOLEAN DEFAULT FALSE,
+  `cdnImage` JSON,
   props JSON,
   `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP NULL,

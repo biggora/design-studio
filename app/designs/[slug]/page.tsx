@@ -1,12 +1,6 @@
-import Image from "next/image";
 import { cache } from "react";
 import { getSiteConfig, getDesignById, getDesignBySlug, fetchRandomDesigns } from "@/utils/database";
-import {
-  getDesignDisplayImage,
-  designCardHeight,
-  designCardWidth,
-  imageBlurPlaceholder,
-} from "@/lib/image";
+import { getShareImageUrl } from "@/lib/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   formatDate,
@@ -26,6 +20,7 @@ import {
 import FeaturedDesigns from "@/app/components/FeaturedDesigns";
 import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
+import { DesignImage } from "@/app/components/DesignImage";
 import { JsonLd } from "@/app/components/JsonLd";
 import BuyLink from "@/app/components/BuyLink";
 import { MobileBuyBar } from "@/app/components/MobileBuyBar";
@@ -144,7 +139,9 @@ export default async function DesignDetails(
     getTeepublicLink(design),
     config.affiliate.teepublicReferralId,
   );
-  const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
+  // Share surfaces (Pinterest intent, JSON-LD) take the share image — the CDN's
+  // pre-flattened JPEG when published, else the Redbubble display image.
+  const shareImage = getShareImageUrl(design) || "/images/no_image_available.svg";
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -176,7 +173,7 @@ export default async function DesignDetails(
     "@type": "CreativeWork",
     name: design.title,
     description: design.description,
-    image: displayImage,
+    image: shareImage,
     url: shareUrl,
     ...(design.createdAt ? { dateCreated: design.createdAt } : {}),
     keywords: design.keywords,
@@ -197,14 +194,10 @@ export default async function DesignDetails(
               className="relative md:pb-0 md:h-full"
               style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
             >
-              <Image
-                src={displayImage || "/images/no_image_available.svg"}
+              <DesignImage
+                design={design}
                 alt={design.collection ? `${design.title} – ${design.collection} design` : `${design.title} design`}
-                width={designCardWidth}
-                height={designCardHeight}
                 priority
-                placeholder="blur"
-                blurDataURL={imageBlurPlaceholder}
                 className="object-contain w-full h-full"
               />
             </div>
@@ -275,7 +268,7 @@ export default async function DesignDetails(
                 <ShareLinks
                   shareText={shareText}
                   shareUrl={shareUrl}
-                  imageUrl={displayImage}
+                  imageUrl={shareImage}
                 />
               </div>
               <p className="text-sm text-muted-foreground mt-4">

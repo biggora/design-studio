@@ -6,7 +6,7 @@ import { getSiteConfig, fetchDesigns, fetchFeedCollections, fetchFeaturedCollect
 import { Design } from "@/types/design";
 import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { DesignCard } from "@/app/components/DesignCard";
-import { getDesignDisplayImage } from "@/lib/image";
+import { getShareImageUrl } from "@/lib/image";
 import TrackCatalogState from "@/app/components/TrackCatalogState";
 import { buttonVariants } from "@/components/ui/button";
 import { parsePageParam } from "@/lib/utils";
@@ -69,12 +69,12 @@ export async function generateMetadata(
       type: "website",
       title,
       description,
-      images: designs.slice(0, 4).map((design) => getDesignDisplayImage(design)),
+      images: designs.slice(0, 4).map((design) => getShareImageUrl(design)),
     },
     twitter: {
       title,
       description,
-      images: designs.slice(0, 4).map((design) => getDesignDisplayImage(design)),
+      images: designs.slice(0, 4).map((design) => getShareImageUrl(design)),
     },
   };
 }

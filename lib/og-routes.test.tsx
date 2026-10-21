@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
 import config from "@/config/config.json";
 import type { Design } from "@/types/design";
@@ -12,9 +12,11 @@ const design: Design = {
   props: { mockup_tshirt: "https://ih1.redbubble.net/image.2/mockup.jpg" },
 };
 
+const getDesignBySlugMock = vi.hoisted(() => vi.fn());
+
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
-  getDesignBySlug: async (slug: string) => (slug === "space-cat" ? { design, relatedDesigns: [] } : null),
+  getDesignBySlug: getDesignBySlugMock,
   getDesignById: async () => null,
 }));
 
@@ -23,6 +25,12 @@ import TwitterImage from "@/app/designs/[slug]/twitter-image";
 import BrandImage from "@/app/opengraph-image";
 
 const realFetch = globalThis.fetch;
+
+beforeEach(() => {
+  getDesignBySlugMock.mockImplementation(async (slug: string) =>
+    slug === "space-cat" ? { design, relatedDesigns: [] } : null);
+});
+
 afterEach(() => vi.unstubAllGlobals());
 
 // ImageResponse loads its wasm through global fetch, so only intercept the mockup host.
@@ -51,6 +59,25 @@ describe("OpenGraph image routes", () => {
   it("still renders when the mockup fetch fails", async () => {
     stubMockupFetch(async () => { throw new Error("blocked"); });
     await expectCard(await DesignImage({ params: Promise.resolve({ slug: "space-cat" }) }));
+  });
+
+  it("uses the CDN share JPEG for a design with cdnImage (satori cannot decode WebP)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
+    const cdnDesign: Design = {
+      ...design,
+      externalImageUrl: "",
+      props: {},
+      cdnImage: { key: "designs/f45e5bc7a5342c2c", version: 1, width: 1600, height: 1920 },
+    };
+    getDesignBySlugMock.mockImplementation(async (slug: string) =>
+      slug === "space-cat" ? { design: cdnDesign, relatedDesigns: [] } : null);
+    const jpeg = await sharp({ create: { width: 30, height: 40, channels: 3, background: "#888" } }).jpeg().toBuffer();
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input) === "https://images.threadquirk.lv/designs/f45e5bc7a5342c2c/share-v1.jpg"
+        ? Promise.resolve(new Response(new Uint8Array(jpeg), { headers: { "content-type": "image/jpeg" } }))
+        : realFetch(input, init));
+    await expectCard(await DesignImage({ params: Promise.resolve({ slug: "space-cat" }) }));
+    vi.unstubAllEnvs();
   });
 
   it("falls back to the brand card for an unknown slug", async () => {

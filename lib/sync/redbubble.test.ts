@@ -635,6 +635,8 @@ describe("syncRedbubbleToSupabase", () => {
     expect(row.description).toBe("A hand-drawn design.\n\nPrinted on demand.");
     expect(row.slug).toBe("design-a");
     expect(typeof row.updatedAt).toBe("string");
+    // The ingest-only CDN column is never written by the scrapers.
+    expect(row).not.toHaveProperty("cdnImage");
 
     expect(result.inserted).toBe(1);
     expect(result.updated).toBe(0);

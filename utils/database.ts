@@ -12,7 +12,7 @@ import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
-import {getMockupUrl} from "@/lib/image";
+import {hasPinImage, normalizeCdnImage} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
@@ -116,6 +116,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         price: row.price as number | undefined,
         inStock: row.inStock as boolean | undefined,
         shared: Boolean(row.shared),
+        cdnImage: normalizeCdnImage(row.cdnImage),
         props: row.props as object | undefined,
     };
 }
@@ -491,6 +492,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         price: item.price as number | undefined,
         inStock: item.inStock as boolean | undefined,
         shared: item.shared as boolean | undefined,
+        cdnImage: normalizeCdnImage(item.cdnImage),
         props: item.props as object | undefined,
     };
 }
@@ -840,10 +842,10 @@ function isoTime(value: unknown): string {
 }
 
 /** Designs for one collection's Pinterest feed, newest first, already filtered and capped:
- * must have a Classic T-Shirt mockup (`props.mockup_tshirt` — pins render the mockup,
- * not the flat artwork) and a marketplace link, and must not already be pinned
- * through the API (a `design_social_posts` row with channel 'pinterest', status
- * 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
+ * must have a pin source — a Classic T-Shirt mockup (`props.mockup_tshirt`) or a pod-uploader
+ * CDN image (`cdnImage`, whose share JPEG backs the pin) — plus a marketplace link, and must
+ * not already be pinned through the API (a `design_social_posts` row with channel 'pinterest',
+ * status 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
  * `earliestListingAt` maps design id → the earliest design_listings.publishedAt, used
  * as the feed's pubDate. There is no hidden/trashed column in the schema (the `shared`
  * flag is vestigial and always false), so removal state is exactly the social-post row.
@@ -866,7 +868,7 @@ export async function fetchCollectionFeedDesigns(
     const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
         const unique = new Map(rows.map(design => [design.id, design]));
         const eligible = [...unique.values()]
-            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null);
+            .filter(design => hasMarketplaceLink(design) && hasPinImage(design));
         const memberships = await fetchDesignMemberships(eligible);
         const sizes = new Map(feedCollections.flatMap(entry => entry.size === undefined ? [] : [[entry.title, entry.size] as const]));
         const owned = assignDesignsToFeeds(eligible, memberships, assignCollectionSlugs([...feedCollections]), sizes)
@@ -886,9 +888,9 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))")
                 .eq("design_collections.collections.title", collectionTitle)
-                // Feed pins render the Classic T-Shirt mockup, so only rows that have
-                // one (props.mockup_tshirt) are eligible.
-                .or("props->>mockup_tshirt.not.is.null")
+                // Feed pins need a pin source: a Classic T-Shirt mockup (props.mockup_tshirt)
+                // or a pod-uploader CDN image (cdnImage, share JPEG).
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -900,7 +902,7 @@ export async function fetchCollectionFeedDesigns(
                 .from("designs")
                 .select("*")
                 .eq("collection", collectionTitle)
-                .or("props->>mockup_tshirt.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -930,7 +932,7 @@ export async function fetchCollectionFeedDesigns(
             `SELECT d.* FROM designs d
              WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
@@ -957,7 +959,7 @@ export async function fetchCollectionFeedDesigns(
 }
 
 /** Designs of any of the given collections for a gift RSS feed: deduplicated by id, newest first,
- * with the same eligibility as the collection feeds (marketplace link, Classic T-Shirt mockup).
+ * with the same eligibility as the collection feeds (marketplace link, mockup or CDN image).
  * Deliberately skips the one-feed-per-design assignment: gift feeds overlap collection feeds. */
 export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], limit: number): Promise<FeedDesigns> {
     const titles = [...new Set(collectionTitles)];
@@ -967,7 +969,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
 
     const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
         const designs = [...new Map(rows.map(design => [design.id, design])).values()]
-            .filter(design => hasMarketplaceLink(design) && getMockupUrl(design) !== null)
+            .filter(design => hasMarketplaceLink(design) && hasPinImage(design))
             .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
             .slice(0, safeLimit);
         return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
@@ -980,7 +982,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
                 ? client.from("designs").select("*").in("collection", titles)
                 : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
                     .in("design_collections.collections.title", titles);
-            return base.or("props->>mockup_tshirt.not.is.null")
+            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
         };
         const joined = await run(false);
@@ -997,7 +999,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
             `SELECT d.* FROM designs d
              WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title IN (?))
-               AND JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
             [titles, fetchLimit],
         );
@@ -1186,14 +1188,15 @@ export async function getDesignListings(lookup: ListingLookup): Promise<{design:
         }
         const client = getSupabase();
         const {data: design, error} = await client.from("designs")
-            .select("id, slug, title, externalId, sha256, sourceImageId").eq(field, value).maybeSingle();
+            .select("id, slug, title, externalId, sha256, sourceImageId, cdnImage").eq(field, value).maybeSingle();
         if (error) throw new Error("Failed to look up design", {cause: error});
         if (!design) return null;
+        const response = {...design, cdnImage: normalizeCdnImage(design.cdnImage)} as IngestDesign;
         const {data: listings, error: listingError} = await client.from("design_listings")
             .select("id, platform, account, externalId, url, title, tags, thumbnailUrl, publishedAt, extra")
             .eq("designId", design.id as string).order("createdAt").order("id");
         if (listingError) throw new Error("Failed to look up listings", {cause: listingError});
-        return {design: design as IngestDesign, listings: listings as DesignListing[]};
+        return {design: response, listings: listings as DesignListing[]};
     }
     const pool = getMySQLPool();
     const [rows] = await pool.query<mysql.RowDataPacket[]>(`SELECT * FROM designs WHERE ${field} = ?`, [value]);

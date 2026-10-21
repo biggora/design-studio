@@ -1,6 +1,5 @@
-import Image from "next/image";
 import { Design } from "@/types/design";
-import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
+import { DesignImage } from "@/app/components/DesignImage";
 import { cn, safeHexColor } from "@/lib/utils";
 
 type DesignThumbsProps = {
@@ -25,15 +24,7 @@ export function DesignThumbs({ designs, className }: DesignThumbsProps) {
           className="relative aspect-[3/4] overflow-hidden rounded-md bg-muted"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
         >
-          <Image
-            src={getDesignDisplayImage(design).trim() || "/images/no_image_available.svg"}
-            alt=""
-            fill
-            sizes="120px"
-            placeholder="blur"
-            blurDataURL={imageBlurPlaceholder}
-            className="object-contain"
-          />
+          <DesignImage design={design} alt="" fill sizes="120px" className="object-contain" />
         </div>
       ))}
     </div>

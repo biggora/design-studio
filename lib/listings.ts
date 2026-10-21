@@ -14,6 +14,11 @@ export type ListingInput = {
   publishedAt?: string;
   extra?: Record<string, unknown>;
 };
+/** The design's artwork published to the pod-uploader CDN (NEXT_PUBLIC_IMAGES_CDN).
+ * `key` addresses the immutable variant files (`<CDN>/<key>/<variant>-v<version>.webp`);
+ * `width`/`height` are the pixel size of the `main` variant. */
+export type CdnImage = { key: string; version: number; width: number; height: number };
+
 export type IngestInput = {
   design: {
     sourceImageId: number;
@@ -22,6 +27,7 @@ export type IngestInput = {
     description?: string;
     tags?: string[];
     backgroundColor?: string;
+    cdnImage?: CdnImage;
   };
   listing: ListingInput;
 };
@@ -32,6 +38,7 @@ export type IngestDesign = {
   externalId: number | null;
   sha256: string | null;
   sourceImageId: number | null;
+  cdnImage: CdnImage | null;
 };
 export type DesignListing = {
   id: string;
@@ -136,9 +143,31 @@ function sourceId(value: unknown): number {
   return value;
 }
 
+function positiveInt(value: unknown, field: string): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    invalid(field, "Expected an integer of at least 1");
+  }
+  return value;
+}
+
+// The key is derived, never trusted: the CDN files of a design live under
+// designs/<first 16 hex chars of its sha256>, so a mismatched key would make
+// the site display another design's artwork.
+function cdnImage(value: unknown, field: string, sha256: string): CdnImage {
+  const image = strictObject(value, field, ["key", "version", "width", "height"]);
+  const expectedKey = `designs/${sha256.slice(0, 16)}`;
+  if (image.key !== expectedKey) invalid(`${field}.key`, `Expected "${expectedKey}"`);
+  return {
+    key: text(image.key, `${field}.key`, 200),
+    version: positiveInt(image.version, `${field}.version`),
+    width: positiveInt(image.width, `${field}.width`),
+    height: positiveInt(image.height, `${field}.height`),
+  };
+}
+
 export function parseIngestInput(value: unknown): IngestInput {
   const body = strictObject(value, "", ["design", "listing"]);
-  const d = strictObject(body.design, "design", ["sourceImageId", "sha256", "title", "description", "tags", "backgroundColor"]);
+  const d = strictObject(body.design, "design", ["sourceImageId", "sha256", "title", "description", "tags", "backgroundColor", "cdnImage"]);
   const l = strictObject(body.listing, "listing", ["platform", "account", "externalId", "url", "title", "description", "tags", "thumbnailUrl", "publishedAt", "extra"]);
   const design: IngestInput["design"] = {
     sourceImageId: sourceId(d.sourceImageId), sha256: hash(d.sha256), title: text(d.title, "design.title", 500),
@@ -152,6 +181,7 @@ export function parseIngestInput(value: unknown): IngestInput {
     if (typeof d.backgroundColor !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(d.backgroundColor)) invalid("design.backgroundColor", "Expected #rgb or #rrggbb");
     design.backgroundColor = d.backgroundColor;
   }
+  if (d.cdnImage !== undefined) design.cdnImage = cdnImage(d.cdnImage, "design.cdnImage", design.sha256);
   if (l.platform !== "redbubble" && l.platform !== "teepublic" && l.platform !== "spreadshirt") invalid("listing.platform", "Unsupported platform");
   const listing: ListingInput = {
     platform: l.platform, account: text(l.account, "listing.account", 100),

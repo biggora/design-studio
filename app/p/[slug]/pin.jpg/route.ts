@@ -1,19 +1,20 @@
 import { NextResponse } from "next/server";
 import { cache } from "react";
 import { getDesignBySlug, getDesignById } from "@/utils/database";
-import { getDesignDisplayImage } from "@/lib/image";
+import { getShareImageUrl } from "@/lib/image";
 import { isAllowedPinSourceImage, renderPinImage } from "@/lib/pin-image";
 import { UUID_PATTERN, SLUG_PATTERN } from "@/lib/slug";
 
 /**
  * GET /p/[slug]/pin.jpg — the 1000×1500 (2:3) pin image for a design.
  *
- * The mockup is fetched server-side from the allow-listed Redbubble image host
- * (Pinterest only ever sees this site's URL — every feed URL must stay
- * on the claimed domain). The optional ?v= version param from the feed is
- * ignored here; it exists purely so a changed design gets a fresh URL past
- * caches. Upstream failures answer 503 with no-store so the CDN never pins a
- * broken image.
+ * The source is the share image — the pod-uploader CDN's pre-flattened share
+ * JPEG when the design has one, else the Redbubble mockup — fetched
+ * server-side from an allow-listed host (Pinterest only ever sees this site's
+ * URL — every feed URL must stay on the claimed domain). The optional ?v=
+ * version param from the feed is ignored here; it exists purely so a changed
+ * design gets a fresh URL past caches. Upstream failures answer 503 with
+ * no-store so the CDN never pins a broken image.
  */
 
 const PIN_CACHE_CONTROL = "public, max-age=86400, s-maxage=604800, stale-while-revalidate";
@@ -40,7 +41,7 @@ export async function GET(
     return notFoundResponse();
   }
 
-  const sourceUrl = getDesignDisplayImage(data.design).trim();
+  const sourceUrl = getShareImageUrl(data.design);
   if (!sourceUrl || !isAllowedPinSourceImage(sourceUrl)) {
     return notFoundResponse();
   }

@@ -185,6 +185,7 @@ describe("fetchFeedCollections", () => {
 
 describe("fetchGiftFeedDesigns", () => {
     it("unions section collections without duplicates, newest first, and caps at the limit", async () => {
+        vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
         responses = {
             designs: {data: [
                 supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
@@ -192,11 +193,12 @@ describe("fetchGiftFeedDesigns", () => {
                 supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
                 supabaseRow({id: "c", createdAt: "2026-10-07T00:00:00.000Z"}),
                 supabaseRow({id: "no-mockup", createdAt: "2026-10-10T00:00:00.000Z", props: {}}),
+                supabaseRow({id: "cdn-only", createdAt: "2026-10-06T00:00:00.000Z", props: {}, cdnImage: {key: "designs/a1", version: 1, width: 1600, height: 1920}}),
             ], error: null},
             design_listings: {data: [], error: null},
         };
         const {fetchGiftFeedDesigns} = await importFacade();
-        expect((await fetchGiftFeedDesigns(["Space", "Cats", "Space"], 100)).designs.map(design => design.id)).toEqual(["a", "b", "c"]);
+        expect((await fetchGiftFeedDesigns(["Space", "Cats", "Space"], 100)).designs.map(design => design.id)).toEqual(["a", "b", "c", "cdn-only"]);
         expect((await fetchGiftFeedDesigns(["Space", "Cats"], 2)).designs.map(design => design.id)).toEqual(["a", "b"]);
         const inStep = steps.designs.find(step => step.method === "in" && step.args[0] === "design_collections.collections.title");
         expect(inStep?.args[1]).toEqual(["Space", "Cats"]);
@@ -258,11 +260,13 @@ describe("fetchCollectionFeedDesigns", () => {
         expect(designs.map(design => design.id)).toEqual(["teepublic-only", "redbubble"]);
     });
 
-    it("mockup rule: only rows with props.mockup_tshirt are eligible — artwork-only and imageless rows are dropped", async () => {
+    it("pin source rule: mockup OR cdnImage — artwork-only and imageless rows are dropped", async () => {
+        // The CDN base is required to turn a cdnImage into a usable share image.
+        vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
         responses = {
             designs: {data: [
                 supabaseRow({id: "mockup-only", externalImageUrl: ""}),
-                supabaseRow({id: "artwork-only", props: {}}),
+                supabaseRow({id: "cdn-only", props: {}, cdnImage: {key: "designs/a1", version: 1, width: 1600, height: 1920}}),
                 supabaseRow({id: "no-image-at-all", externalImageUrl: "", props: {}}),
             ], error: null},
             design_social_posts: {data: [], error: null},
@@ -271,10 +275,10 @@ describe("fetchCollectionFeedDesigns", () => {
 
         const {fetchCollectionFeedDesigns} = await importFacade();
         const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
-        expect(designs.map(design => design.id)).toEqual(["mockup-only"]);
-        // The mockup requirement is one PostgREST or/is-null filter over the prop.
+        expect(designs.map(design => design.id)).toEqual(["mockup-only", "cdn-only"]);
+        // The pin-source requirement is one PostgREST or/is-null filter over both sources.
         const orStep = steps.designs.filter(step => step.method === "or")[0];
-        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null");
+        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null");
     });
 
     it("excludes designs already pinned through the API (published pinterest post)", async () => {
@@ -380,7 +384,7 @@ describe("fetchCollectionFeedDesigns", () => {
 
         const [sql, params] = mysqlQuery.mock.calls[0];
         expect(String(sql)).toContain("JOIN collections c ON c.id = dc.collectionId");
-        expect(String(sql)).toContain("JSON_EXTRACT(d.props, '$.mockup_tshirt')");
+        expect(String(sql)).toContain("JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL");
         expect(String(sql)).toContain("NOT EXISTS");
         expect(String(sql)).toContain("design_social_posts");
         expect(params[0]).toBe("Space");

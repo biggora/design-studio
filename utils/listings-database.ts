@@ -4,6 +4,7 @@ import { designSlugBase, uniqueSlug } from "@/lib/slug";
 import {
   DesignListing, IngestDesign, IngestInput, IngestResult, ListingsError,
 } from "@/lib/listings";
+import { normalizeCdnImage } from "@/lib/image";
 
 type DesignRow = IngestDesign & {
   source: string | null;
@@ -18,6 +19,8 @@ export function ingestDesignResponse(row: IngestDesign): IngestDesign {
   return {
     id: row.id, slug: row.slug, title: row.title, externalId: row.externalId,
     sha256: row.sha256, sourceImageId: row.sourceImageId,
+    // mysql2 hands JSON columns back as strings; Supabase as objects.
+    cdnImage: normalizeCdnImage((row as { cdnImage?: unknown }).cdnImage),
   };
 }
 
@@ -67,8 +70,8 @@ export async function ingestListingMySQL(pool: mysql.Pool, input: IngestInput): 
       const taken = await query("SELECT slug FROM designs WHERE slug LIKE ? FOR UPDATE", [`${base}%`]);
       const slug = uniqueSlug(base, new Set(taken.map(row => row.slug as string)));
       await connection.query(
-        "INSERT INTO designs (id, title, slug, description, keywords, backgroundColor, source, sha256, sourceImageId, externalId) VALUES (?, ?, ?, ?, ?, ?, 'pod-studio', ?, ?, ?)",
-        [id, d.title, slug, d.description ?? "", (d.tags ?? []).join(","), d.backgroundColor ?? "#FFFFFF", d.sha256, d.sourceImageId, l.platform === "redbubble" ? Number(l.externalId) : null],
+        "INSERT INTO designs (id, title, slug, description, keywords, backgroundColor, source, sha256, sourceImageId, externalId, cdnImage) VALUES (?, ?, ?, ?, ?, ?, 'pod-studio', ?, ?, ?, ?)",
+        [id, d.title, slug, d.description ?? "", (d.tags ?? []).join(","), d.backgroundColor ?? "#FFFFFF", d.sha256, d.sourceImageId, l.platform === "redbubble" ? Number(l.externalId) : null, d.cdnImage ? JSON.stringify(d.cdnImage) : null],
       );
       [target] = await query("SELECT * FROM designs WHERE id = ?", [id]) as (mysql.RowDataPacket & DesignRow)[];
     }
@@ -101,10 +104,13 @@ export async function ingestListingMySQL(pool: mysql.Pool, input: IngestInput): 
     if (l.platform === "redbubble" && l.extra?.mockupTshirt && !props.mockup_tshirt) props.mockup_tshirt = l.extra.mockupTshirt;
     if (l.platform === "teepublic") Object.assign(props, { teepublicLink: l.url, teepublicId: l.externalId });
     await connection.query(
-      "UPDATE designs SET sha256 = COALESCE(sha256, ?), sourceImageId = COALESCE(sourceImageId, ?), source = COALESCE(source, 'pod-studio'), description = COALESCE(description, ?), keywords = COALESCE(keywords, ?), backgroundColor = COALESCE(backgroundColor, ?), externalId = COALESCE(externalId, ?), externalLink = ?, props = ?, updatedAt = UTC_TIMESTAMP() WHERE id = ?",
+      // A present cdnImage overwrites (e.g. a higher version); an absent one keeps the
+      // stored value — there is no way to clear the column through the API.
+      "UPDATE designs SET sha256 = COALESCE(sha256, ?), sourceImageId = COALESCE(sourceImageId, ?), source = COALESCE(source, 'pod-studio'), description = COALESCE(description, ?), keywords = COALESCE(keywords, ?), backgroundColor = COALESCE(backgroundColor, ?), externalId = COALESCE(externalId, ?), externalLink = ?, cdnImage = COALESCE(?, cdnImage), props = ?, updatedAt = UTC_TIMESTAMP() WHERE id = ?",
       [d.sha256, d.sourceImageId, d.description ?? null, d.tags?.join(",") ?? null, d.backgroundColor ?? null,
         l.platform === "redbubble" ? Number(l.externalId) : null,
         l.platform === "redbubble" ? `https://www.redbubble.com/shop/ap/${l.externalId}` : design.externalLink,
+        d.cdnImage ? JSON.stringify(d.cdnImage) : null,
         JSON.stringify(props), design.id],
     );
     const [savedDesign] = await query("SELECT * FROM designs WHERE id = ?", [design.id]);

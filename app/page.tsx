@@ -1,16 +1,10 @@
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
 import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages } from "@/utils/database";
 import { Design } from "@/types/design";
 import { HomeConfig, HomeValue, SiteConfig } from "@/lib/store";
-import {
-  getDesignDisplayImage,
-  designCardHeight,
-  designCardWidth,
-  imageBlurPlaceholder,
-} from "@/lib/image";
+import { DesignImage } from "@/app/components/DesignImage";
 import { DesignCard } from "@/app/components/DesignCard";
 import { Input } from "@/components/ui/input";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -79,8 +73,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Framed artwork card shared by the hero and the about teaser. */
 function ArtCard({ design, caption, priority }: { design: Design; caption?: string; priority?: boolean }) {
-  const displayImage =
-    getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
   // Designs without a baked background fall back to the muted surface instead
   // of letting the frame show through as dark letterbox bands.
   const bakedBackground = safeHexColor(design.backgroundColor);
@@ -97,16 +89,12 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
           className="relative aspect-[4/3] w-full bg-muted"
           style={bakedBackground ? { backgroundColor: bakedBackground } : undefined}
         >
-          <Image
-            src={displayImage}
+          <DesignImage
+            design={design}
             alt=""
-            width={designCardWidth}
-            height={designCardHeight}
             priority={priority}
-            placeholder="blur"
-            blurDataURL={imageBlurPlaceholder}
-            className="object-contain w-full h-full"
             sizes="(max-width: 1024px) 100vw, 40vw"
+            className="object-contain w-full h-full"
           />
         </div>
       </AccentLink>

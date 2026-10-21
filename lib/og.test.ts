@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchImageDataUrl, loadOgLogo } from "@/lib/og";
+import { isAllowedPinSourceImage } from "@/lib/pin-image";
 
 const URL_OK = "https://ih1.redbubble.net/image.1/mockup.jpg";
+const CDN = "https://images.threadquirk.lv";
+const SHARE_JPG = `${CDN}/designs/f45e5bc7a5342c2c/share-v1.jpg`;
 
 function stubFetch(impl: () => Promise<unknown>) {
   const fn = vi.fn(impl);
@@ -51,6 +54,36 @@ describe("fetchImageDataUrl", () => {
     expect(await fetchImageDataUrl("https://evil.example.com/a.jpg")).toBeNull();
     expect(await fetchImageDataUrl("/images/no_image_available.svg")).toBeNull();
     expect(fn).not.toHaveBeenCalled();
+  });
+});
+
+describe("isAllowedPinSourceImage", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps the Redbubble allowlist and rejects lookalikes and plain http", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    expect(isAllowedPinSourceImage(URL_OK)).toBe(true);
+    expect(isAllowedPinSourceImage("https://evil-redbubble.net/a.jpg")).toBe(false);
+    expect(isAllowedPinSourceImage("http://ih1.redbubble.net/a.jpg")).toBe(false);
+    expect(isAllowedPinSourceImage(SHARE_JPG)).toBe(false);
+  });
+
+  it("allows the configured image CDN host", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    expect(isAllowedPinSourceImage(SHARE_JPG)).toBe(true);
+    // The share JPEG must stay a JPEG: a webp from the same host stays rejected.
+    expect(isAllowedPinSourceImage(`${CDN}/designs/f45e5bc7a5342c2c/card-v1.webp`)).toBe(true);
+  });
+
+  it("rejects a lookalike of the CDN host", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    expect(isAllowedPinSourceImage("https://images.threadquirk.lv.evil.example/share-v1.jpg")).toBe(false);
+    expect(isAllowedPinSourceImage("https://images.threadquirk.lv.evil.example")).toBe(false);
+  });
+
+  it("rejects http: even on the CDN host", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    expect(isAllowedPinSourceImage("http://images.threadquirk.lv/share-v1.jpg")).toBe(false);
   });
 });
 

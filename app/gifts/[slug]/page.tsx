@@ -10,7 +10,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 import { CardGrid } from "@/app/components/CardGrid";
-import { getDesignDisplayImage } from "@/lib/image";
+import { getShareImageUrl } from "@/lib/image";
 import { designPath } from "@/lib/slug";
 import { collectionPath } from "@/lib/collections";
 import { getGiftPages, giftPath } from "@/lib/gifts";
@@ -44,7 +44,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 
   const title = `${page.title} - ${config.name}`;
   const canonical = giftPath(page.slug);
-  const images = sections.flatMap((section) => section.designs).slice(0, 4).map((design) => getDesignDisplayImage(design));
+  const images = sections.flatMap((section) => section.designs).slice(0, 4).map((design) => getShareImageUrl(design));
   return {
     title,
     description: page.description,

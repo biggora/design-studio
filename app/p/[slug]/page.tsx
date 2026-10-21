@@ -1,9 +1,7 @@
-import Image from "next/image";
 import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSiteConfig, getDesignBySlug, getDesignById } from "@/utils/database";
-import { getDesignDisplayImage, imageBlurPlaceholder } from "@/lib/image";
 import {
   getRedBubbleDesignPageLink,
   getTeepublicLink,
@@ -17,6 +15,7 @@ import { UUID_PATTERN, SLUG_PATTERN, designPath } from "@/lib/slug";
 import { pinImageUrl } from "@/lib/pinterest-feed";
 import { SiteConfig } from "@/lib/store";
 import BuyLink from "@/app/components/BuyLink";
+import { DesignImage } from "@/app/components/DesignImage";
 import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
@@ -109,8 +108,6 @@ export default async function PinLandingPage(props: Props) {
     ? (teePublicLink !== "#" ? { label: "Buy on TeePublic", href: teePublicLink } : null)
     : null;
 
-  const displayImage = getDesignDisplayImage(design).trim() || "/images/no_image_available.svg";
-
   return (
     <PageShell as="main" className="pt-6">
       <div className="mx-auto w-full max-w-md">
@@ -118,13 +115,11 @@ export default async function PinLandingPage(props: Props) {
           className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
         >
-          <Image
-            src={displayImage}
+          <DesignImage
+            design={design}
             alt={design.title}
             fill
             priority
-            placeholder="blur"
-            blurDataURL={imageBlurPlaceholder}
             sizes="(max-width: 640px) 100vw, 576px"
             className="object-contain"
           />

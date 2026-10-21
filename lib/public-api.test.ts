@@ -139,6 +139,44 @@ describe("toPublicPrint", () => {
   });
 });
 
+describe("toPublicPrint cdnImage", () => {
+  const CDN = "https://images.threadquirk.lv";
+  const cdnImage = { key: "designs/f45e5bc7a5342c2c", version: 2, width: 1600, height: 1920 };
+  // A Redbubble image URL the bg override can rewrite (image.<id>/ path shape).
+  const redbubbleArtwork = "https://ih1.redbubble.net/image.5123/flat.jpg";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("returns the share JPEG as imageUrl for a CDN design, leaving mockupUrl untouched", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const result = toPublicPrint(makeDesign({ cdnImage, props: { mockup_tshirt: "https://redbubble.com/mockup.jpg" } }));
+    expect(result.imageUrl).toBe(`${CDN}/designs/f45e5bc7a5342c2c/share-v2.jpg`);
+    expect(result.mockupUrl).toBe("https://redbubble.com/mockup.jpg");
+    expect(result.backgroundColor).toBe("#ffffff");
+  });
+
+  it("keeps the bg override on top of the CDN image when it resolves", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const result = toPublicPrint(makeDesign({ cdnImage, externalImageUrl: redbubbleArtwork }), "white");
+    expect(result.imageUrl).toBe("https://ih1.redbubble.net/image.5123/raf,750x,075,f,fafafa:ca443f4786.jpg");
+    expect(result.backgroundColor).toBe("#fafafa");
+  });
+
+  it("keeps the stored imageUrl for designs without cdnImage", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const result = toPublicPrint(makeDesign({ externalImageUrl: redbubbleArtwork }));
+    expect(result.imageUrl).toBe(redbubbleArtwork);
+  });
+
+  it("ignores cdnImage when the CDN base is unset", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    const result = toPublicPrint(makeDesign({ cdnImage, externalImageUrl: redbubbleArtwork }));
+    expect(result.imageUrl).toBe(redbubbleArtwork);
+  });
+});
+
 describe("corsHeaders", () => {
   afterEach(() => {
     vi.unstubAllEnvs();

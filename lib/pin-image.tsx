@@ -1,11 +1,13 @@
 import { ImageResponse } from "next/og";
 import sharp from "sharp";
 import { PIN_HEIGHT, PIN_WIDTH } from "@/lib/pinterest-feed";
+import { imagesCdnHost } from "@/lib/image";
 
 /**
- * Renders the 1000×1500 (2:3) Pinterest pin for a design: the design's mockup
- * on its own background colour, scaled to fit ~1000×1000 in the upper part,
- * with the design title in the lower band.
+ * Renders the 1000×1500 (2:3) Pinterest pin for a design: the design's share
+ * image (pod-uploader CDN JPEG or Redbubble mockup) on its own background
+ * colour, scaled to fit ~1000×1000 in the upper part, with the design title
+ * in the lower band.
  *
  * Layout/text goes through `next/og`'s ImageResponse (satori, bundled Noto Sans
  * — no dependency on system fonts), and the result is encoded as JPEG with
@@ -15,14 +17,17 @@ import { PIN_HEIGHT, PIN_WIDTH } from "@/lib/pinterest-feed";
 
 const MAX_PIN_BYTES = 1024 * 1024;
 
-// Mirrors the remotePatterns allowlist in next.config.mjs — pins are only ever
-// composed from the same hosts the storefront may hotlink.
+// Mirrors the remotePatterns allowlist in next.config.mjs, plus the site's own
+// image CDN (NEXT_PUBLIC_IMAGES_CDN) — pins are only ever composed from hosts
+// this deployment is allowed to hotlink.
 const ALLOWED_IMAGE_HOST_SUFFIXES = [".redbubble.com", ".redbubble.net", ".placeholder.com"];
 
 export function isAllowedPinSourceImage(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:") return false;
+    const cdnHost = imagesCdnHost();
+    if (cdnHost && parsed.hostname === cdnHost) return true;
     return ALLOWED_IMAGE_HOST_SUFFIXES.some(
       suffix => parsed.hostname === suffix.slice(1) || parsed.hostname.endsWith(suffix),
     );

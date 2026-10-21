@@ -77,6 +77,7 @@ CREATE TABLE public.designs (
     "backgroundColor" CHARACTER VARYING NOT NULL DEFAULT '#FFFFFF'::character varying,
     "backgroundColors" TEXT NULL,
     shared BOOLEAN NULL DEFAULT false,
+    "cdnImage" JSONB NULL,
     props JSON NULL,
     "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     "updatedAt" TIMESTAMP WITHOUT TIME ZONE NULL,
@@ -107,6 +108,7 @@ CREATE TABLE designs (
   `backgroundColor` VARCHAR(255) NOT NULL DEFAULT '#FFFFFF',
   `backgroundColors` TEXT,
   shared BOOLEAN DEFAULT FALSE,
+  `cdnImage` JSON,
   props JSON,
   `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP NULL,
@@ -137,6 +139,7 @@ CREATE TABLE designs (
 | `backgroundColor` | `VARCHAR` | `VARCHAR(255)` | DEFAULT `'#FFFFFF'` | Primary background color in HEX format. |
 | `backgroundColors` | `TEXT` | `TEXT` | NULL | Additional color palette or list of available shades. |
 | `shared` | `BOOLEAN` | `BOOLEAN` | DEFAULT `false` | Visibility/publication flag for the shared catalog. |
+| `cdnImage` | `JSONB` | `JSON` | NULL | Pod-uploader CDN artwork descriptor `{ key, version, width, height }`, or NULL. Written only by the listings ingest (`ingest_design_listing` / `ingestListingMySQL`); never by the scrapers or background tooling. `key` addresses `<NEXT_PUBLIC_IMAGES_CDN>/<key>/<thumb|card|main>-v<version>.webp` and `share-v<version>.jpg` files (immutable, `version` ≥ 1); `width`/`height` are the `main` variant's pixel size. |
 | `props` | `JSON` | `JSON` | NULL | Additional unstructured metadata (source, original URL, etc.). |
 | `createdAt` | `TIMESTAMP WITH TIME ZONE` | `TIMESTAMP` | DEFAULT NOW | Date the artwork was added to the catalog. |
 | `updatedAt` | `TIMESTAMP` | `TIMESTAMP` | NULL | Date of the last metadata update or synchronization. |
@@ -266,6 +269,7 @@ For deployments that already have `studio` and `designs` provisioned, apply the 
 - `init/migrations/002_design_slugs_postgres.sql` / `002_design_slugs_mysql.sql` — add the nullable unique `designs.slug` column and `designs_slug_key` constraint. Idempotent (guarded by column/constraint existence checks).
 - `init/migrations/003_design_listings_postgres.sql` / `003_design_listings_mysql.sql` — add ingest identities and `design_listings`, allow NULL Redbubble IDs, and widen MySQL design titles to 500 characters. The PostgreSQL migration also installs the transactional ingest RPC and column grants/RLS. Both scripts are rerunnable. Apply 002 first, then 003 before deploying this API or running the updated scrapers. Fresh installs use the full table/function scripts instead.
 - `init/migrations/004_design_social_posts_postgres.sql` / `004_design_social_posts_mysql.sql` — add the private `design_social_posts` table (§ 2.7). The PostgreSQL migration also installs its RLS policy/grants and the `upsert_design_social_post`, `list_design_social_posts`, and `summarize_design_social_posts` RPCs (§ 3.1). Both scripts are rerunnable; apply after 003.
+- `init/migrations/005_design_cdn_image_postgres.sql` / `005_design_cdn_image_mysql.sql` — add the nullable `designs.cdnImage` column (Postgres `JSONB`, MySQL `JSON`) and reinstall `ingest_design_listing` with the `cdnImage` semantics (present → store/overwrite, absent → keep; never cleared). Both scripts are rerunnable; apply after 004. `init/postgres_functions.sql` carries the same function body for fresh installs.
 
 Run `npm run db:migrate` to apply all pending migrations using `.env` and `DATABASE_PROVIDER`. The command discovers numbered `*_postgres.sql` or `*_mysql.sql` files in `init/migrations/`, applies them in numeric order, and records each successful file and its checksum in the database (`design_studio_migrations.history` for PostgreSQL, `schema_migrations` for MySQL). Subsequent runs skip recorded files; editing an already recorded file is rejected. Add a new numbered migration for further changes. Concurrent migration runners are blocked by a database session lock.
 
@@ -394,7 +398,7 @@ Unique constraints: `(channel, externalId)` and `(designId, channel, account, va
 | `publishedAt` | TIMESTAMPTZ | DATETIME(3) | Defaults to now through ingest; UTC |
 | `createdAt`, `updatedAt` | TIMESTAMPTZ | DATETIME(3) | Required timestamps |
 
-Unique constraints: `(platform, externalId)` and `(designId, platform, account)`. There is no title-based cross-platform adoption. Existing curated design fields, including empty strings and default background colors, remain unchanged; only NULL values are filled. Descriptions/keywords on new designs default to empty strings when omitted.
+Unique constraints: `(platform, externalId)` and `(designId, platform, account)`. There is no title-based cross-platform adoption. Existing curated design fields, including empty strings and default background colors, remain unchanged; only NULL values are filled. Descriptions/keywords on new designs default to empty strings when omitted. `design.cdnImage` follows its own rule: present in the request → stored (overwriting a different value, e.g. a higher version); absent → the stored value is kept; there is no way to clear it through the API.
 
 The listings table has RLS enabled. `anon`/`authenticated` can SELECT only `designId`, `platform`, `externalId`, and `url`, the public link projection and safe marketplace identity used by scraper deduplication. They cannot read `account`, tags, descriptions, timestamps, thumbnails, or `extra`, and cannot write. Explicit column grants prevent `SELECT *` from exposing private listing metadata. The service role has full access; `ingest_design_listing` is SECURITY INVOKER and EXECUTE is revoked from PUBLIC/anon/authenticated.
 

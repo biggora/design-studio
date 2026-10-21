@@ -67,11 +67,11 @@ BEGIN
       chosen_slug := slug_base || '-' || suffix;
       suffix := suffix + 1;
     END LOOP;
-    INSERT INTO public.designs (title, slug, description, keywords, "backgroundColor", source, sha256, "sourceImageId", "externalId")
+    INSERT INTO public.designs (title, slug, description, keywords, "backgroundColor", source, sha256, "sourceImageId", "externalId", "cdnImage")
     VALUES (d->>'title', chosen_slug, coalesce(d->>'description', ''),
       coalesce((SELECT string_agg(value, ',') FROM jsonb_array_elements_text(d->'tags')), ''),
       coalesce(d->>'backgroundColor', '#FFFFFF'), 'pod-studio', d->>'sha256', (d->>'sourceImageId')::BIGINT,
-      CASE WHEN platform_name = 'redbubble' THEN work_id::BIGINT END)
+      CASE WHEN platform_name = 'redbubble' THEN work_id::BIGINT END, d->'cdnImage')
     RETURNING * INTO target;
     is_new_design := true;
   END IF;
@@ -118,12 +118,16 @@ BEGIN
     "backgroundColor" = coalesce("backgroundColor", d->>'backgroundColor'),
     "externalId" = CASE WHEN platform_name = 'redbubble' THEN coalesce("externalId", work_id::BIGINT) ELSE "externalId" END,
     "externalLink" = CASE WHEN platform_name = 'redbubble' THEN 'https://www.redbubble.com/shop/ap/' || work_id ELSE "externalLink" END,
+    -- A present cdnImage overwrites (e.g. a higher version); an absent one keeps the
+    -- stored value. There is no way to clear the column through the API.
+    "cdnImage" = CASE WHEN d ? 'cdnImage' THEN d->'cdnImage' ELSE "cdnImage" END,
     props = props_value::JSON, "updatedAt" = now()
   WHERE id = target.id RETURNING * INTO target;
 
   RETURN jsonb_build_object(
     'design', jsonb_build_object('id', target.id, 'slug', target.slug, 'title', target.title,
-      'externalId', target."externalId", 'sha256', target.sha256, 'sourceImageId', target."sourceImageId"),
+      'externalId', target."externalId", 'sha256', target.sha256, 'sourceImageId', target."sourceImageId",
+      'cdnImage', target."cdnImage"),
     'listing', to_jsonb(entry) - 'designId' - 'description' - 'createdAt' - 'updatedAt',
     'created', jsonb_build_object('design', is_new_design, 'listing', is_new_listing));
 EXCEPTION WHEN unique_violation THEN

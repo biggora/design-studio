@@ -1,7 +1,115 @@
 import { Design } from "@/types/design";
+import type { CdnImage } from "@/lib/listings";
 
 export const designCardWidth = 600;
 export const designCardHeight = 400;
+
+export const NO_IMAGE_PLACEHOLDER = "/images/no_image_available.svg";
+
+/** CDN variant widths matching pod-uploader's thumb/card/main files. */
+const CDN_VARIANT_WIDTHS = [
+  { variant: "thumb", width: 400 },
+  { variant: "card", width: 800 },
+  { variant: "main", width: 1600 },
+] as const;
+
+/**
+ * Base of the pod-uploader CDN (`NEXT_PUBLIC_IMAGES_CDN`), trailing slash
+ * stripped, or null when unset/empty or not an https URL — the site then
+ * behaves as if no design had a CDN image.
+ */
+export function imagesCdnBase(): string | null {
+  const raw = (process.env.NEXT_PUBLIC_IMAGES_CDN ?? "").trim().replace(/\/+$/, "");
+  return raw.startsWith("https://") ? raw : null;
+}
+
+/** Hostname of the CDN base (see imagesCdnBase), for server-side fetch allowlists. */
+export function imagesCdnHost(): string | null {
+  const base = imagesCdnBase();
+  if (!base) return null;
+  try {
+    return new URL(base).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/** Row values from both providers arrive as an object (Supabase jsonb) or a JSON string (mysql2). */
+export function normalizeCdnImage(value: unknown): CdnImage | null {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const { key, version, width, height } = value as Record<string, unknown>;
+  if (typeof key !== "string" || !key) return null;
+  if (![version, width, height].every(n => typeof n === "number" && Number.isSafeInteger(n) && n >= 1)) {
+    return null;
+  }
+  return { key, version: version as number, width: width as number, height: height as number };
+}
+
+function cdnVariantUrl(base: string, cdn: CdnImage, variant: string): string {
+  return `${base}/${cdn.key}/${variant}-v${cdn.version}.webp`;
+}
+
+/** The `share-v<version>.jpg` URL (artwork pre-flattened onto the background color), or null without a CDN image/env. */
+export function cdnShareImageUrl(design: Pick<Design, "cdnImage">): string | null {
+  const base = imagesCdnBase();
+  const cdn = design.cdnImage;
+  if (!base || !cdn) return null;
+  return `${base}/${cdn.key}/share-v${cdn.version}.jpg`;
+}
+
+export type DesignImageSource =
+  | {
+      kind: "cdn";
+      src: string;
+      srcSet: string;
+      width: number;
+      height: number;
+      backgroundColor: string;
+    }
+  | { kind: "remote"; src: string };
+
+/**
+ * What the storefront shows for a design: the pod-uploader CDN's flat artwork
+ * (transparent WebP variants over the design background) when published, else
+ * the existing Redbubble chain via getDesignDisplayImage.
+ */
+export function getDesignImage(design: Design): DesignImageSource {
+  const base = imagesCdnBase();
+  const cdn = design.cdnImage;
+  if (base && cdn) {
+    return {
+      kind: "cdn",
+      src: cdnVariantUrl(base, cdn, "card"),
+      srcSet: CDN_VARIANT_WIDTHS.map(({ variant, width }) => `${cdnVariantUrl(base, cdn, variant)} ${width}w`).join(", "),
+      width: cdn.width,
+      height: cdn.height,
+      backgroundColor: design.backgroundColor,
+    };
+  }
+  return { kind: "remote", src: getDesignDisplayImage(design).trim() || NO_IMAGE_PLACEHOLDER };
+}
+
+/**
+ * The image for consumers that may not accept WebP or transparency — OG and
+ * Twitter cards, Pinterest pins, JSON-LD `image`, RSS: the CDN's share JPEG
+ * when available, else the existing display image. No placeholder fallback —
+ * callers keep their own empty-value handling.
+ */
+export function getShareImageUrl(design: Design): string {
+  return cdnShareImageUrl(design) ?? getDesignDisplayImage(design).trim();
+}
+
+/** A design can back a Pinterest pin when it has a CDN share image or a Classic T-Shirt mockup. */
+export function hasPinImage(design: Design): boolean {
+  return cdnShareImageUrl(design) !== null || getMockupUrl(design) !== null;
+}
 
 /**
  * Reads the Classic T-Shirt mockup URL the sync stores in `props.mockup_tshirt`
