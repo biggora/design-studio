@@ -282,7 +282,7 @@ describe("fetchCollectionFeedDesigns", () => {
         expect(designs.map(design => design.id)).toEqual(["mockup-only", "cdn-only", "cdn-array"]);
         // The pin-source requirement is one PostgREST or/is-null filter over both sources.
         const orStep = steps.designs.filter(step => step.method === "or")[0];
-        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null");
+        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null,pinterestImage.not.is.null");
     });
 
     it("excludes designs already pinned through the API (published pinterest post)", async () => {

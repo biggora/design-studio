@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pinterest-plan-pg
+    environment:
+      POSTGRES_PASSWORD: pinterest_test
+      POSTGRES_DB: pinterest_test
+    ports: ["127.0.0.1:35439:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pinterest_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  mysql:
+    image: mysql:8.4
+    container_name: pinterest-plan-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: pinterest_test
+      MYSQL_DATABASE: pinterest_test
+    ports: ["127.0.0.1:35440:3306"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -ppinterest_test"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data
+    environment:
+      MINIO_ROOT_USER: pinterest_test
+      MINIO_ROOT_PASSWORD: pinterest_test_password
+    ports: ["127.0.0.1:35441:9000"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

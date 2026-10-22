@@ -179,9 +179,9 @@ export function getShareImageUrl(design: Design): string {
   return cdnShareImageUrl(design) ?? getDesignDisplayImage(design).trim();
 }
 
-/** A design can back a Pinterest pin when it has a CDN share image or a Classic T-Shirt mockup. */
+/** A pin needs a saved composition, a CDN share image or a Classic T-Shirt mockup. */
 export function hasPinImage(design: Design): boolean {
-  return cdnShareImageUrl(design) !== null || getMockupUrl(design) !== null;
+  return !!design.pinterestImage || cdnShareImageUrl(design) !== null || getMockupUrl(design) !== null;
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { CdnImage } from "@/lib/listings";
+import type { PinterestImage } from "@pod/pinterest-renderer/contract";
 
 /** One picked CDN artwork (key + main-variant size) — what getDesignImage resolves
  * from the design's stored mockup array for a given surface orientation. */
@@ -33,5 +34,6 @@ export interface Design {
    * hanger-full/hanger-close; a legacy single display object arrives wrapped as its flat-full
    * entry). Each surface picks its own orientation in lib/image.ts. */
   cdnImage?: CdnImage | null;
+  pinterestImage?: PinterestImage | null;
   props?: object;
 }

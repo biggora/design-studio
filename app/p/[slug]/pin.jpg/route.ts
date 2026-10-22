@@ -4,11 +4,14 @@ import { getDesignBySlug, getDesignById } from "@/utils/database";
 import { getShareImageUrl } from "@/lib/image";
 import { isAllowedPinSourceImage, renderPinImage } from "@/lib/pin-image";
 import { UUID_PATTERN, SLUG_PATTERN } from "@/lib/slug";
+import { assignedPinResponse } from "@/lib/pinterest-image-response";
 
 /**
  * GET /p/[slug]/pin.jpg — the 1000×1500 (2:3) pin image for a design.
  *
- * The source is the share image — the pod-uploader CDN's pre-flattened share
+ * Saved assignments prefer the precomputed JPEG, then reproduce the same
+ * composition with its frozen sources. Designs without an assignment use
+ * the share image — the pod-uploader CDN's pre-flattened share
  * JPEG when the design has one, else the Redbubble mockup — fetched
  * server-side from an allow-listed host (Pinterest only ever sees this site's
  * URL — every feed URL must stay on the claimed domain). The optional ?v=
@@ -39,6 +42,20 @@ export async function GET(
   const data = await loadDesign(slug);
   if (!data || !data.design) {
     return notFoundResponse();
+  }
+
+  if (data.design.pinterestImage) {
+    try {
+      const { bytes, cloud } = await assignedPinResponse(data.design.pinterestImage);
+      return new NextResponse(bytes, { headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": cloud ? PIN_CACHE_CONTROL : "public, max-age=60, s-maxage=60",
+        "Access-Control-Allow-Origin": "*",
+      } });
+    } catch (error) {
+      console.error("Error serving assigned Pinterest image:", error);
+      return new NextResponse(null, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
   }
 
   const sourceUrl = getShareImageUrl(data.design);

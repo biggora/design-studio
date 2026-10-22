@@ -2,6 +2,10 @@ import {cache} from "react";
 import {unstable_cache} from "next/cache";
 import {createClient} from "@supabase/supabase-js";
 import mysql from "mysql2/promise";
+import {normalizePinterestImage} from "@/lib/pinterest-image";
+import type {PinLookup, PinWrite, PinWriteResult, PinContext} from "@/lib/pinterest-image";
+import {setPinterestImageMySQL} from "@/utils/pinterest-image-database";
+import {isProductUrl} from "@pod/pinterest-renderer/contract";
 import {SiteConfig} from "@/lib/store";
 import {mapDataToConfig} from "@/lib/config";
 import {ConfigProp} from "@/types/config";
@@ -80,6 +84,138 @@ function getProvider(): string {
     return provider;
 }
 
+/** Authenticated Pinterest preparation context; no artwork is exposed through the public DTO. */
+export async function getPinterestContexts(
+    lookup: PinLookup | null,
+    page: number,
+    limit: number,
+    brand: string,
+): Promise<{ items: PinContext[]; total: number }> {
+    const columns: Record<string, string> = {
+        id: "id",
+        sha256: "sha256",
+        sourceImageId: "sourceImageId",
+        redbubbleId: "externalId",
+    };
+    const filters = Object.entries(lookup ?? {}).map(
+        ([k, v]) => [columns[k], v] as const,
+    );
+    const read = async (
+        field?: string,
+        value?: unknown,
+    ): Promise<Record<string, unknown>[]> => {
+        if (getProvider() === "mysql") {
+            const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+                `SELECT id, sha256, sourceImageId, externalId, active, title, props, pinterestImage FROM designs WHERE active = TRUE${field ? ` AND ${field} = ?` : ""} ORDER BY id LIMIT ? OFFSET ?`,
+                field ? [value, 1, 0] : [limit, (page - 1) * limit],
+            );
+            return rows;
+        }
+        let query = getSupabase()
+            .from("designs")
+            .select(
+                "id, sha256, sourceImageId, externalId, active, title, props, pinterestImage",
+            )
+            .eq("active", true)
+            .order("id");
+        if (field) query = query.eq(field, value as string | number).limit(1);
+        else query = query.range((page - 1) * limit, page * limit - 1);
+        const { data, error } = await query;
+        if (error)
+            throw new Error("Failed to read Pinterest context", {
+                cause: error,
+            });
+        return data ?? [];
+    };
+    let rows: Record<string, unknown>[];
+    let total: number;
+    if (filters.length) {
+        const found = (
+            await Promise.all(filters.map(([f, v]) => read(f, v)))
+        ).flat();
+        if (new Set(found.map((r) => r.id)).size > 1)
+            throw new ListingsError(
+                409,
+                "CONFLICT",
+                "Identifiers resolve to different designs",
+            );
+        rows = found.length ? [found[0]] : [];
+        // A supplied identifier cannot contradict a populated identity on the resolved row.
+        if (
+            rows[0] &&
+            filters.some(
+                ([f, v]) =>
+                    rows[0][f] != null && String(rows[0][f]) !== String(v),
+            )
+        )
+            throw new ListingsError(409, "CONFLICT", "Identifier mismatch");
+        total = rows.length;
+    } else {
+        rows = await read();
+        if (getProvider() === "mysql") {
+            const [count] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+                "SELECT COUNT(*) AS n FROM designs WHERE active = TRUE",
+            );
+            total = Number(count[0].n);
+        } else {
+            const r = await getSupabase()
+                .from("designs")
+                .select("id", { count: "exact", head: true })
+                .eq("active", true);
+            if (r.error)
+                throw new Error("Failed to count Pinterest contexts", {
+                    cause: r.error,
+                });
+            total = r.count ?? 0;
+        }
+    }
+    return {
+        total,
+        items: rows.map((r) => {
+            const props = (
+                typeof r.props === "string" ? JSON.parse(r.props) : r.props
+            ) as Record<string, unknown> | null;
+            const sources: PinContext["sources"] = {};
+            for (const [role, key] of [
+                ["tee", "mockup_tshirt"],
+                ["hat", "mockup_hat"],
+                ["mug", "mockup_mug"],
+                ["mousepad", "mockup_mousepad"],
+            ] as const) {
+                const url = props?.[key];
+                if (typeof url === "string" && isProductUrl(url))
+                    sources[role] = url;
+            }
+            return {
+                designId: String(r.id),
+                sha256: r.sha256 as string | null,
+                sourceImageId:
+                    r.sourceImageId == null ? null : Number(r.sourceImageId),
+                redbubbleId: r.externalId == null ? null : String(r.externalId),
+                active: true,
+                title: String(r.title),
+                brand,
+                sources,
+                pinterestImage: normalizePinterestImage(r.pinterestImage),
+            };
+        }),
+    };
+}
+
+export async function setPinterestImage(
+    write: PinWrite,
+): Promise<PinWriteResult> {
+    if (getProvider() === "mysql")
+        return setPinterestImageMySQL(getMySQLPool(), write);
+    const { data, error } = await getSupabase().rpc(
+        "set_design_pinterest_image",
+        { write },
+    );
+    if (error)
+        throw new Error("Failed to save Pinterest image", { cause: error });
+    return data as PinWriteResult;
+}
+
 // The sync pipeline stores "no_collection" when a design has no collection;
 // that sentinel is for query bookkeeping and must never reach the UI, which
 // treats an empty collection as "no collection".
@@ -127,6 +263,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         shared: Boolean(row.shared),
         active: normalizeActive(row.active),
         cdnImage: normalizeCdnArtworkOptions(row.cdnImage),
+        pinterestImage: normalizePinterestImage(row.pinterestImage),
         props: row.props as object | undefined,
     };
 }
@@ -511,6 +648,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         shared: item.shared as boolean | undefined,
         active: normalizeActive(item.active),
         cdnImage: normalizeCdnArtworkOptions(item.cdnImage),
+        pinterestImage: normalizePinterestImage(item.pinterestImage),
         props: item.props as object | undefined,
     };
 }
@@ -1013,7 +1151,7 @@ export async function fetchCollectionFeedDesigns(
                 .eq("design_collections.collections.title", collectionTitle)
                 // Feed pins need a pin source: a Classic T-Shirt mockup (props.mockup_tshirt)
                 // or a pod-uploader CDN image (cdnImage, share JPEG).
-                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null,pinterestImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1026,7 +1164,7 @@ export async function fetchCollectionFeedDesigns(
                 .select("*")
                 .eq("active", true)
                 .eq("collection", collectionTitle)
-                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null,pinterestImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1057,7 +1195,7 @@ export async function fetchCollectionFeedDesigns(
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL OR d.pinterestImage IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
@@ -1108,7 +1246,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
                 : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
                     .eq("active", true)
                     .in("design_collections.collections.title", titles);
-            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null,pinterestImage.not.is.null")
                 .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
         };
         const joined = await run(false);
@@ -1126,7 +1264,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title IN (?))
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL OR d.pinterestImage IS NOT NULL)
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
             [titles, fetchLimit],
         );

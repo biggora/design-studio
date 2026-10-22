@@ -26,8 +26,9 @@ export const FEED_MAX_ITEMS = 100;
 export const FEED_TITLE_MAX = 100;
 export const FEED_DESCRIPTION_MAX = 500;
 
-/** The pin URL carries ?v=<updatedAt hash>; the route itself ignores it. */
-export function designVersionHash(design: Pick<Design, "updatedAt" | "createdAt">): string {
+/** Assigned pins use their permanent hash; legacy pins retain the updatedAt cache buster. */
+export function designVersionHash(design: Pick<Design, "updatedAt" | "createdAt" | "pinterestImage">): string {
+  if (design.pinterestImage) return design.pinterestImage.assignment.hash;
   const source = design.updatedAt || design.createdAt || "1";
   return createHash("sha256").update(source).digest("hex").slice(0, 6);
 }
@@ -43,7 +44,7 @@ export function pinLandingUrl(domain: string, design: Pick<Design, "id" | "slug"
 
 export function pinImageUrl(
   domain: string,
-  design: Pick<Design, "id" | "slug" | "updatedAt" | "createdAt">,
+  design: Pick<Design, "id" | "slug" | "updatedAt" | "createdAt" | "pinterestImage">,
 ): string {
   return `${pinLandingUrl(domain, design)}/pin.jpg?v=${designVersionHash(design)}`;
 }

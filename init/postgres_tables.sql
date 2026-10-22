@@ -28,6 +28,7 @@ create table
                        shared boolean null default false,
                        active boolean not null default true,
                        "cdnImage" jsonb null,
+                       "pinterestImage" jsonb null,
                        props json null,
                        "createdAt" timestamp with time zone not null default now(),
                        "updatedAt" timestamp without time zone null,

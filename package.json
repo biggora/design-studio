@@ -32,6 +32,7 @@
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",
     "@next/third-parties": "^16.3.6",
+    "@pod/pinterest-renderer": "file:vendor/pod-pinterest-renderer-1.0.0.tgz",
     "@supabase/supabase-js": "^2.47.1",
     "cheerio": "^1.0.0-rc.12",
     "class-variance-authority": "^0.7.1",

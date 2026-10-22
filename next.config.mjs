@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  serverExternalPackages: ["@pod/pinterest-renderer", "fontkit", "sharp"],
+  outputFileTracingIncludes: {
+    "/p/*/pin.jpg": ["./node_modules/@pod/pinterest-renderer/fonts/**/*"],
+  },
   images: {
     remotePatterns: [
       {
