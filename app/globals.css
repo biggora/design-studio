@@ -67,6 +67,19 @@
     repeating-radial-gradient(circle at 86% 82%, hsl(var(--foreground) / 0.02) 0 1px, transparent 1px 120px);
 }
 
+/*
+ * Watermark overlay for artwork previews (DesignImage + NEXT_PUBLIC_WATERMARK).
+ * The mask shape — a staggered checkerboard of the configured text — comes
+ * from the component as --watermark-mask (data-URI SVG, env is build-time
+ * config); this class only carries the token-sourced ink and repeat behavior.
+ * Mid-gray ink reads on both light baked backgrounds and dark artwork.
+ */
+.watermark-tile {
+  background-color: hsl(var(--muted-foreground) / 0.4);
+  -webkit-mask-image: var(--watermark-mask);
+  mask-image: var(--watermark-mask);
+}
+
 /* Browser chrome carries the world: dark native controls, ember caret and
    selection, quiet scrollbars. */
 html {

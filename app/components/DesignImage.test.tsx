@@ -63,19 +63,21 @@ describe("DesignImage", () => {
     vi.unstubAllEnvs();
   });
 
-  it("stamps the watermark caption over both branches when NEXT_PUBLIC_WATERMARK is set", () => {
+  it("tiles a watermark pattern over both branches when NEXT_PUBLIC_WATERMARK is set", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", cdnBase);
     vi.stubEnv("NEXT_PUBLIC_WATERMARK", "threadquirk.lv");
     const cdnHtml = renderToStaticMarkup(
       <DesignImage design={makeDesign({ cdnImage: { key, version: 2, width: 1600, height: 1920 } })} alt="Space cat" sizes="30vw" />,
     );
-    expect(cdnHtml).toContain(">threadquirk.lv</span>");
+    expect(cdnHtml).toContain("watermark-tile");
     expect(cdnHtml).toContain('aria-hidden="true"');
     expect(cdnHtml).toContain("pointer-events-none");
+    // The configured text travels inside the encoded SVG mask data URI.
+    expect(cdnHtml).toContain("threadquirk.lv");
 
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
     const remoteHtml = renderToStaticMarkup(<DesignImage design={makeDesign()} alt="Space cat" />);
-    expect(remoteHtml).toContain(">threadquirk.lv</span>");
+    expect(remoteHtml).toContain("watermark-tile");
     vi.unstubAllEnvs();
   });
 
@@ -83,7 +85,7 @@ describe("DesignImage", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
     vi.stubEnv("NEXT_PUBLIC_WATERMARK", "   ");
     const html = renderToStaticMarkup(<DesignImage design={makeDesign()} alt="Space cat" />);
-    expect(html).not.toContain("pointer-events-none");
+    expect(html).not.toContain("watermark-tile");
     vi.unstubAllEnvs();
   });
 

@@ -59,7 +59,7 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `NEXT_PUBLIC_WATERMARK` | No | — (unset) | Text stamped as a small CSS overlay caption over rendered artwork previews (`lib/image.ts` `watermarkText()` → the overlay in `app/components/DesignImage.tsx`), e.g. `threadquirk.lv`. DOM-only: it deters casual copying/screenshots of previews and brands reposts, but is absent from OG/Twitter/Pinterest/JSON-LD/public-API image URLs and from the downloadable image files. Unset or empty = disabled. `NEXT_PUBLIC_*` values are inlined at build time: set the variable, then redeploy. |
+| `NEXT_PUBLIC_WATERMARK` | No | — (unset) | Text tiled as a staggered-checkerboard CSS watermark over rendered artwork previews (`lib/image.ts` `watermarkText()` → the `.watermark-tile` overlay in `app/components/DesignImage.tsx` + `globals.css`), e.g. `threadquirk.lv`. DOM-only: it deters casual copying/screenshots of previews and brands reposts, but is absent from OG/Twitter/Pinterest/JSON-LD/public-API image URLs and from the downloadable image files. Unset or empty = disabled. `NEXT_PUBLIC_*` values are inlined at build time: set the variable, then redeploy. |
 
 ### 1.5 Site config cache & Supabase webhook
 

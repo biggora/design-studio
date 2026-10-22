@@ -1,4 +1,5 @@
 import Image from "next/image";
+import type { CSSProperties } from "react";
 import { Design } from "@/types/design";
 import {
   designCardHeight,
@@ -31,8 +32,8 @@ type DesignImageProps = {
  * Vercel holds no CDN credentials and must not fetch-and-reproxy those
  * files; the browser picks the variant by rendered width. Every other
  * design keeps next/image (Redbubble hosts, blur placeholder, optimizer).
- * When NEXT_PUBLIC_WATERMARK is set, a small DOM-only caption is stamped
- * over the artwork (absent from OG/Pinterest/API image URLs by design).
+ * When NEXT_PUBLIC_WATERMARK is set, a DOM-only checkerboard watermark is
+ * tiled over the artwork (absent from OG/Pinterest/API image URLs by design).
  */
 export function DesignImage({ design, alt, className, sizes, priority, fill = false, width, height }: DesignImageProps) {
   const source = getDesignImage(design);
@@ -56,7 +57,7 @@ export function DesignImage({ design, alt, className, sizes, priority, fill = fa
           decoding="async"
           className={cn(fill && "absolute inset-0 h-full w-full", className)}
         />
-        {watermark && <WatermarkMark text={watermark} />}
+        {watermark && <WatermarkOverlay text={watermark} />}
       </>
     );
   }
@@ -74,18 +75,35 @@ export function DesignImage({ design, alt, className, sizes, priority, fill = fa
         blurDataURL={imageBlurPlaceholder}
         className={className}
       />
-      {watermark && <WatermarkMark text={watermark} />}
+      {watermark && <WatermarkOverlay text={watermark} />}
     </>
   );
 }
 
-function WatermarkMark({ text }: { text: string }) {
+// Staggered-checkerboard tile: one text row per `height` band, every second
+// mark offset by half a tile (marks at (x, y) and (x + width/2, y + height/2)),
+// so the grid repeats seamlessly. Encoded as a data-URI SVG mask; the ink
+// color stays in .watermark-tile (token-sourced). Tile width is derived from
+// the text so a long domain never collides with its staggered neighbor.
+function watermarkMask(text: string): string {
+  const textWidth = text.length * 10;
+  const width = Math.max(240, textWidth * 2 + 96);
+  const height = 150;
+  const glyph = `font-family='system-ui, sans-serif' font-size='15' font-weight='500'`;
+  const svg =
+    `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>` +
+    `<text x='10' y='22' ${glyph}>${text}</text>` +
+    `<text x='${width / 2 + 10}' y='${height / 2 + 22}' ${glyph}>${text}</text>` +
+    `</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+function WatermarkOverlay({ text }: { text: string }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute bottom-2 right-2 z-10 select-none rounded bg-background/60 px-1.5 py-0.5 text-[10px] font-medium leading-none text-foreground/70 backdrop-blur-[2px]"
-    >
-      {text}
-    </span>
+      className="watermark-tile pointer-events-none absolute inset-0 z-10"
+      style={{ "--watermark-mask": watermarkMask(text) } as CSSProperties}
+    />
   );
 }
