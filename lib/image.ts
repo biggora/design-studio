@@ -131,6 +131,19 @@ export function getMockupUrl(design: Pick<Design, "props">): string | null {
   return typeof raw === "string" && raw.trim() !== "" ? raw : null;
 }
 
+export type ProductMockupKey = "mockup_hat" | "mockup_mug" | "mockup_mousepad";
+
+/**
+ * Reads a product mockup URL the sync stores in `props` (`mockup_hat`,
+ * `mockup_mug`, `mockup_mousepad` — extracted from the design's marketplace
+ * page when that product exists); null when absent or junk, so callers show
+ * only the products the marketplace actually lists. Same contract as getMockupUrl.
+ */
+export function getProductMockupUrl(design: Pick<Design, "props">, key: ProductMockupKey): string | null {
+  const raw = (design.props as Record<string, unknown> | undefined)?.[key];
+  return typeof raw === "string" && raw.trim() !== "" ? raw : null;
+}
+
 /**
  * The image the storefront shows for a design: the clean Classic T-Shirt
  * mockup when the sync captured one (the flat artwork URL carries Redbubble's

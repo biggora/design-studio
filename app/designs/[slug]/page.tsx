@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { getSiteConfig, getDesignById, getDesignBySlug, fetchRandomDesigns } from "@/utils/database";
-import { getShareImageUrl } from "@/lib/image";
+import { getShareImageUrl, getProductMockupUrl, type ProductMockupKey } from "@/lib/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
   formatDate,
@@ -33,6 +33,13 @@ import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
 type Props = {
   params: Promise<{ slug: string }>;
 };
+
+/** The product mockups the detail page offers beside the artwork, in display order. */
+const PRODUCT_MOCKUPS: { key: ProductMockupKey; label: string }[] = [
+  { key: "mockup_hat", label: "Hat" },
+  { key: "mockup_mug", label: "Mug" },
+  { key: "mockup_mousepad", label: "Mouse pad" },
+];
 
 // Per-request dedupe: generateMetadata and the page share one DB lookup.
 const loadDesign = cache(async (param: string) => {
@@ -125,6 +132,13 @@ export default async function DesignDetails(
   const giftLinks = orderGiftPages(getGiftPages(config.giftPages)).filter((page) =>
     page.sections.some((section) => designCollections.includes(section.collection)),
   );
+
+  // Only the products the marketplace actually lists for this design — the sync
+  // captures a mockup per product, so missing ones leave no empty tiles.
+  const productMockups = PRODUCT_MOCKUPS.flatMap((mockup) => {
+    const url = getProductMockupUrl(design, mockup.key);
+    return url ? [{ ...mockup, url }] : [];
+  });
 
   const shareUrl = `https://${config.domain}${designPath(design)}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
@@ -231,6 +245,29 @@ export default async function DesignDetails(
                   </p>
                 )}
               </div>
+              {productMockups.length > 0 && (
+                <div className="mb-6">
+                  <div className="grid grid-cols-3 gap-3">
+                    {productMockups.map((mockup) => (
+                      <figure key={mockup.key} className="min-w-0">
+                        <div className="relative aspect-square overflow-hidden rounded-md bg-muted">
+                          <DesignImage
+                            design={design}
+                            src={mockup.url}
+                            alt={`${design.title} on a ${mockup.label}`}
+                            fill
+                            sizes="(min-width: 768px) 200px, 30vw"
+                            className="object-contain"
+                          />
+                        </div>
+                        <figcaption className="mt-1.5 text-center text-xs text-muted-foreground">
+                          {mockup.label}
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                </div>
+              )}
               {buyUrl !== "#" && (
                 <div data-in-card-buy>
                   <BuyLink

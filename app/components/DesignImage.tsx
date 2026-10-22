@@ -8,6 +8,7 @@ import {
   imageBlurPlaceholder,
   NO_IMAGE_PLACEHOLDER,
   watermarkText,
+  type DesignImageSource,
 } from "@/lib/image";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,13 @@ type DesignImageProps = {
   /** Intrinsic size for the next/image fallback (defaults to the card ladder). */
   width?: number;
   height?: number;
+  /**
+   * Render this URL instead of the design's primary image — for the product
+   * mockups (`props.mockup_hat` / `mockup_mug` / `mockup_mousepad`) the detail
+   * page shows beside the artwork. Always a marketplace-hosted remote image,
+   * so it takes the next/image branch.
+   */
+  src?: string;
 };
 
 /**
@@ -35,8 +43,8 @@ type DesignImageProps = {
  * When NEXT_PUBLIC_WATERMARK is set, a DOM-only checkerboard watermark is
  * tiled over the artwork (absent from OG/Pinterest/API image URLs by design).
  */
-export function DesignImage({ design, alt, className, sizes, priority, fill = false, width, height }: DesignImageProps) {
-  const source = getDesignImage(design);
+export function DesignImage({ design, alt, className, sizes, priority, fill = false, width, height, src }: DesignImageProps) {
+  const source: DesignImageSource = src ? { kind: "remote", src } : getDesignImage(design);
   // Anchors to the nearest positioned ancestor — the aspect box on cards, the
   // relative parent on the detail page. The placeholder is not artwork; no mark.
   const watermark =

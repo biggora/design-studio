@@ -54,6 +54,7 @@ describe("non-Redbubble design page", () => {
     expect(html).not.toContain("Buy on Redbubble");
     expect(html).not.toContain("shop/ap/null");
     expect(html).toContain("/disclosure");
+    expect(html).not.toContain("on a Hat");
   });
   it("wires the TeePublic button with its GA4 buy_click parameters", async () => {
     const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
@@ -98,6 +99,25 @@ describe("non-Redbubble design page", () => {
     expect(html).toContain('alt="Space cat design"');
     expect(html).not.toContain("Gift ideas:");
     expect(html).toContain('"name":"Designs"');
+  });
+  it("renders only the product mockups captured in props, with alts and captions", async () => {
+    const original = design.props;
+    design.props = {
+      ...original,
+      mockup_hat: "https://ih1.redbubble.net/images/cap/hat.jpg",
+      mockup_mug: "https://ih1.redbubble.net/images/cap/mug.jpg",
+    };
+    try {
+      const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
+      expect(html).toContain('alt="Space cat on a Hat"');
+      expect(html).toContain("https://ih1.redbubble.net/images/cap/hat.jpg");
+      expect(html).toContain('alt="Space cat on a Mug"');
+      expect(html).toContain("https://ih1.redbubble.net/images/cap/mug.jpg");
+      // The mouse pad has no captured mockup — no tile, no caption, no hole.
+      expect(html).not.toContain("Mouse pad");
+    } finally {
+      design.props = original;
+    }
   });
   it("fills the related row from random picks when the design has no related designs", async () => {
     fetchRandomDesigns.mockClear();
