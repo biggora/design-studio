@@ -75,6 +75,17 @@ describe("home catalog discovery", () => {
     expect(metadata.robots).toBeUndefined();
   });
 
+  it("fills the featured band with six prints — two clean rows of three", async () => {
+    designs = Array.from({length: 8}, (_, i) =>
+      designFixture({id: `d${i + 1}`, slug: `design-${i + 1}`, title: `Design ${i + 1}`}));
+    const {default: Home} = await import("./page");
+    const $ = load(renderToStaticMarkup(await Home()));
+    // Hero and teaser lead the page; the band shows exactly the next six.
+    expect($("section[aria-labelledby=\"home-heading\"] img")).toHaveLength(1);
+    expect($('section[aria-labelledby="featured-heading"] img')).toHaveLength(6);
+    expect($('section[aria-labelledby="featured-heading"]').text()).not.toContain("Design 1");
+  });
+
   it("shows a Gift ideas block only when gift pages are configured", async () => {
     const {default: Home} = await import("./page");
     expect(load(renderToStaticMarkup(await Home()))('nav[aria-label="Gift ideas"]')).toHaveLength(0);

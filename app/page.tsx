@@ -26,9 +26,10 @@ import defaultConfig from "@/config/config.json";
 // the first print several screens down, worst on mobile.
 const HOME_CHIP_LIMIT = 6;
 // Two of the fetched designs lead the page (hero card, about teaser); the
-// featured band shows the next five, so no design appears twice on home.
-const FEATURED_FETCH_LIMIT = 7;
-const FEATURED_COUNT = 5;
+// featured band shows the next six — two clean rows of three in its 1 → 2 → 3
+// grid — so no design appears twice on home and no row ends in an orphan.
+const FEATURED_FETCH_LIMIT = 8;
+const FEATURED_COUNT = 6;
 
 function parseHomeValues(value: HomeConfig["values"]): HomeValue[] {
   let raw: unknown = value;
