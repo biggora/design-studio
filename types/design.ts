@@ -1,5 +1,7 @@
-/** The storefront's display image from `designs.cdnImage`: the first vertical (portrait) mockup, else `flat-full`, else the first, of the
- * stored mockup array (see CdnImage in lib/listings.ts), or a legacy single object. See normalizeCdnImage. */
+import type { CdnImage } from "@/lib/listings";
+
+/** One picked CDN artwork (key + main-variant size) — what getDesignImage resolves
+ * from the design's stored mockup array for a given surface orientation. */
 export type CdnArtwork = { key: string; version: number; width: number; height: number };
 
 export interface Design {
@@ -27,7 +29,9 @@ export interface Design {
    * direct URLs. Defaults to true; the scrapes never rewrite it — it changes only through
    * POST /api/designs/active or the matching CLI. */
   active?: boolean;
-  /** Legacy single-object value; drives the CDN image preference in lib/image.ts. */
-  cdnImage?: CdnArtwork | null;
+  /** The design's pod-uploader CDN mockups (whole stored array — flat-full/flat-close/
+   * hanger-full/hanger-close; a legacy single display object arrives wrapped as its flat-full
+   * entry). Each surface picks its own orientation in lib/image.ts. */
+  cdnImage?: CdnImage | null;
   props?: object;
 }

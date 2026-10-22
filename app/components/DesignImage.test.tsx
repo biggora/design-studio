@@ -40,7 +40,7 @@ describe("DesignImage", () => {
   it("renders the CDN srcSet without /_next/image", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", cdnBase);
     const html = renderToStaticMarkup(
-      <DesignImage design={makeDesign({ cdnImage: { key, version: 2, width: 1600, height: 1920 } })} alt="Space cat" sizes="30vw" />,
+      <DesignImage design={makeDesign({ cdnImage: [{ key, kind: "flat-full" as const, version: 2, width: 1600, height: 1920 }] })} alt="Space cat" sizes="30vw" />,
     );
     expect(html).toContain(`src="${cdnBase}/${key}/card-v2.webp"`);
     // React 19 keeps the camelCase prop name in SSR output; HTML attribute
@@ -67,7 +67,7 @@ describe("DesignImage", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", cdnBase);
     vi.stubEnv("NEXT_PUBLIC_WATERMARK", "threadquirk.lv");
     const cdnHtml = renderToStaticMarkup(
-      <DesignImage design={makeDesign({ cdnImage: { key, version: 2, width: 1600, height: 1920 } })} alt="Space cat" sizes="30vw" />,
+      <DesignImage design={makeDesign({ cdnImage: [{ key, kind: "flat-full" as const, version: 2, width: 1600, height: 1920 }] })} alt="Space cat" sizes="30vw" />,
     );
     expect(cdnHtml).toContain("watermark-tile");
     expect(cdnHtml).toContain('aria-hidden="true"');

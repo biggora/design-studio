@@ -62,10 +62,7 @@ export function normalizeCdnImage(value: unknown): CdnArtwork | null {
     }
   }
   if (Array.isArray(value)) {
-    const mockups = normalizeCdnImageMockups(value);
-    const pick =
-      mockups?.find(mockup => mockup.height > mockup.width) ?? mockups?.find(mockup => mockup.kind === "flat-full") ?? mockups?.[0];
-    return pick ? { key: pick.key, version: pick.version, width: pick.width, height: pick.height } : null;
+    return pickCdnArtwork(normalizeCdnImageMockups(value) ?? [], "portrait");
   }
   if (!value || typeof value !== "object") return null;
   const { key, version, width, height } = value as Record<string, unknown>;
@@ -74,6 +71,34 @@ export function normalizeCdnImage(value: unknown): CdnArtwork | null {
     return null;
   }
   return { key, version: version as number, width: width as number, height: height as number };
+}
+
+/** The row mappers' view of `designs.cdnImage`: the validated mockup array kept whole, so each
+ * surface can pick its own orientation (getDesignImage). A legacy single `{key, version, width,
+ * height}` display object (pre-array installs, plain or JSON string) is wrapped as its flat-full
+ * entry; null when nothing valid remains. */
+export function normalizeCdnArtworkOptions(value: unknown): CdnImage | null {
+  return normalizeCdnImageMockups(value) ?? legacyCdnArtworkArray(value);
+}
+
+function legacyCdnArtworkArray(value: unknown): CdnImage | null {
+  const single = normalizeCdnImage(value);
+  return single ? [{ ...single, kind: "flat-full" }] : null;
+}
+
+export type DesignImageOrientation = "portrait" | "landscape";
+
+/**
+ * One mockup from the stored array, by surface orientation: the first mockup matching it
+ * (portrait is normally `hanger-full`, landscape normally `flat-full`), else `flat-full`,
+ * else the first entry — so a surface never gets the opposite orientation when the array
+ * has a fit, and degrades gracefully when it does not.
+ */
+function pickCdnArtwork(mockups: CdnImage, orientation: DesignImageOrientation): CdnArtwork | null {
+  const oriented = mockups.find(mockup =>
+    orientation === "landscape" ? mockup.width > mockup.height : mockup.height > mockup.width);
+  const pick = oriented ?? mockups.find(mockup => mockup.kind === "flat-full") ?? mockups[0];
+  return pick ? { key: pick.key, version: pick.version, width: pick.width, height: pick.height } : null;
 }
 
 /** The ingest API's view of `designs.cdnImage`: the stored mockup array (same provider quirk as
@@ -105,7 +130,7 @@ function cdnVariantUrl(base: string, cdn: CdnArtwork, variant: string): string {
 /** The `share-v<version>.jpg` URL (artwork pre-flattened onto the background color), or null without a CDN image/env. */
 export function cdnShareImageUrl(design: Pick<Design, "cdnImage">): string | null {
   const base = imagesCdnBase();
-  const cdn = design.cdnImage;
+  const cdn = design.cdnImage ? pickCdnArtwork(design.cdnImage, "portrait") : null;
   if (!base || !cdn) return null;
   return `${base}/${cdn.key}/share-v${cdn.version}.jpg`;
 }
@@ -122,13 +147,15 @@ export type DesignImageSource =
   | { kind: "remote"; src: string };
 
 /**
- * What the storefront shows for a design: the pod-uploader CDN's flat artwork
+ * What the storefront shows for a design: the pod-uploader CDN's garment mockup
  * (transparent WebP variants over the design background) when published, else
- * the existing Redbubble chain via getDesignDisplayImage.
+ * the existing Redbubble chain via getDesignDisplayImage. The `orientation`
+ * picks which stored mockup fits the surface — portrait (the catalog-card pick)
+ * by default, landscape for the home hero and about-teaser tiles.
  */
-export function getDesignImage(design: Design): DesignImageSource {
+export function getDesignImage(design: Design, orientation: DesignImageOrientation = "portrait"): DesignImageSource {
   const base = imagesCdnBase();
-  const cdn = design.cdnImage;
+  const cdn = design.cdnImage ? pickCdnArtwork(design.cdnImage, orientation) : null;
   if (base && cdn) {
     return {
       kind: "cdn",

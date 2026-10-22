@@ -7,6 +7,7 @@ import {
   getShareImageUrl,
   hasPinImage,
   imagesCdnBase,
+  normalizeCdnArtworkOptions,
   normalizeCdnImage,
   normalizeCdnImageMockups,
   watermarkText,
@@ -37,6 +38,9 @@ function makeDesign(overrides: Partial<Design> = {}): Design {
 }
 
 const cdnImage = { key: "designs/f45e5bc7a5342c2c", version: 2, width: 1600, height: 1920 };
+// What the row mappers store on a design: the whole mockup array (the legacy single
+// object above, wrapped as its flat-full entry).
+const cdnArtwork = [{ ...cdnImage, kind: "flat-full" as const }];
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -145,7 +149,7 @@ describe("a stored cdnImage mockup array on the storefront", () => {
 
   it("serves the CDN card, srcSet and the portrait mockup size for getDesignImage", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
-    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups) });
+    const design = makeDesign({ cdnImage: normalizeCdnArtworkOptions(fourMockups) });
     const base = `${CDN}/${hangerFull.key}`;
     expect(getDesignImage(design)).toEqual({
       kind: "cdn",
@@ -157,9 +161,23 @@ describe("a stored cdnImage mockup array on the storefront", () => {
     });
   });
 
+  it("picks the first landscape mockup for the landscape orientation (home hero/teaser)", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const design = makeDesign({ cdnImage: normalizeCdnArtworkOptions(fourMockups) });
+    expect(getDesignImage(design, "landscape")).toMatchObject({
+      kind: "cdn",
+      src: `${CDN}/${flatFull.key}/card-v1.webp`,
+      width: 1536,
+      height: 1024,
+    });
+    // Same fallback ladder as the portrait pick when nothing matches.
+    expect(getDesignImage(makeDesign({ cdnImage: normalizeCdnArtworkOptions([flatClose, flatFull]) }), "landscape"))
+      .toMatchObject({ kind: "cdn", src: `${CDN}/${flatClose.key}/card-v1.webp` });
+  });
+
   it("uses the share JPEG for share URL and pins", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
-    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups), externalImageUrl: "" });
+    const design = makeDesign({ cdnImage: normalizeCdnArtworkOptions(fourMockups), externalImageUrl: "" });
     expect(cdnShareImageUrl(design)).toBe(`${CDN}/${hangerFull.key}/share-v1.jpg`);
     expect(getShareImageUrl(design)).toBe(`${CDN}/${hangerFull.key}/share-v1.jpg`);
     expect(hasPinImage(design)).toBe(true);
@@ -167,11 +185,21 @@ describe("a stored cdnImage mockup array on the storefront", () => {
 
   it("keeps the Redbubble fallback without the CDN env", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
-    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups) });
+    const design = makeDesign({ cdnImage: normalizeCdnArtworkOptions(fourMockups) });
     expect(getDesignImage(design)).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/images/flat.png" });
     expect(cdnShareImageUrl(design)).toBeNull();
     expect(getShareImageUrl(design)).toBe("https://ih1.redbubble.net/images/flat.png");
     expect(hasPinImage(design)).toBe(false);
+  });
+
+  it("keeps the whole validated array for the mappers, wrapping a legacy single object", () => {
+    expect(normalizeCdnArtworkOptions(fourMockups)).toEqual(fourMockups);
+    expect(normalizeCdnArtworkOptions(JSON.stringify(fourMockups))).toEqual(fourMockups);
+    expect(normalizeCdnArtworkOptions(cdnImage)).toEqual([{ ...cdnImage, kind: "flat-full" }]);
+    expect(normalizeCdnArtworkOptions(JSON.stringify(cdnImage))).toEqual([{ ...cdnImage, kind: "flat-full" }]);
+    for (const value of [undefined, null, "", "not json", [], [null], 7, true]) {
+      expect(normalizeCdnArtworkOptions(value)).toBeNull();
+    }
   });
 });
 
@@ -204,7 +232,7 @@ describe("normalizeCdnImageMockups (ingest responses)", () => {
 describe("getDesignImage", () => {
   it("prefers the CDN flat artwork with the three-variant srcSet", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
-    const source = getDesignImage(makeDesign({ cdnImage }));
+    const source = getDesignImage(makeDesign({ cdnImage: cdnArtwork }));
     expect(source).toEqual({
       kind: "cdn",
       src: `${CDN}/designs/f45e5bc7a5342c2c/card-v2.webp`,
@@ -217,10 +245,10 @@ describe("getDesignImage", () => {
 
   it("keeps the Redbubble fallback chain (mockup, then flat artwork, then placeholder) without the env", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
-    const withMockup = makeDesign({ props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.png" }, cdnImage });
+    const withMockup = makeDesign({ props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.png" }, cdnImage: cdnArtwork });
     expect(getDesignImage(withMockup)).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/mockup.png" });
-    expect(getDesignImage(makeDesign({ cdnImage }))).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/images/flat.png" });
-    expect(getDesignImage(makeDesign({ cdnImage, externalImageUrl: "  " }))).toEqual({
+    expect(getDesignImage(makeDesign({ cdnImage: cdnArtwork }))).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/images/flat.png" });
+    expect(getDesignImage(makeDesign({ cdnImage: cdnArtwork, externalImageUrl: "  " }))).toEqual({
       kind: "remote",
       src: "/images/no_image_available.svg",
     });
@@ -228,7 +256,7 @@ describe("getDesignImage", () => {
 
   it("treats an unset env like the empty one (Redbubble fallback even with cdnImage)", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
-    expect(getDesignImage(makeDesign({ cdnImage })).kind).toBe("remote");
+    expect(getDesignImage(makeDesign({ cdnImage: cdnArtwork })).kind).toBe("remote");
   });
 
   it("falls back to Redbubble images for a design without cdnImage even with the env set", () => {
@@ -240,14 +268,14 @@ describe("getDesignImage", () => {
 describe("cdnShareImageUrl / getShareImageUrl", () => {
   it("returns the share JPEG for a CDN design", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
-    expect(cdnShareImageUrl(makeDesign({ cdnImage }))).toBe(`${CDN}/designs/f45e5bc7a5342c2c/share-v2.jpg`);
+    expect(cdnShareImageUrl(makeDesign({ cdnImage: cdnArtwork }))).toBe(`${CDN}/designs/f45e5bc7a5342c2c/share-v2.jpg`);
   });
 
   it("returns null without a CDN design or env", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
     expect(cdnShareImageUrl(makeDesign())).toBeNull();
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
-    expect(cdnShareImageUrl(makeDesign({ cdnImage }))).toBeNull();
+    expect(cdnShareImageUrl(makeDesign({ cdnImage: cdnArtwork }))).toBeNull();
   });
 
   it("getShareImageUrl falls back to the display image, keeping the mockup preference", () => {
@@ -255,7 +283,7 @@ describe("cdnShareImageUrl / getShareImageUrl", () => {
     const design = makeDesign({ props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.png" } });
     expect(getShareImageUrl(design)).toBe("https://ih1.redbubble.net/mockup.png");
     expect(getShareImageUrl(makeDesign())).toBe("https://ih1.redbubble.net/images/flat.png");
-    expect(getShareImageUrl(makeDesign({ cdnImage }))).toBe(`${CDN}/designs/f45e5bc7a5342c2c/share-v2.jpg`);
+    expect(getShareImageUrl(makeDesign({ cdnImage: cdnArtwork }))).toBe(`${CDN}/designs/f45e5bc7a5342c2c/share-v2.jpg`);
   });
 
   it("getShareImageUrl keeps getDesignDisplayImage's contract for empty artwork", () => {
@@ -268,13 +296,13 @@ describe("hasPinImage", () => {
   it("is true for a mockup, a CDN image (with the env), or both", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
     expect(hasPinImage(makeDesign({ props: { mockup_tshirt: "https://ih1.redbubble.net/mockup.png" } }))).toBe(true);
-    expect(hasPinImage(makeDesign({ cdnImage }))).toBe(true);
+    expect(hasPinImage(makeDesign({ cdnImage: cdnArtwork }))).toBe(true);
     expect(hasPinImage(makeDesign())).toBe(false);
   });
 
   it("needs the env for a cdnImage-only design", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
-    expect(hasPinImage(makeDesign({ cdnImage }))).toBe(false);
+    expect(hasPinImage(makeDesign({ cdnImage: cdnArtwork }))).toBe(false);
   });
 
   it("ignores a junk mockup value", () => {

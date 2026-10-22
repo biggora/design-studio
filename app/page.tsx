@@ -17,7 +17,7 @@ import { CardGrid } from "@/app/components/CardGrid";
 import { collectionPath, collectionDisplayNames } from "@/lib/collections";
 import { giftPath, orderGiftPages } from "@/lib/gifts";
 import { designPath } from "@/lib/slug";
-import { cn, focusRingClasses, safeHexColor } from "@/lib/utils";
+import { cn, focusRingClasses } from "@/lib/utils";
 import defaultConfig from "@/config/config.json";
 
 // The interest navs are a teaser, not a directory: the operator's config order
@@ -74,10 +74,6 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Framed artwork card shared by the hero and the about teaser. */
 function ArtCard({ design, caption, priority }: { design: Design; caption?: string; priority?: boolean }) {
-  // Designs without a baked background fall back to the muted surface instead
-  // of letting the frame show through as dark letterbox bands.
-  const bakedBackground = safeHexColor(design.backgroundColor);
-
   return (
     <div className="mx-auto w-full max-w-md rounded-xl border border-border bg-card p-3 shadow-xl">
       <AccentLink
@@ -86,19 +82,16 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
         tabIndex={-1}
         aria-hidden="true"
       >
-        <div
-          className="relative aspect-[3/4] w-full bg-muted"
-          style={bakedBackground ? { backgroundColor: bakedBackground } : undefined}
-        >
-          <DesignImage
-            design={design}
-            alt=""
-            fill
-            priority={priority}
-            sizes="(max-width: 1024px) 100vw, 40vw"
-            className="object-cover object-center"
-          />
-        </div>
+        {/* No fixed aspect box: the frame hugs the picture's own ratio — the landscape CDN
+            mockup, or a taller marketplace fallback — so nothing ever letterboxes. */}
+        <DesignImage
+          design={design}
+          alt=""
+          priority={priority}
+          sizes="(max-width: 1024px) 100vw, 40vw"
+          className="block w-full h-auto"
+          orientation="landscape"
+        />
       </AccentLink>
       {caption ? (
         <p className="mt-3 border-t border-border pt-3 text-center text-sm text-muted-foreground">

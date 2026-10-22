@@ -141,7 +141,7 @@ describe("toPublicPrint", () => {
 
 describe("toPublicPrint cdnImage", () => {
   const CDN = "https://images.threadquirk.lv";
-  const cdnImage = { key: "designs/f45e5bc7a5342c2c", version: 2, width: 1600, height: 1920 };
+  const cdnImage = [{ key: "designs/f45e5bc7a5342c2c", kind: "flat-full" as const, version: 2, width: 1600, height: 1920 }];
   // A Redbubble image URL the bg override can rewrite (image.<id>/ path shape).
   const redbubbleArtwork = "https://ih1.redbubble.net/image.5123/flat.jpg";
 

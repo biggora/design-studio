@@ -8,6 +8,7 @@ import {
   imageBlurPlaceholder,
   NO_IMAGE_PLACEHOLDER,
   watermarkText,
+  type DesignImageOrientation,
   type DesignImageSource,
 } from "@/lib/image";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,11 @@ type DesignImageProps = {
    * so it takes the next/image branch.
    */
   src?: string;
+  /**
+   * Which stored CDN mockup fits the surface: portrait (default — the catalog
+   * card pick) or landscape (the home hero and about-teaser tiles).
+   */
+  orientation?: DesignImageOrientation;
 };
 
 /**
@@ -43,8 +49,8 @@ type DesignImageProps = {
  * When NEXT_PUBLIC_WATERMARK is set, a DOM-only checkerboard watermark is
  * tiled over the artwork (absent from OG/Pinterest/API image URLs by design).
  */
-export function DesignImage({ design, alt, className, sizes, priority, fill = false, width, height, src }: DesignImageProps) {
-  const source: DesignImageSource = src ? { kind: "remote", src } : getDesignImage(design);
+export function DesignImage({ design, alt, className, sizes, priority, fill = false, width, height, src, orientation }: DesignImageProps) {
+  const source: DesignImageSource = src ? { kind: "remote", src } : getDesignImage(design, orientation);
   // Anchors to the nearest positioned ancestor — the aspect box on cards, the
   // relative parent on the detail page. The placeholder is not artwork; no mark.
   const watermark =

@@ -13,7 +13,7 @@ import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
-import {hasPinImage, normalizeCdnImage, normalizeCdnImageMockups} from "@/lib/image";
+import {hasPinImage, normalizeCdnArtworkOptions, normalizeCdnImageMockups} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
@@ -126,7 +126,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         inStock: row.inStock as boolean | undefined,
         shared: Boolean(row.shared),
         active: normalizeActive(row.active),
-        cdnImage: normalizeCdnImage(row.cdnImage),
+        cdnImage: normalizeCdnArtworkOptions(row.cdnImage),
         props: row.props as object | undefined,
     };
 }
@@ -510,7 +510,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         inStock: item.inStock as boolean | undefined,
         shared: item.shared as boolean | undefined,
         active: normalizeActive(item.active),
-        cdnImage: normalizeCdnImage(item.cdnImage),
+        cdnImage: normalizeCdnArtworkOptions(item.cdnImage),
         props: item.props as object | undefined,
     };
 }

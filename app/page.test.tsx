@@ -86,16 +86,25 @@ describe("home catalog discovery", () => {
     expect($('section[aria-labelledby="featured-heading"]').text()).not.toContain("Design 1");
   });
 
-  it("fills the hero art frame with the artwork (cover in a 3:4 box, no bars)", async () => {
-    designs = [designFixture()];
+  it("frames the hero with the landscape CDN mockup at its own ratio (no letterbox)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
+    designs = [designFixture({
+      cdnImage: [
+        { key: "designs/aaaa", kind: "flat-full" as const, version: 1, width: 1536, height: 1024 },
+        { key: "designs/bbbb", kind: "hanger-full" as const, version: 1, width: 1024, height: 1536 },
+      ],
+    })];
     const {default: Home} = await import("./page");
     const $ = load(renderToStaticMarkup(await Home()));
     const img = $("section[aria-labelledby=\"home-heading\"] img");
-    expect(img.attr("class")).toContain("object-cover");
-    expect(img.attr("class")).toContain("object-center");
-    expect(img.attr("class")).not.toContain("object-contain");
-    expect(img.parent().attr("class")).toContain("aspect-[3/4]");
+    // The frame hugs the picture — no fixed aspect box — so the landscape mockup fills it
+    // edge to edge and a taller marketplace fallback would too: nothing letterboxes.
+    expect(img.attr("src")).toContain("designs/aaaa/card-v1.webp");
+    expect(img.attr("class")).toContain("w-full");
+    expect(img.attr("class")).toContain("h-auto");
     expect(img.closest("a").attr("class")).toContain("overflow-hidden");
+    expect($("section[aria-labelledby=\"home-heading\"] [class*='aspect-']")).toHaveLength(0);
+    vi.unstubAllEnvs();
   });
 
   it("shows a Gift ideas block only when gift pages are configured", async () => {

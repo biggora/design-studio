@@ -29,7 +29,7 @@ describe("DesignCard", () => {
   ])("fills the 3:4 box with a %s CDN mockup (cover, no bars) and keeps the hover zoom", (_ratio, width, height) => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.example.test");
     const design = {id: "1", slug: "cat", title: "Cat", description: "d", collection: "", externalImageUrl: "",
-      backgroundColor: "#ffffff", cdnImage: {key: "designs/x", version: 1, width, height}} as Design;
+      backgroundColor: "#ffffff", cdnImage: [{key: "designs/x", kind: "flat-full" as const, version: 1, width, height}]} as Design;
     const html = renderToStaticMarkup(<DesignCard design={design}/>);
     const classes = imgClass(html).split(/\s+/);
     expect(classes).toEqual(expect.arrayContaining([

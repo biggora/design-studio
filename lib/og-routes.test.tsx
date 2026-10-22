@@ -67,7 +67,7 @@ describe("OpenGraph image routes", () => {
       ...design,
       externalImageUrl: "",
       props: {},
-      cdnImage: { key: "designs/f45e5bc7a5342c2c", version: 1, width: 1600, height: 1920 },
+      cdnImage: [{ key: "designs/f45e5bc7a5342c2c", kind: "flat-full" as const, version: 1, width: 1600, height: 1920 }],
     };
     getDesignBySlugMock.mockImplementation(async (slug: string) =>
       slug === "space-cat" ? { design: cdnDesign, relatedDesigns: [] } : null);

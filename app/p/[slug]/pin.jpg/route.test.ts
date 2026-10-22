@@ -85,7 +85,7 @@ describe("/p/[slug]/pin.jpg", () => {
   it("renders from the CDN share JPEG when the design has a cdnImage", async () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
     const design = makeDesign({
-      cdnImage: { key: "designs/f45e5bc7a5342c2c", version: 2, width: 1600, height: 1920 },
+      cdnImage: [{ key: "designs/f45e5bc7a5342c2c", kind: "flat-full" as const, version: 2, width: 1600, height: 1920 }],
     });
     getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
     const fetchMock = vi.fn().mockResolvedValue(

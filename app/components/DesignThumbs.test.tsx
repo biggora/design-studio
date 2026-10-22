@@ -12,7 +12,7 @@ vi.mock("next/image", () => ({
 
 const cdnDesign = (id: string, width: number, height: number) => ({
   id, slug: id, title: id, description: "d", collection: "", externalImageUrl: "", backgroundColor: "#ffffff",
-  cdnImage: {key: `designs/${id}`, version: 1, width, height},
+  cdnImage: [{key: `designs/${id}`, kind: "flat-full" as const, version: 1, width, height}],
 }) as Design;
 const remoteDesign = (id: string) => ({
   id, slug: id, title: id, description: "d", collection: "",
