@@ -7,7 +7,8 @@ import {mapDataToConfig} from "@/lib/config";
 import {ConfigProp} from "@/types/config";
 import {Design} from "@/types/design";
 import {designSlugBase} from "@/lib/slug";
-import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, ListingsError, ListingPlatform} from "@/lib/listings";
+import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, ListingsError, ListingPlatform, CdnImage, CdnImageItem, CdnImageLookup, CdnImageResult} from "@/lib/listings";
+import {getDesignCdnImageMySQL, setDesignCdnImageMySQL} from "@/utils/cdn-image-database";
 import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/utils/listings-database";
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
@@ -1329,6 +1330,31 @@ export async function getDesignListings(lookup: ListingLookup): Promise<{design:
     if (!rows.length) return null;
     const [listings] = await pool.query<mysql.RowDataPacket[]>("SELECT * FROM design_listings WHERE designId = ? ORDER BY createdAt, id", [rows[0].id]);
     return {design: ingestDesignResponse(rows[0] as mysql.RowDataPacket & IngestDesign), listings: listings.map(mysqlListingResponse)};
+}
+
+/** PUT /api/v1/designs/cdn-image: overwrite designs.cdnImage for a batch; one result per item. */
+export async function setDesignCdnImage(items: CdnImageItem[]): Promise<CdnImageResult[]> {
+    if (getProvider() === "mysql") return setDesignCdnImageMySQL(getMySQLPool(), items);
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new ListingsError(503, "NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY is required for the cdn-image API");
+    }
+    const {data, error} = await getSupabase().rpc("set_design_cdn_image", {items});
+    if (error) throw new Error("Failed to set design cdnImage", {cause: error});
+    return data as CdnImageResult[];
+}
+
+/** Read-back for pod-uploader: the stored mockup array of the design a lookup resolves to. */
+export async function getDesignCdnImage(lookup: CdnImageLookup): Promise<{designId: string; cdnImage: CdnImage | null} | null> {
+    if (getProvider() === "mysql") return getDesignCdnImageMySQL(getMySQLPool(), lookup);
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new ListingsError(503, "NOT_CONFIGURED", "SUPABASE_SERVICE_ROLE_KEY is required for the cdn-image API");
+    }
+    const column = "sha256" in lookup ? "sha256" : "sourceImageId" in lookup ? "sourceImageId" : "externalId";
+    const {data, error} = await getSupabase().from("designs")
+        .select("id, cdnImage").eq(column, Object.values(lookup)[0]).maybeSingle();
+    if (error) throw new Error("Failed to look up design cdnImage", {cause: error});
+    if (!data) return null;
+    return {designId: data.id as string, cdnImage: normalizeCdnImageMockups(data.cdnImage)};
 }
 
 // Project only public marketplace links; account, source identity and extra never leave

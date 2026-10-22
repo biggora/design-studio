@@ -432,6 +432,64 @@ Errors retain the existing string-valued `error`, with additive machine-readable
 
 Validation errors also include `field`; conflicts may include `details`. Redbubble IDs and source image IDs are limited to the JavaScript safe integer range because existing catalog readers return numbers. Store hashes/source IDs in the private client workflow; the public print DTO omits them. A non-Redbubble design remains visible with `link: ""`, its other marketplace links and the existing image placeholder until it has a supported design image.
 
+### Design CDN mockups: PUT/GET /api/v1/designs/cdn-image
+
+Writes (and reads back) `designs."cdnImage"` — the design's CDN mockup array described under `design.cdnImage` above — for designs that already exist, so mockups can be published without touching the database. Same bearer auth (`LISTINGS_API_TOKEN`), JSON error envelope and `Cache-Control: no-store` as the listings API. It writes nothing else and renders nothing.
+
+#### PUT /api/v1/designs/cdn-image
+
+Body: `{ "items": [ … ] }` — 1 to 100 items, unknown keys rejected at every level. Each item:
+
+| Field | Required | Validation |
+|---|---|---|
+| `sha256` | one identifier of the three | 64 hex characters, saved lowercase |
+| `sourceImageId` | (at least one) | Positive safe integer |
+| `redbubbleId` | | Digits string, safe-integer range; matches `designs."externalId"` (the Redbubble work ID) |
+| `cdnImage` | yes | Exactly the ingest array: 1–8 `{ key, kind, version, width, height }`, `key` = `designs/<sha16>/mockups/<16 hex>`, `kind` ∈ `flat-full`/`flat-close`/`hanger-full`/`hanger-close`, ints ≥ 1, no duplicate keys |
+
+The key prefix `<sha16>` is the first 16 hex of the item's `sha256` when it is given. Otherwise all keys of the item must share one prefix, and it must equal the first 16 hex of the resolved design's stored `sha256` (when that is not NULL). Validation errors are `400 VALIDATION` with the field path, e.g. `items[2].cdnImage[1].key`; nothing is written when any item is malformed.
+
+Per item, the design is resolved by `sha256`, then `sourceImageId`, then `redbubbleId`. Identifiers that resolve to **different designs**, a given `sha256`/`sourceImageId` that differs from the stored one, or keys that do not address the stored `sha256` make that item a `conflict`; no match is `not_found`. Otherwise `designs."cdnImage"` is **overwritten** with the array (no merge), a NULL `sha256`/`sourceImageId` is filled from the item (as ingest does), `"updatedAt"` is bumped, and nothing else changes. The whole batch runs in one transaction, and per-item failures never fail it: the response is always `200` once the request is valid.
+
+```bash
+curl -s -X PUT http://localhost:3000/api/v1/designs/cdn-image \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"items":[
+    {"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","cdnImage":[
+      {"key":"designs/f45e5bc7a5342c2c/mockups/66c018b96d9c6dac","kind":"flat-full","version":1,"width":1024,"height":1536},
+      {"key":"designs/f45e5bc7a5342c2c/mockups/002a102ae0ec24d0","kind":"hanger-close","version":1,"width":1024,"height":1536}]},
+    {"redbubbleId":"184507567","cdnImage":[
+      {"key":"designs/0123456789abcdef/mockups/aaaaaaaaaaaaaaaa","kind":"flat-close","version":1,"width":1024,"height":1536}]}
+  ]}'
+```
+
+```json
+{
+  "results": [
+    { "index": 0, "status": "updated", "designId": "c4e49734-7bb5-46f4-86c8-7ec6a587c128",
+      "cdnImage": [
+        { "key": "designs/f45e5bc7a5342c2c/mockups/66c018b96d9c6dac", "kind": "flat-full", "version": 1, "width": 1024, "height": 1536 },
+        { "key": "designs/f45e5bc7a5342c2c/mockups/002a102ae0ec24d0", "kind": "hanger-close", "version": 1, "width": 1024, "height": 1536 }
+      ] },
+    { "index": 1, "status": "not_found" }
+  ],
+  "updated": 1
+}
+```
+
+`status` is `updated`, `not_found` or `conflict`; `designId` is present for `updated` and for conflicts that name a design, `cdnImage` only for `updated`, and `message` explains a `conflict`. Two items resolving to the same design are applied in order (the last wins).
+
+#### GET /api/v1/designs/cdn-image
+
+Provide exactly one of `sha256`, `sourceImageId` or `redbubbleId`. Returns **200** `{ "designId": "…", "cdnImage": [ … ] | null }` — the stored array (malformed stored entries dropped), or `null` — or **404** `NOT_FOUND`. Validation, auth and `503 NOT_CONFIGURED` (Supabase service-role key missing) behave as for the listings API.
+
+```bash
+curl -s -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/designs/cdn-image?sha256=f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971'
+```
+
+Deploy order on Supabase: migrations 005–007 where not yet applied → **008** (`init/migrations/008_design_cdn_image_api_postgres.sql`, the `set_design_cdn_image` function; without it the PUT answers `500 INTERNAL`) → the code. The GET needs only the 005 column. MySQL needs no function: the endpoint is application code and uses the 005 `cdnImage` column.
+
 ### Social posts ingest
 
 `/api/v1/social-posts` is a private API, not part of the public embed API. pod-uploader calls it to record the final facts about a social post for a design: the post is `published`, or later `removed`. The design must already exist (create it first with `POST /api/v1/listings`); this API never creates or changes designs.

@@ -72,6 +72,17 @@ export type IngestResult = {
 };
 export type ListingLookup = { sha256: string } | { sourceImageId: number };
 
+/** One entry of PUT /api/v1/designs/cdn-image: identifiers (at least one) plus the mockup array. */
+export type CdnImageItem = { sha256?: string; sourceImageId?: number; redbubbleId?: string; cdnImage: CdnImage };
+export type CdnImageResult = {
+  index: number;
+  status: "updated" | "not_found" | "conflict";
+  designId?: string;
+  cdnImage?: CdnImage;
+  message?: string;
+};
+export type CdnImageLookup = { sha256: string } | { sourceImageId: number } | { redbubbleId: string };
+
 export class ListingsError extends Error {
   constructor(
     public status: number,
@@ -144,14 +155,14 @@ export function isoTimestamp(value: unknown, field: string): string {
   return new Date(value).toISOString();
 }
 
-function hash(value: unknown): string {
-  if (typeof value !== "string" || !/^[a-f0-9]{64}$/i.test(value)) invalid("design.sha256", "Expected a 64-character hexadecimal SHA-256");
+function hash(value: unknown, field = "design.sha256"): string {
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/i.test(value)) invalid(field, "Expected a 64-character hexadecimal SHA-256");
   return value.toLowerCase();
 }
 
-function sourceId(value: unknown): number {
+function sourceId(value: unknown, field = "design.sourceImageId"): number {
   if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
-    invalid("design.sourceImageId", "Expected a positive safe integer");
+    invalid(field, "Expected a positive safe integer");
   }
   return value;
 }
@@ -166,17 +177,22 @@ function positiveInt(value: unknown, field: string): number {
 // Keys are derived, never trusted: a design's CDN files live under designs/<first 16 hex chars of
 // its sha256>, and each mockup under <that>/mockups/<16 hex of the mockup PNG's sha256>, so a
 // mismatched key could never point at another design's files.
-function cdnImage(value: unknown, field: string, sha256: string): CdnImage {
+// With `sha16` null (the design is only known by another identifier) the prefix is not fixed
+// up front: every key must still share one prefix, which the caller checks against the design.
+function cdnImage(value: unknown, field: string, sha16: string | null): CdnImage {
   if (!Array.isArray(value) || value.length < 1 || value.length > 8) invalid(field, "Expected an array of 1 to 8 mockups");
-  const designKey = `designs/${sha256.slice(0, 16)}`;
-  const keyPattern = new RegExp(`^${designKey}/mockups/[0-9a-f]{16}$`);
+  let designKey = `designs/${sha16 ?? "[0-9a-f]{16}"}`;
   const seen = new Set<string>();
   return value.map((item, index) => {
     const at = `${field}[${index}]`;
     const mockup = strictObject(item, at, ["key", "kind", "version", "width", "height"]);
-    if (typeof mockup.key !== "string" || !keyPattern.test(mockup.key)) {
-      invalid(`${at}.key`, `Expected "${designKey}/mockups/" followed by 16 lowercase hex characters`);
+    if (typeof mockup.key !== "string" || !new RegExp(`^${designKey}/mockups/[0-9a-f]{16}$`).test(mockup.key)) {
+      invalid(`${at}.key`, sha16 === null && index > 0
+        ? `Expected the same designs/<16 hex> prefix as the first key ("${designKey}")`
+        : `Expected "${designKey.replace("[0-9a-f]{16}", "<16 hex>")}/mockups/" followed by 16 lowercase hex characters`);
     }
+    // Without a known sha16 the first key fixes the prefix the others must share.
+    if (sha16 === null && index === 0) designKey = mockup.key.slice(0, "designs/".length + 16);
     if (seen.has(mockup.key)) invalid(`${at}.key`, "Duplicate mockup key");
     seen.add(mockup.key);
     if (!(CDN_MOCKUP_KINDS as readonly unknown[]).includes(mockup.kind)) {
@@ -208,7 +224,7 @@ export function parseIngestInput(value: unknown): IngestInput {
     if (typeof d.backgroundColor !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(d.backgroundColor)) invalid("design.backgroundColor", "Expected #rgb or #rrggbb");
     design.backgroundColor = d.backgroundColor;
   }
-  if (d.cdnImage !== undefined) design.cdnImage = cdnImage(d.cdnImage, "design.cdnImage", design.sha256);
+  if (d.cdnImage !== undefined) design.cdnImage = cdnImage(d.cdnImage, "design.cdnImage", design.sha256.slice(0, 16));
   if (l.platform !== "redbubble" && l.platform !== "teepublic" && l.platform !== "spreadshirt") invalid("listing.platform", "Unsupported platform");
   const listing: ListingInput = {
     platform: l.platform, account: text(l.account, "listing.account", 100),
@@ -253,4 +269,45 @@ export function parseListingLookup(params: URLSearchParams): ListingLookup {
   const raw = params.get("sourceImageId")!;
   if (!/^[1-9]\d*$/.test(raw)) invalid("sourceImageId", "Expected a positive integer");
   return { sourceImageId: sourceId(Number(raw)) };
+}
+
+// `designs."externalId"` is a JavaScript-safe BIGINT, like the Redbubble listing ID.
+function redbubbleId(value: unknown, field: string): string {
+  if (typeof value !== "string" || !/^[1-9]\d{0,18}$/.test(value) || !Number.isSafeInteger(Number(value))) {
+    invalid(field, "Expected a Redbubble work ID: digits that fit a JavaScript safe integer");
+  }
+  return value;
+}
+
+export function parseCdnImageBatch(value: unknown): CdnImageItem[] {
+  const body = strictObject(value, "", ["items"]);
+  if (!Array.isArray(body.items) || body.items.length < 1 || body.items.length > 100) invalid("items", "Expected an array of 1 to 100 items");
+  return body.items.map((raw, index) => {
+    const at = `items[${index}]`;
+    const entry = strictObject(raw, at, ["sha256", "sourceImageId", "redbubbleId", "cdnImage"]);
+    const item: Partial<CdnImageItem> = {};
+    if (entry.sha256 !== undefined) item.sha256 = hash(entry.sha256, `${at}.sha256`);
+    if (entry.sourceImageId !== undefined) item.sourceImageId = sourceId(entry.sourceImageId, `${at}.sourceImageId`);
+    if (entry.redbubbleId !== undefined) item.redbubbleId = redbubbleId(entry.redbubbleId, `${at}.redbubbleId`);
+    if (item.sha256 === undefined && item.sourceImageId === undefined && item.redbubbleId === undefined) {
+      invalid(at, "Expected at least one of sha256, sourceImageId, redbubbleId");
+    }
+    // A given sha256 fixes the key prefix; otherwise the keys must agree among themselves and the
+    // data layer checks them against the resolved design's stored sha256.
+    item.cdnImage = cdnImage(entry.cdnImage, `${at}.cdnImage`, item.sha256?.slice(0, 16) ?? null);
+    return item as CdnImageItem;
+  });
+}
+
+export function parseCdnImageLookup(params: URLSearchParams): CdnImageLookup {
+  const keys = [...params.keys()];
+  const name = keys[0];
+  if (keys.length !== 1 || (name !== "sha256" && name !== "sourceImageId" && name !== "redbubbleId")) {
+    invalid("query", "Provide exactly one of sha256, sourceImageId or redbubbleId");
+  }
+  const raw = params.get(name)!;
+  if (name === "sha256") return { sha256: hash(raw, "sha256") };
+  if (name === "redbubbleId") return { redbubbleId: redbubbleId(raw, "redbubbleId") };
+  if (!/^[1-9]\d*$/.test(raw)) invalid("sourceImageId", "Expected a positive integer");
+  return { sourceImageId: sourceId(Number(raw), "sourceImageId") };
 }

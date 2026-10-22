@@ -3,9 +3,10 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readFileSync } from "node:fs";
 import mysql from "mysql2/promise";
-import { IngestInput, IngestResult, parseIngestInput } from "@/lib/listings";
+import { CdnImageItem, CdnImageResult, IngestInput, IngestResult, parseIngestInput } from "@/lib/listings";
 import { designSlugBase } from "@/lib/slug";
 import { ingestListingMySQL } from "@/utils/listings-database";
+import { getDesignCdnImageMySQL, setDesignCdnImageMySQL } from "@/utils/cdn-image-database";
 
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
 const exec = promisify(execFile);
@@ -64,7 +65,9 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
       await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/006_listing_extra_mockups_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/008_design_cdn_image_api_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/006_listing_extra_mockups_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/008_design_cdn_image_api_postgres.sql", "utf8"));
       await pgSql("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;");
     } else {
       pool = mysql.createPool({ host: "127.0.0.1", port: 33316, user: "root", password: "listings-test", database: "listings_test", dateStrings: true, multipleStatements: true });
@@ -120,6 +123,108 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
     fewer.design.cdnImage = [cdnImage[1]];
     expect((await ingest(fewer)).design.cdnImage).toEqual([cdnImage[1]]);
     expect(await stored()).toEqual([cdnImage[1]]);
+  });
+  describe("set_design_cdn_image (PUT /api/v1/designs/cdn-image)", () => {
+    const mockupsFor = (sha: string, count = 4): CdnImageItem["cdnImage"] =>
+      (["flat-full", "hanger-full", "flat-close", "hanger-close"] as const).slice(0, count).map((kind, i) => (
+        { key: `designs/${sha.slice(0, 16)}/mockups/${String(i + 1).repeat(16)}`, kind, version: 1, width: 1024, height: 1536 }
+      ));
+    const setImage = async (items: CdnImageItem[]): Promise<CdnImageResult[]> => {
+      if (provider === "mysql") return setDesignCdnImageMySQL(pool, items);
+      return JSON.parse(await pgSql(`SET ROLE service_role; SELECT public.set_design_cdn_image(${sqlString(JSON.stringify(items))}::jsonb)`));
+    };
+    const SHA_B = "b".repeat(64);
+    const SHA_C = "c".repeat(64);
+    const byId = async (title: string): Promise<Record<string, unknown> & { id: string; updatedAt: unknown }> => {
+      const [row] = await query(`SELECT * FROM designs WHERE title = ${sqlString(title)}`);
+      return { ...row, id: row.id as string, updatedAt: row.updatedAt, cdnImage: typeof row.cdnImage === "string" ? JSON.parse(row.cdnImage) : row.cdnImage };
+    };
+    // Design A (Space cat: sha a.., source 299, Redbubble 184507566) and design B (sha b.., source 300, Redbubble 184507567).
+    const seedTwo = async () => {
+      await ingest(input());
+      const second = input();
+      second.design.title = "Other cat"; second.design.sourceImageId = 300; second.design.sha256 = SHA_B;
+      second.listing.externalId = "184507567"; second.listing.url = "https://www.redbubble.com/shop/ap/184507567";
+      await ingest(second);
+    };
+    const A = "a".repeat(64);
+
+    it("resolves by sha256, sourceImageId and redbubbleId, overwrites the array, bumps updatedAt, and touches nothing else", async () => {
+      await seedTwo();
+      const before = await byId("Space cat");
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      for (const [i, identifier] of ([{ sha256: A }, { sourceImageId: 299 }, { redbubbleId: "184507566" }] as const).entries()) {
+        const cdnImage = mockupsFor(A, 4 - i);
+        const [result] = await setImage([{ ...identifier, cdnImage }]);
+        expect(result).toMatchObject({ index: 0, status: "updated", designId: before.id, cdnImage });
+        expect((await byId("Space cat")).cdnImage).toEqual(cdnImage);
+      }
+      const after = await byId("Space cat");
+      const unchanged = (row: typeof before) => Object.fromEntries(Object.entries(row).filter(([key]) => key !== "cdnImage" && key !== "updatedAt"));
+      expect(unchanged(after)).toEqual(unchanged(before));
+      expect(after.updatedAt).not.toEqual(before.updatedAt);
+      expect((await byId("Other cat")).cdnImage).toBeNull();
+    });
+
+    it("reports not_found, and conflicts for identifiers of different designs, a different stored identity, or foreign keys", async () => {
+      await seedTwo();
+      const results = await setImage([
+        { sha256: "d".repeat(64), cdnImage: mockupsFor("d".repeat(64)) },
+        { sha256: A, sourceImageId: 300, cdnImage: mockupsFor(A) },
+        { redbubbleId: "184507567", sourceImageId: 299, cdnImage: mockupsFor(SHA_B) },
+        { sourceImageId: 299, sha256: SHA_C, cdnImage: mockupsFor(SHA_C) },
+        { sourceImageId: 299, cdnImage: mockupsFor(SHA_B) },
+        { redbubbleId: "1", sourceImageId: 999, cdnImage: mockupsFor(A) },
+      ]);
+      expect(results.map(r => r.status)).toEqual(["not_found", "conflict", "conflict", "conflict", "conflict", "not_found"]);
+      expect(results[1].designId).toBeUndefined();
+      expect(results[3]).toMatchObject({ designId: (await byId("Space cat")).id, message: expect.stringMatching(/sha256/) });
+      expect(results[4].message).toMatch(/keys/);
+      expect((await byId("Space cat")).cdnImage).toBeNull();
+      expect((await byId("Other cat")).cdnImage).toBeNull();
+    });
+
+    it("fills a NULL sha256/sourceImageId from the item, and otherwise accepts any shared prefix for a design with no sha256", async () => {
+      await execute(`INSERT INTO designs (${provider === "postgres" ? '"externalId"' : "externalId"}, title, description, keywords, props) VALUES (777, 'Scraped', 'd', 'k', '{}')`);
+      const noSha = await setImage([{ redbubbleId: "777", cdnImage: mockupsFor(SHA_C, 2) }]);
+      expect(noSha[0].status).toBe("updated");
+      expect(await byId("Scraped")).toMatchObject({ sha256: null, sourceImageId: null, cdnImage: mockupsFor(SHA_C, 2) });
+      const filled = await setImage([{ redbubbleId: "777", sha256: SHA_C, sourceImageId: 555, cdnImage: mockupsFor(SHA_C) }]);
+      expect(filled[0].status).toBe("updated");
+      expect(await byId("Scraped")).toMatchObject({ sha256: SHA_C, sourceImageId: 555, cdnImage: mockupsFor(SHA_C) });
+      // Now that the design has a sha256, the keys must follow it.
+      expect((await setImage([{ redbubbleId: "777", cdnImage: mockupsFor(A) }]))[0].status).toBe("conflict");
+    });
+
+    it("applies the good items of a mixed batch in order and leaves the others untouched", async () => {
+      await seedTwo();
+      const results = await setImage([
+        { sha256: A, cdnImage: mockupsFor(A) },
+        { sourceImageId: 12345, cdnImage: mockupsFor(A) },
+        { sha256: A, sourceImageId: 300, cdnImage: mockupsFor(A) },
+        { redbubbleId: "184507567", cdnImage: mockupsFor(SHA_B, 1) },
+      ]);
+      expect(results.map(r => [r.index, r.status])).toEqual([[0, "updated"], [1, "not_found"], [2, "conflict"], [3, "updated"]]);
+      expect((await byId("Space cat")).cdnImage).toEqual(mockupsFor(A));
+      expect((await byId("Other cat")).cdnImage).toEqual(mockupsFor(SHA_B, 1));
+    });
+
+    it.skipIf(provider !== "postgres")("is callable only by the service role", async () => {
+      await expect(pgSql("SET ROLE anon; SELECT public.set_design_cdn_image('[]')")).rejects.toThrow(/permission denied/i);
+      await expect(pgSql("SET ROLE authenticated; SELECT public.set_design_cdn_image('[]')")).rejects.toThrow(/permission denied/i);
+      expect(await pgSql("SET ROLE service_role; SELECT public.set_design_cdn_image('[]')")).toBe("[]");
+    });
+
+    it.skipIf(provider !== "mysql")("reads the stored array back by sha256, sourceImageId and redbubbleId", async () => {
+      await seedTwo();
+      await setImage([{ sha256: A, cdnImage: mockupsFor(A) }]);
+      const id = (await byId("Space cat")).id;
+      for (const lookup of [{ sha256: A }, { sourceImageId: 299 }, { redbubbleId: "184507566" }]) {
+        expect(await getDesignCdnImageMySQL(pool, lookup)).toEqual({ designId: id, cdnImage: mockupsFor(A) });
+      }
+      expect(await getDesignCdnImageMySQL(pool, { sourceImageId: 300 })).toMatchObject({ cdnImage: null });
+      expect(await getDesignCdnImageMySQL(pool, { sourceImageId: 4040 })).toBeNull();
+    });
   });
   it("repeat updates only supplied listing fields; preserves publish time and curated design", async () => {
     const body = input();
