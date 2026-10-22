@@ -40,7 +40,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
               alt=""
               fill
               sizes={`(max-width: 640px) ${compactOnMobile ? "50vw" : "100vw"}, (max-width: 768px) 50vw, (max-width: 1280px) 33vw, 30vw`}
-              className="object-contain transition-transform duration-300 ease-out group-hover:scale-[1.4]"
+              className="object-cover object-center transition-transform duration-300 ease-out group-hover:scale-[1.4]"
             />
           </div>
         </AccentLink>
