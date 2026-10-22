@@ -78,7 +78,7 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
     <div className="mx-auto w-full max-w-md rounded-xl border border-border bg-card p-3 shadow-xl">
       <AccentLink
         href={designPath(design)}
-        className={cn("block overflow-hidden rounded-lg", focusRingClasses)}
+        className={cn("relative block overflow-hidden rounded-lg", focusRingClasses)}
         tabIndex={-1}
         aria-hidden="true"
       >

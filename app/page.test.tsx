@@ -102,6 +102,9 @@ describe("home catalog discovery", () => {
     expect(img.attr("src")).toContain("designs/aaaa/card-v1.webp");
     expect(img.attr("class")).toContain("w-full");
     expect(img.attr("class")).toContain("h-auto");
+    // The frame is the positioned ancestor: the watermark overlay must anchor to the
+    // picture, not tile across the whole hero band.
+    expect(img.closest("a").attr("class")).toContain("relative");
     expect(img.closest("a").attr("class")).toContain("overflow-hidden");
     expect($("section[aria-labelledby=\"home-heading\"] [class*='aspect-']")).toHaveLength(0);
     vi.unstubAllEnvs();
