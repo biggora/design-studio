@@ -110,6 +110,8 @@ describe("setDesignBackgrounds", () => {
       expect(result.updated).toEqual([{ id: "d-update", externalImageUrl: WHITE_URL, backgroundColor: WHITE_HEX }]);
       expect(result.skipped).toHaveLength(0);
       expect(updateDesignBackgroundMock).toHaveBeenCalledWith("d-update", WHITE_URL, WHITE_HEX);
+      // Background updates by explicit id must reach deactivated designs too.
+      expect(getDesignByIdMock).toHaveBeenCalledWith("d-update", true);
     });
 
     it("does not call updateDesignBackground in dry-run mode but still reports the planned update", async () => {

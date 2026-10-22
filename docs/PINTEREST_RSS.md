@@ -121,10 +121,11 @@ next itself; **no new dependency**.
   and `status = 'published'`** — designs pod-uploader already pinned through
   the API are skipped so nothing is pinned twice. (`removed` posts do not
   block re-publication through RSS.)
-- **Trashed/hidden state does not exist in this schema** — there is no such
-  column (`designs.shared` is written `false` by the sync and never used as a
-  filter), so there is nothing extra to skip. If a visibility flag is added
-  later, `fetchCollectionFeedDesigns` is the place to apply it.
+- the design is **active** (`designs.active`, default `true`) — deactivated
+  prints are filtered out of the feed queries (and their `/p/{slug}` landing
+  pages and `pin.jpg` answer `404`), so a Pin is never published for a print
+  the storefront itself hides. `designs.shared` remains unused (the sync
+  writes `false` and nothing filters on it).
 
 **One design, one feed.** Pinterest creates a separate Pin for every feed item
 it reads, so a design listed in several collection feeds would be pinned once

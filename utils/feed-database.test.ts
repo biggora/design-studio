@@ -146,16 +146,18 @@ beforeEach(() => {
 });
 
 describe("fetchFeedCollections", () => {
-    it("reads titles and descriptions from the collections table", async () => {
+    it("reads titles and descriptions from the collections table, sizing active designs only", async () => {
         responses = {collections: {data: [
-            {title: "Cats", description: "Feline friends", design_collections: [{count: 3}]},
-            {title: "Space", description: null, design_collections: [{count: 0}]},
-            {title: "Cats", description: "duplicate row", design_collections: [{count: 9}]},
+            {title: "Cats", description: "Feline friends", design_collections: [
+                {designs: {active: true}}, {designs: {active: true}}, {designs: {active: false}},
+            ]},
+            {title: "Space", description: null, design_collections: []},
+            {title: "Cats", description: "duplicate row", design_collections: [{designs: {active: true}}]},
         ], error: null}};
 
         const {fetchFeedCollections} = await importFacade();
         await expect(fetchFeedCollections()).resolves.toEqual([
-            {title: "Cats", description: "Feline friends", size: 3},
+            {title: "Cats", description: "Feline friends", size: 2},
             {title: "Space", description: "", size: 0},
         ]);
     });

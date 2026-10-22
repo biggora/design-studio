@@ -26,6 +26,7 @@ create table
                        "backgroundColor" character varying not null default '#FFFFFF'::character varying,
                        "backgroundColors" text null,
                        shared boolean null default false,
+                       active boolean not null default true,
                        "cdnImage" jsonb null,
                        props json null,
                        "createdAt" timestamp with time zone not null default now(),

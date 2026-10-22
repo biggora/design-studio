@@ -139,6 +139,7 @@ CREATE TABLE designs (
 | `backgroundColor` | `VARCHAR` | `VARCHAR(255)` | DEFAULT `'#FFFFFF'` | Primary background color in HEX format. |
 | `backgroundColors` | `TEXT` | `TEXT` | NULL | Additional color palette or list of available shades. |
 | `shared` | `BOOLEAN` | `BOOLEAN` | DEFAULT `false` | Visibility/publication flag for the shared catalog. |
+| `active` | `BOOLEAN` | `BOOLEAN` | NOT NULL, DEFAULT `true` | The manual publish switch. `false` hides the print from every public surface (catalog, search, home, collections, gifts, related, feeds, sitemap) and 404s its direct URLs (`/designs/<slug>`, `/p/<slug>`, `/api/v1/prints/{id}`). Existing rows became active through the column default in migration 006; the sync pipeline never rewrites the flag — it changes only through `POST /api/designs/active` or `npm run designs:active`. Operational tooling reads through it with an explicit `includeInactive` escape hatch. |
 | `cdnImage` | `JSONB` | `JSON` | NULL | Pod-uploader CDN artwork descriptor `{ key, version, width, height }`, or NULL. Written only by the listings ingest (`ingest_design_listing` / `ingestListingMySQL`); never by the scrapers or background tooling. `key` addresses `<NEXT_PUBLIC_IMAGES_CDN>/<key>/<thumb|card|main>-v<version>.webp` and `share-v<version>.jpg` files (immutable, `version` ≥ 1); `width`/`height` are the `main` variant's pixel size. |
 | `props` | `JSON` | `JSON` | NULL | Additional unstructured metadata. Known keys: `mockup_tshirt`, `mockup_hat`, `mockup_mug`, `mockup_mousepad` (Redbubble product mockup image URLs, filled by the Redbubble sync and the listings ingest, never overwritten once set), `teepublicLink`, `teepublicId`, `curatedCollections`. |
 | `createdAt` | `TIMESTAMP WITH TIME ZONE` | `TIMESTAMP` | DEFAULT NOW | Date the artwork was added to the catalog. |
@@ -271,6 +272,7 @@ For deployments that already have `studio` and `designs` provisioned, apply the 
 - `init/migrations/004_design_social_posts_postgres.sql` / `004_design_social_posts_mysql.sql` — add the private `design_social_posts` table (§ 2.7). The PostgreSQL migration also installs its RLS policy/grants and the `upsert_design_social_post`, `list_design_social_posts`, and `summarize_design_social_posts` RPCs (§ 3.1). Both scripts are rerunnable; apply after 003.
 - `init/migrations/005_design_cdn_image_postgres.sql` / `005_design_cdn_image_mysql.sql` — add the nullable `designs.cdnImage` column (Postgres `JSONB`, MySQL `JSON`) and reinstall `ingest_design_listing` with the `cdnImage` semantics (present → store/overwrite, absent → keep; never cleared). Both scripts are rerunnable; apply after 004. `init/postgres_functions.sql` carries the same function body for fresh installs.
 - `init/migrations/006_listing_extra_mockups_postgres.sql` — reinstall `ingest_design_listing` so a Redbubble listing's `extra.mockupHat` / `mockupMug` / `mockupMousepad` fill `props.mockup_hat` / `mockup_mug` / `mockup_mousepad` while empty (like `mockupTshirt`). PostgreSQL only: the MySQL ingest is application code (`utils/listings-database.ts`) and needs no schema change. Rerunnable; apply after 005.
+- `init/migrations/007_design_active_postgres.sql` / `007_design_active_mysql.sql` — add the NOT NULL `designs.active` flag (default `true`), the manual publish switch behind every public surface (§ 2.2). The PostgreSQL migration also reinstalls the `get_random_design` / `get_random_designs` helpers with the active filter; MySQL procedure bodies cannot run through the migration runner, so fresh installs get them from `init/mysql_functions.sql` and existing MySQL installs keep the (unused by the app) unfiltered procedures. Existing rows become active through the column default — no backfill. Rerunnable; apply BEFORE deploying the code that filters on the flag, since the new queries error against a database without the column.
 
 Run `npm run db:migrate` to apply all pending migrations using `.env` and `DATABASE_PROVIDER`. The command discovers numbered `*_postgres.sql` or `*_mysql.sql` files in `init/migrations/`, applies them in numeric order, and records each successful file and its checksum in the database (`design_studio_migrations.history` for PostgreSQL, `schema_migrations` for MySQL). Subsequent runs skip recorded files; editing an already recorded file is rejected. Add a new numbered migration for further changes. Concurrent migration runners are blocked by a database session lock.
 
@@ -412,22 +414,24 @@ For selecting random designs (e.g. for a promo block or dynamic recommendations)
 ### 3.1 PostgreSQL (`init/postgres_functions.sql`)
 
 ```sql
--- Select a single random design
+-- Select a single random active design
 CREATE OR REPLACE FUNCTION get_random_design()
 RETURNS SETOF designs
 LANGUAGE SQL
 AS $$
     SELECT * FROM designs
+    WHERE active
     ORDER BY random()
     LIMIT 1;
 $$;
 
--- Select three random designs
+-- Select three random active designs
 CREATE OR REPLACE FUNCTION get_random_designs()
 RETURNS SETOF designs
 LANGUAGE SQL
 AS $$
     SELECT * FROM designs
+    WHERE active
     ORDER BY random()
     LIMIT 3;
 $$;
@@ -456,6 +460,7 @@ DELIMITER $$
 CREATE PROCEDURE get_random_design()
 BEGIN
   SELECT * FROM designs
+  WHERE active = 1
   ORDER BY RAND()
   LIMIT 1;
 END $$
@@ -463,6 +468,7 @@ END $$
 CREATE PROCEDURE get_random_designs()
 BEGIN
   SELECT * FROM designs
+  WHERE active = 1
   ORDER BY RAND()
   LIMIT 3;
 END $$

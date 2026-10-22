@@ -29,6 +29,7 @@ All endpoints:
 - Are `GET` (plus `OPTIONS` for CORS preflight, which returns `204` with the CORS headers and no body).
 - Return JSON with `Content-Type: application/json`.
 - Return `{ "error": string }` with an appropriate status code on failure (see §5).
+- **Serve active prints only.** Every design carries an `active` flag (`true` by default). Deactivated prints (`active = false`) are excluded from all lists and random draws, and `/prints/{id}` answers `404` for them, exactly like the storefront itself. The flag is managed out-of-band (studio-side CLI/API), so treat a print disappearing from responses the same way as a deleted one.
 
 ### 3.1 `GET /api/v1/prints`
 
@@ -103,7 +104,7 @@ Response body:
 Status codes:
 - `200` — found.
 - `400` — `{"error":"Invalid id"}` when the id exceeds 100 characters, or `{"error":"Invalid bg"}` for an invalid `bg`.
-- `404` — `{"error":"Not found"}` when no design matches.
+- `404` — `{"error":"Not found"}` when no design matches, or when the design is deactivated (`active = false`).
 - `500` — `{"error":"Internal server error"}` if the query throws.
 
 Cache-Control: `public, s-maxage=300, stale-while-revalidate=600` on success; `no-store` on any error status (`400`/`404`/`500` all force `no-store`, since the response helper treats any status >= 400 as non-cacheable).
@@ -122,7 +123,7 @@ Response body:
 }
 ```
 
-`items` is `string[]` — plain collection titles, not objects.
+`items` is `string[]` — plain collection titles, not objects. Themes whose every print is deactivated are omitted.
 
 Status codes: `200` on success, `500` (`{"error":"Internal server error"}`) if the query throws.
 
@@ -298,6 +299,7 @@ function PrintsWidget() {
 - **The other three endpoints are cached at the CDN for 5 minutes** (`s-maxage=300, stale-while-revalidate=600`), so newly synced designs, collection changes, or edits can take up to a few minutes to appear.
 - **Supabase random sampling reads up to 1000 design ids** before shuffling and picking a sample — `fetchRandomDesigns` selects only the `id` column with no explicit row limit, and Supabase/PostgREST caps unbounded selects at 1000 rows by default. On a catalog larger than 1000 designs, designs beyond that default page are not eligible for the random draw.
 - **Images are hosted on Redbubble's CDN**, not this deployment — `imageUrl`/`mockupUrl` point at `*.redbubble.com`/`*.redbubble.net`.
+- **Deactivated prints vanish without notice.** The `active` flag is toggled from the studio side (§3 intro); a print can disappear from lists and its `{id}` can start returning `404` between polls. `total` counts active prints only.
 
 ---
 

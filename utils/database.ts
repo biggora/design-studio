@@ -89,6 +89,14 @@ function normalizeCollection(value: unknown): string {
     return collection && collection !== NO_COLLECTION_SENTINEL ? collection : "";
 }
 
+// `active` is NOT NULL DEFAULT true in the schema; rows predating the column (or test
+// fixtures without it) read as published. MySQL delivers the boolean as 1/0.
+function normalizeActive(value: unknown): boolean {
+    if (typeof value === "boolean") return value;
+    if (value === null || value === undefined) return true;
+    return Boolean(value);
+}
+
 export function mapRowToDesign(row: mysql.RowDataPacket): Design {
     return {
         id: row.id as string,
@@ -116,6 +124,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         price: row.price as number | undefined,
         inStock: row.inStock as boolean | undefined,
         shared: Boolean(row.shared),
+        active: normalizeActive(row.active),
         cdnImage: normalizeCdnImage(row.cdnImage),
         props: row.props as object | undefined,
     };
@@ -190,7 +199,7 @@ export async function fetchDesigns(
         const filters = searchTerms.length ? `and(${termFilters.join(",")})` : keywordFilters;
 
         const runLegacyQuery = async (from = start, to = end) => {
-            let query = supabaseClient.from("designs").select("*", {count: "exact"});
+            let query = supabaseClient.from("designs").select("*", {count: "exact"}).eq("active", true);
             if (filters) query = query.or(filters);
             if (collection) {
                 query = query.eq("collection", collection);
@@ -202,7 +211,8 @@ export async function fetchDesigns(
         const runJoinQuery = async (from = start, to = end) => {
             let query = supabaseClient
                 .from("designs")
-                .select("*, design_collections!inner(collections!inner(title))", {count: "exact"});
+                .select("*, design_collections!inner(collections!inner(title))", {count: "exact"})
+                .eq("active", true);
             if (filters) query = query.or(filters);
             query = query.eq("design_collections.collections.title", collection);
             query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
@@ -260,7 +270,7 @@ export async function fetchDesigns(
     const pool = getMySQLPool();
 
     const buildBase = (withCollectionJoin: boolean) => {
-        let base = "FROM designs WHERE 1";
+        let base = "FROM designs WHERE active = TRUE";
         const params: (string | number)[] = [];
 
         for (const term of searchTerms) {
@@ -321,19 +331,19 @@ export async function fetchDesigns(
     return {designs, total: result.total};
 }
 
-// column is always one of the literal values below (never user input), so it's safe to interpolate into the MySQL query.
+// Public surfaces treat a deactivated design (`active = false`) as missing; the
+// operational tooling (background service, curation) passes includeInactive.
 async function getDesignBy(
     column: "id" | "slug",
     value: string,
+    includeInactive = false,
 ): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
-        const {data: designData, error} = await supabaseClient
-            .from("designs")
-            .select("*")
-            .eq(column, value)
-            .single();
+        let query = supabaseClient.from("designs").select("*").eq(column, value);
+        if (!includeInactive) query = query.eq("active", true);
+        const {data: designData, error} = await query.single();
 
         if (error) {
             // PGRST116: .single() matched no rows — a genuine "not found"
@@ -352,8 +362,9 @@ async function getDesignBy(
     }
 
     const pool = getMySQLPool();
+    // column is one of the literal values above (never user input), so it's safe to interpolate.
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-        `SELECT * FROM designs WHERE ${column} = ? LIMIT 1`,
+        `SELECT * FROM designs WHERE ${column} = ?${includeInactive ? "" : " AND active = TRUE"} LIMIT 1`,
         [value],
     );
 
@@ -371,14 +382,16 @@ async function getDesignBy(
 
 export async function getDesignById(
     id: string,
+    includeInactive = false,
 ): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
-    return getDesignBy("id", id);
+    return getDesignBy("id", id, includeInactive);
 }
 
 export async function getDesignBySlug(
     slug: string,
+    includeInactive = false,
 ): Promise<{ design: Design; relatedDesigns: Design[] } | null> {
-    return getDesignBy("slug", slug);
+    return getDesignBy("slug", slug, includeInactive);
 }
 
 async function fetchRelatedByCollection(
@@ -391,6 +404,7 @@ async function fetchRelatedByCollection(
         const {data, error} = await supabaseClient.from("designs")
             .select("*, design_collections!inner(collectionId)")
             .in("design_collections.collectionId", memberships.data.map(row => row.collectionId))
+            .eq("active", true)
             .neq("id", id)
             .order("createdAt", {ascending: false}).order("id", {ascending: false}).limit(5);
         if (!error) return (data || []).map(mapSupabaseRowToDesign);
@@ -401,6 +415,7 @@ async function fetchRelatedByCollection(
         .from("designs")
         .select("*")
         .eq("collection", collection)
+        .eq("active", true)
         .neq("id", id)
         .limit(5);
 
@@ -423,7 +438,7 @@ async function fetchRelatedByCollectionMySQL(
         );
         if (memberships.length) {
             const [rows] = await pool.query<mysql.RowDataPacket[]>(
-                "SELECT * FROM designs WHERE id <> ? AND EXISTS (SELECT 1 FROM design_collections dc WHERE dc.designId = designs.id AND dc.collectionId IN (?)) ORDER BY createdAt DESC, id DESC LIMIT 5",
+                "SELECT * FROM designs WHERE id <> ? AND active = TRUE AND EXISTS (SELECT 1 FROM design_collections dc WHERE dc.designId = designs.id AND dc.collectionId IN (?)) ORDER BY createdAt DESC, id DESC LIMIT 5",
                 [id, memberships.map(row => row.collectionId)],
             );
             return rows.map(mapRowToDesign);
@@ -433,7 +448,7 @@ async function fetchRelatedByCollectionMySQL(
     }
     if (!collection) return [];
     const [relatedRows] = await pool.query<mysql.RowDataPacket[]>(
-        "SELECT * FROM designs WHERE collection = ? AND id <> ? LIMIT 5",
+        "SELECT * FROM designs WHERE collection = ? AND id <> ? AND active = TRUE LIMIT 5",
         [collection, id],
     );
 
@@ -446,6 +461,7 @@ async function fetchLegacyCollections(provider: string): Promise<string[]> {
         const {data, error} = await supabaseClient
             .from("designs")
             .select("collection")
+            .eq("active", true)
             .not("collection", "is", null)
             .neq("collection", "")
             .neq("collection", "no_collection");
@@ -464,7 +480,7 @@ async function fetchLegacyCollections(provider: string): Promise<string[]> {
 
     const pool = getMySQLPool();
     const [rows] = await pool.query<mysql.RowDataPacket[]>(
-        "SELECT DISTINCT collection FROM designs WHERE collection IS NOT NULL AND collection != '' AND collection != 'no_collection' ORDER BY collection ASC",
+        "SELECT DISTINCT collection FROM designs WHERE active = TRUE AND collection IS NOT NULL AND collection != '' AND collection != 'no_collection' ORDER BY collection ASC",
     );
 
     return rows.map(row => row.collection as string);
@@ -492,6 +508,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         price: item.price as number | undefined,
         inStock: item.inStock as boolean | undefined,
         shared: item.shared as boolean | undefined,
+        active: normalizeActive(item.active),
         cdnImage: normalizeCdnImage(item.cdnImage),
         props: item.props as object | undefined,
     };
@@ -509,7 +526,7 @@ export async function fetchRandomDesigns(
         const supabaseClient = getSupabase();
 
         const runLegacyIdQuery = async () => {
-            let query = supabaseClient.from("designs").select("id");
+            let query = supabaseClient.from("designs").select("id").eq("active", true);
             if (collection) {
                 query = query.eq("collection", collection);
             }
@@ -523,6 +540,7 @@ export async function fetchRandomDesigns(
             let query = supabaseClient
                 .from("designs")
                 .select("id, design_collections!inner(collections!inner(title))")
+                .eq("active", true)
                 .eq("design_collections.collections.title", collectionTitle);
             if (keywords.length) {
                 query = query.or(keywords.map(k => `keywords.ilike.%${k}%`).join(","));
@@ -558,7 +576,7 @@ export async function fetchRandomDesigns(
             return [];
         }
 
-        const {data, error} = await supabaseClient.from("designs").select("*").in("id", pickedIds);
+        const {data, error} = await supabaseClient.from("designs").select("*").eq("active", true).in("id", pickedIds);
 
         if (error) {
             console.error("Error fetching random designs:", error);
@@ -573,7 +591,7 @@ export async function fetchRandomDesigns(
         const pool = getMySQLPool();
 
         const buildBase = (withCollectionJoin: boolean) => {
-            let base = "FROM designs WHERE 1";
+            let base = "FROM designs WHERE active = TRUE";
             const params: (string | number)[] = [];
             if (collection) {
                 base += withCollectionJoin
@@ -650,26 +668,125 @@ export async function updateDesignBackground(
     );
 }
 
+/** Light single-design read that also sees deactivated rows — the active-flag service's ids mode. */
+export async function getDesignActiveState(
+    id: string,
+): Promise<{ id: string; title: string; active: boolean } | null> {
+    const provider = getProvider();
+    if (provider === "supabase") {
+        const {data, error} = await getSupabase()
+            .from("designs")
+            .select("id, title, active")
+            .eq("id", id)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error reading design active state:", error);
+            throw new Error("Failed to read design active state", {cause: error});
+        }
+        return data
+            ? {id: data.id as string, title: data.title as string, active: normalizeActive(data.active)}
+            : null;
+    }
+
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT id, title, active FROM designs WHERE id = ?",
+        [id],
+    );
+    return rows.length
+        ? {id: rows[0].id as string, title: rows[0].title as string, active: normalizeActive(rows[0].active)}
+        : null;
+}
+
+/** Every design's {id, title, active} for the active-flag service's `all` mode. Deliberately
+ * unfiltered: `all:false` must still reach already-deactivated rows (and reactivation needs them). */
+export async function fetchDesignActiveEntries(): Promise<{ id: string; title: string; active: boolean }[]> {
+    const provider = getProvider();
+    const entries: { id: string; title: string; active: boolean }[] = [];
+
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const pageSize = 1000;
+        for (let from = 0; ; from += pageSize) {
+            const {data, error} = await supabaseClient
+                .from("designs")
+                .select("id, title, active")
+                .order("createdAt", {ascending: false})
+                .range(from, from + pageSize - 1);
+            // PGRST103: the range starts past the last row — every entry is loaded.
+            if (error?.code === "PGRST103") break;
+            if (error) {
+                console.error("Error listing design active states:", error);
+                throw new Error("Failed to list design active states", {cause: error});
+            }
+            for (const row of data ?? []) {
+                entries.push({id: row.id as string, title: row.title as string, active: normalizeActive(row.active)});
+            }
+            if (!data || data.length < pageSize) break;
+        }
+        return entries;
+    }
+
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT id, title, active FROM designs ORDER BY createdAt DESC, id DESC",
+    );
+    return rows.map(row => ({id: row.id as string, title: row.title as string, active: normalizeActive(row.active)}));
+}
+
+/** Column-scoped active-flag write (active + updatedAt only); the sync pipeline never touches it. */
+export async function updateDesignActive(id: string, active: boolean): Promise<void> {
+    const provider = getProvider();
+    const now = new Date();
+
+    if (provider === "supabase") {
+        const supabaseClient = getSupabase();
+        const {error} = await supabaseClient
+            .from("designs")
+            .update({active, updatedAt: now.toISOString()})
+            .eq("id", id);
+
+        if (error) {
+            console.error("Error updating design active flag:", error);
+            throw new Error("Failed to update design active flag", {cause: error});
+        }
+        return;
+    }
+
+    const pool = getMySQLPool();
+    // A Date object here (not an ISO string with a trailing "Z") — mysql2 serializes it to
+    // MySQL's own DATETIME format; a raw ISO string fails strict-mode TIMESTAMP parsing.
+    await pool.query(
+        "UPDATE designs SET active = ?, updatedAt = ? WHERE id = ?",
+        [active, now, id],
+    );
+}
+
 export async function fetchCollections(): Promise<string[]> {
     const provider = getProvider();
     if (provider === "supabase") {
         const supabaseClient = getSupabase();
         const {data, error} = await supabaseClient
             .from("collections")
-            .select("title")
+            .select("title, design_collections(designs(active))")
             .order("title");
 
         if (error || !data || !data.length) {
             return fetchLegacyCollections(provider);
         }
 
-        return Array.from(new Set(data.map(item => item.title as string).filter(Boolean)));
+        // Only themes that still have at least one active design (each join row embeds its design).
+        const withActiveDesigns = data.filter(item =>
+            ((item.design_collections ?? []) as unknown as {designs: {active: unknown} | null}[])
+                .some(membership => membership.designs && normalizeActive(membership.designs.active)));
+        return Array.from(new Set(withActiveDesigns.map(item => item.title as string).filter(Boolean)));
     }
 
     try {
         const pool = getMySQLPool();
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
-            "SELECT title FROM collections ORDER BY title",
+            "SELECT title FROM collections c WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN designs d ON d.id = dc.designId WHERE dc.collectionId = c.id AND d.active = TRUE) ORDER BY title",
         );
 
         if (!rows.length) {
@@ -784,7 +901,7 @@ export async function fetchFeedCollections(): Promise<FeedCollection[]> {
         const supabaseClient = getSupabase();
         const {data, error} = await supabaseClient
             .from("collections")
-            .select("title, description, design_collections(count)")
+            .select("title, description, design_collections(designs(active))")
             .order("title");
 
         if (error || !data || !data.length) {
@@ -796,15 +913,19 @@ export async function fetchFeedCollections(): Promise<FeedCollection[]> {
         return dedupeFeedCollections(data.map(row => ({
             title: row.title as string,
             description: (row.description as string | null) ?? "",
-            size: (row.design_collections as unknown as {count: number}[] | null)?.[0]?.count ?? 0,
+            // Membership count over active designs only, so a fully deactivated theme
+            // drops out of the chips, the feed index, and the one-feed-per-design sizes.
+            size: ((row.design_collections ?? []) as unknown as {designs: {active: unknown} | null}[])
+                .filter(membership => membership.designs && normalizeActive(membership.designs.active)).length,
         })));
     }
 
     try {
         const pool = getMySQLPool();
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
-            `SELECT c.title, c.description, COUNT(dc.designId) AS size FROM collections c
+            `SELECT c.title, c.description, COUNT(d.id) AS size FROM collections c
              LEFT JOIN design_collections dc ON dc.collectionId = c.id
+             LEFT JOIN designs d ON d.id = dc.designId AND d.active = TRUE
              GROUP BY c.id, c.title, c.description ORDER BY c.title`,
         );
 
@@ -847,8 +968,8 @@ function isoTime(value: unknown): string {
  * not already be pinned through the API (a `design_social_posts` row with channel 'pinterest',
  * status 'published' — so RSS auto-publish and pod-uploader never pin the same design twice).
  * `earliestListingAt` maps design id → the earliest design_listings.publishedAt, used
- * as the feed's pubDate. There is no hidden/trashed column in the schema (the `shared`
- * flag is vestigial and always false), so removal state is exactly the social-post row.
+ * as the feed's pubDate. Deactivated designs (`active = false`) never reach these queries;
+ * for still-active ones, removal state is exactly the social-post row.
  *
  * One feed per design: Pinterest makes a separate Pin per feed item, so a design that
  * belongs to several collections is kept only in the feed chosen by
@@ -887,6 +1008,7 @@ export async function fetchCollectionFeedDesigns(
             const {data, error} = await supabaseClient
                 .from("designs")
                 .select("*, design_collections!inner(collections!inner(title))")
+                .eq("active", true)
                 .eq("design_collections.collections.title", collectionTitle)
                 // Feed pins need a pin source: a Classic T-Shirt mockup (props.mockup_tshirt)
                 // or a pod-uploader CDN image (cdnImage, share JPEG).
@@ -901,6 +1023,7 @@ export async function fetchCollectionFeedDesigns(
             const {data, error} = await supabaseClient
                 .from("designs")
                 .select("*")
+                .eq("active", true)
                 .eq("collection", collectionTitle)
                 .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false})
@@ -930,7 +1053,8 @@ export async function fetchCollectionFeedDesigns(
     const runMySQLQuery = async (excludePinned: boolean) => {
         const [rows] = await pool.query<mysql.RowDataPacket[]>(
             `SELECT d.* FROM designs d
-             WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
+             WHERE d.active = TRUE
+               AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
                AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
@@ -979,8 +1103,9 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
         const client = getSupabase();
         const run = async (legacy: boolean) => {
             const base = legacy
-                ? client.from("designs").select("*").in("collection", titles)
+                ? client.from("designs").select("*").eq("active", true).in("collection", titles)
                 : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
+                    .eq("active", true)
                     .in("design_collections.collections.title", titles);
             return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
@@ -997,7 +1122,8 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
     try {
         const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
             `SELECT d.* FROM designs d
-             WHERE EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
+             WHERE d.active = TRUE
+               AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title IN (?))
                AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,

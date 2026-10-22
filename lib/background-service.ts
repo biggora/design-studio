@@ -17,7 +17,8 @@ export type SetDesignBackgroundsResult = {
 };
 
 // Paging batch size for the `all` mode, reusing fetchDesigns' existing page/limit contract
-// (no search/collection/keyword filter — every design is a candidate).
+// (no search/collection/keyword filter — every active design is a candidate; deactivated
+// designs only get background updates through explicit ids, which skip the active filter).
 const PAGE_SIZE = 100;
 
 async function loadTargetDesigns(opts: SetDesignBackgroundsOptions): Promise<{
@@ -29,7 +30,7 @@ async function loadTargetDesigns(opts: SetDesignBackgroundsOptions): Promise<{
   if (opts.ids) {
     const designs: Design[] = [];
     for (const id of opts.ids) {
-      const result = await getDesignById(id);
+      const result = await getDesignById(id, true);
       if (!result) {
         skipped.push({ id, reason: "not_found" });
         continue;

@@ -26,7 +26,7 @@ async function main() {
         if (!Array.isArray(assignment.collections) || !assignment.collections.length || assignment.collections.some(title => !known.has(title))) {
             throw new Error(`Unknown or missing collection for ${assignment.title}`);
         }
-        const result = await getDesignById(assignment.id);
+        const result = await getDesignById(assignment.id, true);
         if (!result || result.design.title !== assignment.title) throw new Error(`Design changed or missing: ${assignment.title}`);
         before.push(result.design);
     }
@@ -41,7 +41,7 @@ async function main() {
     for (const assignment of plan.assignments) await addCuratedCollections(assignment.id, assignment.collections);
     await saveCollectionPages(plan.collectionPages);
     for (const assignment of plan.assignments) {
-        const current = await getDesignById(assignment.id);
+        const current = await getDesignById(assignment.id, true);
         const saved = curatedCollectionTitles(current?.design.props);
         if (assignment.collections.some(title => !saved.includes(title))) throw new Error(`Curation verification failed: ${assignment.title}`);
     }

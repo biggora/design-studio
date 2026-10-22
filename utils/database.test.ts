@@ -15,12 +15,13 @@ let legacyDesignsQueryResponse: DesignsQueryResponse | DesignsQueryResponse[] = 
 let legacyCollectionsResponse: { data: unknown; error: unknown } = {data: [], error: null};
 let collectionsTableResponse: { data: unknown; error: unknown } = {data: [], error: null};
 
-// A thenable chain that mimics the legacy `.not().neq().neq()` filter chain
+// A thenable chain that mimics the legacy `.eq().not().neq().neq()` filter chain
 // used by fetchCollections' fallback path — it resolves directly on `await`.
 function legacyChain(response: { data: unknown; error: unknown }) {
     const obj = {
         then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) =>
             Promise.resolve(response).then(resolve, reject),
+        eq: () => obj,
         not: () => obj,
         neq: () => obj,
     };
@@ -30,6 +31,7 @@ function legacyChain(response: { data: unknown; error: unknown }) {
 const orderCalls: unknown[][] = [];
 const rangeCalls: unknown[][] = [];
 const neqCalls: unknown[][] = [];
+const eqCalls: unknown[][] = [];
 
 function nextResponse(response: DesignsQueryResponse | DesignsQueryResponse[]): DesignsQueryResponse {
     if (Array.isArray(response)) {
@@ -44,18 +46,34 @@ function makeDesignsBuilder(selectArg: string, options?: { count?: string }) {
 
     const builder = {
         ilike: () => builder,
+        or: () => builder,
         eq: (column: string) => {
+            eqCalls.push([column]);
             if (!hasCount && (column === "id" || column === "slug")) {
-                return {single: () => Promise.resolve(designResponse)};
+                // getDesignBy chain: eq(column, value)[.eq("active", true)].single()
+                const singleChain = {
+                    eq: () => {
+                        eqCalls.push(["active"]);
+                        return singleChain;
+                    },
+                    single: () => Promise.resolve(designResponse),
+                };
+                return singleChain;
             }
             if (!hasCount) {
-                // related-designs lookup: eq("collection", ...).neq("id", ...).limit(5)
-                return {
+                // related-designs lookup: eq("collection", ...).eq("active", ...).neq("id", ...).limit(5)
+                const relatedChain = {
+                    eq: () => {
+                        eqCalls.push(["active"]);
+                        return relatedChain;
+                    },
+                    or: () => relatedChain,
                     neq: (...args: unknown[]) => {
                         neqCalls.push(args);
                         return {limit: () => Promise.resolve(relatedResponse)};
                     },
                 };
+                return relatedChain;
             }
             return builder;
         },
@@ -143,6 +161,7 @@ describe("utils/database", () => {
         orderCalls.length = 0;
         rangeCalls.length = 0;
         neqCalls.length = 0;
+        eqCalls.length = 0;
     });
 
     describe("getSiteConfig", () => {
@@ -198,6 +217,16 @@ describe("utils/database", () => {
             const {getDesignById} = await import("@/utils/database");
             await expect(getDesignById("some-id")).rejects.toThrow("Failed to fetch design");
         });
+
+        it("filters deactivated designs by default and can include them for tooling", async () => {
+            const {getDesignById} = await import("@/utils/database");
+            designResponse = {data: null, error: {code: "PGRST116", message: "no rows"}};
+            await getDesignById("some-id");
+            expect(eqCalls).toEqual([["id"], ["active"]]);
+            eqCalls.length = 0;
+            await getDesignById("some-id", true);
+            expect(eqCalls).toEqual([["id"]]);
+        });
     });
 
     describe("getDesignBySlug (supabase)", () => {
@@ -248,13 +277,19 @@ describe("utils/database", () => {
             await getDesignBySlug("fox");
             expect(neqCalls[0]).toEqual(["id", "design-1"]);
         });
+
+        it("maps a missing active flag to published (rows predating the column)", async () => {
+            designResponse = {data: designRow, error: null};
+            const {getDesignBySlug} = await import("@/utils/database");
+            expect((await getDesignBySlug("fox"))?.design.active).toBe(true);
+        });
     });
 
     describe("getDesignBySlug (mysql)", () => {
-        it("queries by slug with LIMIT 1", async () => {
+        it("queries by slug with LIMIT 1 and the active filter", async () => {
             stubMySQLEnv();
             mysqlQuery.mockImplementation((sql: string) => {
-                if (sql === "SELECT * FROM designs WHERE slug = ? LIMIT 1") {
+                if (sql.startsWith("SELECT * FROM designs WHERE slug")) {
                     return Promise.resolve([[]]);
                 }
                 return Promise.resolve([[]]);
@@ -262,10 +297,22 @@ describe("utils/database", () => {
             const {getDesignBySlug} = await import("@/utils/database");
             const result = await getDesignBySlug("my-slug");
             expect(mysqlQuery).toHaveBeenCalledWith(
-                "SELECT * FROM designs WHERE slug = ? LIMIT 1",
+                "SELECT * FROM designs WHERE slug = ? AND active = TRUE LIMIT 1",
                 ["my-slug"],
             );
             expect(result).toBeNull();
+        });
+
+        it("includeInactive drops the active filter and maps 0 to false", async () => {
+            stubMySQLEnv();
+            mysqlQuery.mockImplementation(() => Promise.resolve([[{id: "x", title: "T", active: 0}]]));
+            const {getDesignById} = await import("@/utils/database");
+            const result = await getDesignById("x", true);
+            expect(mysqlQuery).toHaveBeenCalledWith(
+                "SELECT * FROM designs WHERE id = ? LIMIT 1",
+                ["x"],
+            );
+            expect(result?.design.active).toBe(false);
         });
     });
 
@@ -306,6 +353,7 @@ describe("utils/database", () => {
             expect(designs[0].id).toBe("1");
             expect(designs[0].title).toBe("Fox");
             expect(designs[0].slug).toBe("fox");
+            expect(eqCalls).toContainEqual(["active"]);
         });
 
         it("falls back to the legacy filter when the join query errors", async () => {
@@ -369,10 +417,23 @@ describe("utils/database", () => {
 
     describe("fetchCollections (supabase)", () => {
         it("returns titles from the collections table", async () => {
-            collectionsTableResponse = {data: [{title: "Nature"}, {title: "Space"}], error: null};
+            collectionsTableResponse = {data: [
+                {title: "Nature", design_collections: [{designs: {active: true}}, {designs: {active: true}}]},
+                {title: "Space", design_collections: [{designs: {active: true}}]},
+            ], error: null};
             const {fetchCollections} = await import("@/utils/database");
             const result = await fetchCollections();
             expect(result).toEqual(["Nature", "Space"]);
+        });
+
+        it("drops themes whose every design is deactivated", async () => {
+            collectionsTableResponse = {data: [
+                {title: "Nature", design_collections: [{designs: {active: false}}]},
+                {title: "Space", design_collections: [{designs: {active: false}}, {designs: {active: true}}]},
+            ], error: null};
+            const {fetchCollections} = await import("@/utils/database");
+            const result = await fetchCollections();
+            expect(result).toEqual(["Space"]);
         });
 
         it("falls back to legacy designs.collection when the table query errors", async () => {
@@ -417,6 +478,7 @@ describe("utils/database", () => {
             mysqlQuery.mockImplementation((sql: string) => {
                 if (sql.startsWith("SELECT * FROM designs") || sql.includes("SELECT *")) {
                     expect(sql).toContain("EXISTS (SELECT 1 FROM design_collections");
+                    expect(sql).toContain("WHERE active = TRUE");
                     return Promise.resolve([[row]]);
                 }
                 if (sql.startsWith("SELECT COUNT")) {

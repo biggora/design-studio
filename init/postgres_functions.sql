@@ -1,8 +1,10 @@
+-- Both follow the public filter: only active designs.
 create or replace function get_random_design()
 returns setof designs
 language sql
 as $$
 select * from designs
+where active
 order by random()
     limit 1;
 $$;
@@ -12,6 +14,7 @@ returns setof designs
 language sql
 as $$
 select * from designs
+where active
 order by random()
     limit 3;
 $$;-- Invoker privileges, callable only by the service role. Raising an error rolls back

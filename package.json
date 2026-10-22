@@ -22,6 +22,8 @@
     "seo:copy:dry": "tsx scripts/apply-seo-copy.ts --dry-run",
     "designs:background": "tsx scripts/set-background.ts",
     "designs:background:dry": "tsx scripts/set-background.ts --dry-run",
+    "designs:active": "tsx scripts/set-design-active.ts",
+    "designs:active:dry": "tsx scripts/set-design-active.ts --dry-run",
     "sync:teepublic": "tsx scripts/sync-teepublic.ts",
     "sync:teepublic:dry": "tsx scripts/sync-teepublic.ts --dry-run",
     "sync:teepublic:json": "tsx scripts/sync-teepublic.ts --target=json",

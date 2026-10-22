@@ -236,3 +236,33 @@ To run once per day, add an entry to the server's system crontab (`crontab -e`):
     });
     ```
   - Under heavy load, use a connection-pooling proxy such as **ProxySQL** or **AWS RDS Proxy**.
+
+---
+
+## 5. Hiding prints: the `designs.active` flag
+
+Every design carries an `active` boolean (`NOT NULL DEFAULT true` — migration 007, applied with `npm run db:migrate` BEFORE deploying the code that filters on it). Setting it to `false` hides the print from the entire storefront — catalog, search, home, collections, gifts, related rails, the Pinterest/gift RSS feeds, `sitemap.xml`, and the public `/api/v1` API — and its direct URLs (`/designs/<slug>`, `/p/<slug>`, `/api/v1/prints/{id}`) answer `404`. The Redbubble/TeePublic syncs never rewrite the flag, so a re-sync cannot reactivate a print.
+
+### 5.1 CLI
+
+```bash
+npm run designs:active -- --active=false --id=<uuid>[,<uuid>...]   # hide specific prints (writes)
+npm run designs:active -- --active=true  --id=<uuid>               # bring a print back
+npm run designs:active:dry -- --active=false --id=<uuid>           # preview: no writes
+npm run designs:active -- --active=true --all                      # reactivate everything
+```
+
+Flags: `--active=<true|false>` (required), exactly one of `--id=<id>[,<id>...]` or `--all`, `--dry-run`. Already-matching designs are reported as `unchanged`, unknown ids as `not_found`.
+
+### 5.2 HTTP endpoint
+
+`POST /api/designs/active` — same authorization as the sync route (`SYNC_SECRET` via `Authorization: Bearer` or `x-sync-secret`):
+
+```bash
+curl -fsS -X POST "https://your-domain.com/api/designs/active" \
+  -H "Authorization: Bearer YOUR_LONG_RANDOM_SYNC_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"active": false, "ids": ["<uuid>"]}'
+```
+
+Body: `{ "active": boolean, "ids"?: string[], "all"?: boolean, "dryRun"?: boolean }` (exactly one of a non-empty `ids` array or `all: true`, up to 500 ids). A real (non-dry) change revalidates the site layout immediately; CDN-cached surfaces (sitemap, public API, OG images) refresh within their normal TTLs (5 minutes / 24 hours).
