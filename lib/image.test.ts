@@ -8,6 +8,7 @@ import {
   hasPinImage,
   imagesCdnBase,
   normalizeCdnImage,
+  normalizeCdnImageMockups,
   watermarkText,
 } from "@/lib/image";
 
@@ -83,6 +84,54 @@ describe("normalizeCdnImage", () => {
     expect(normalizeCdnImage({ ...cdnImage, version: 0 })).toBeNull();
     expect(normalizeCdnImage({ ...cdnImage, width: "1600" })).toBeNull();
     expect(normalizeCdnImage({ key: "", version: 1, width: 1, height: 1 })).toBeNull();
+  });
+});
+
+const mockups = [
+  { key: "designs/f45e5bc7a5342c2c/mockups/66c018b96d9c6dac", kind: "flat-full", version: 1, width: 1024, height: 1536 },
+  { key: "designs/f45e5bc7a5342c2c/mockups/002a102ae0ec24d0", kind: "hanger-close", version: 1, width: 1024, height: 1536 },
+];
+
+describe("a stored cdnImage mockup array on the storefront", () => {
+  it("is not CDN artwork: normalizeCdnImage returns null for arrays and their JSON strings", () => {
+    expect(normalizeCdnImage(mockups)).toBeNull();
+    expect(normalizeCdnImage(JSON.stringify(mockups))).toBeNull();
+    expect(normalizeCdnImage([cdnImage])).toBeNull();
+  });
+
+  it("keeps the Redbubble fallback for images, share URL and pins even with the env set", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const design = makeDesign({ cdnImage: normalizeCdnImage(mockups) });
+    expect(getDesignImage(design)).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/images/flat.png" });
+    expect(cdnShareImageUrl(design)).toBeNull();
+    expect(getShareImageUrl(design)).toBe("https://ih1.redbubble.net/images/flat.png");
+    expect(hasPinImage(design)).toBe(false);
+  });
+});
+
+describe("normalizeCdnImageMockups (ingest responses)", () => {
+  it("parses a mysql2 JSON string and passes Supabase arrays through", () => {
+    expect(normalizeCdnImageMockups(JSON.stringify(mockups))).toEqual(mockups);
+    expect(normalizeCdnImageMockups(mockups)).toEqual(mockups);
+  });
+
+  it("returns null for absent, malformed, non-array, and empty values (including the old object form)", () => {
+    for (const value of [undefined, null, "", "not json", {}, mockups[0], cdnImage, "{}", [], "[]"]) {
+      expect(normalizeCdnImageMockups(value)).toBeNull();
+    }
+  });
+
+  it("drops invalid entries and keeps the valid ones", () => {
+    const result = normalizeCdnImageMockups([
+      mockups[0], { ...mockups[1], kind: "side" }, { ...mockups[1], version: 0 }, { ...mockups[1], width: "1024" },
+      { ...mockups[1], key: "" }, null, "x", [],
+    ]);
+    expect(result).toEqual([mockups[0]]);
+    expect(normalizeCdnImageMockups([{ ...mockups[0], kind: "side" }])).toBeNull();
+  });
+
+  it("strips unknown properties", () => {
+    expect(normalizeCdnImageMockups([{ ...mockups[0], extra: 1 }])).toEqual([mockups[0]]);
   });
 });
 

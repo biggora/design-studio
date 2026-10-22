@@ -7,6 +7,10 @@ const body = () => ({
   listing: { platform: "redbubble", account: "redbubble:main", externalId: "184507566", url: "https://www.redbubble.com/shop/ap/184507566" },
 });
 
+const prefix = `designs/${sha256.slice(0, 16)}/mockups/`;
+const mockup = (n: number, kind = "flat-full") => ({ key: `${prefix}${n.toString(16).padStart(16, "0")}`, kind, version: 1, width: 1024, height: 1536 });
+const kinds = ["flat-full", "hanger-full", "flat-close", "hanger-close"];
+
 function parseField(value: unknown): ListingsError {
   try {
     parseIngestInput({ ...body(), design: { ...body().design, cdnImage: value } });
@@ -16,70 +20,89 @@ function parseField(value: unknown): ListingsError {
   }
   throw new Error("Expected parseIngestInput to reject the value");
 }
+const parseOk = (value: unknown) => parseIngestInput({ ...body(), design: { ...body().design, cdnImage: value } });
 
-describe("parseIngestInput cdnImage", () => {
-  it("accepts a valid cdnImage and stores it on the design", () => {
-    const input = parseIngestInput({
-      ...body(),
-      design: { ...body().design, cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920 } },
-    });
-    expect(input.design.cdnImage).toEqual({ key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920 });
+describe("parseIngestInput cdnImage (mockup array)", () => {
+  it("accepts all four kinds and keeps them in request order", () => {
+    const mockups = kinds.map((kind, i) => mockup(i + 1, kind));
+    expect(parseOk(mockups).design.cdnImage).toEqual(mockups);
   });
 
   it("accepts the field absent", () => {
     expect(parseIngestInput(body()).design.cdnImage).toBeUndefined();
   });
 
-  it.each([
-    ["a string", "designs/x"],
-    ["an array", ["key"]],
-    ["null", null],
-  ])("rejects a non-object cdnImage (%s)", (_name, value) => {
-    const error = parseField(value);
+  it("derives the expected prefix from the lowercased sha256", () => {
+    const input = parseIngestInput({ ...body(), design: { ...body().design, sha256: sha256.toUpperCase(), cdnImage: [mockup(1)] } });
+    expect(input.design.cdnImage).toEqual([mockup(1)]);
+  });
+
+  it("no longer accepts the old single-object form", () => {
+    const error = parseField({ key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920 });
     expect(error.status).toBe(400);
     expect(error.code).toBe("VALIDATION");
     expect(error.field).toBe("design.cdnImage");
   });
 
-  it("rejects an unknown nested key with its field name", () => {
-    const error = parseField({ key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920, format: "webp" });
+  it.each([["a string", "designs/x"], ["null", null], ["a number", 5], ["an empty array", []]])("rejects %s", (_name, value) => {
+    const error = parseField(value);
     expect(error.status).toBe(400);
-    expect(error.field).toBe("design.cdnImage.format");
+    expect(error.field).toBe("design.cdnImage");
   });
 
-  it("rejects a key that does not match designs/ + the first 16 hex chars of sha256", () => {
-    for (const key of ["designs/0000000000000000", `designs/${sha256.slice(0, 15)}`, `designs/${sha256.slice(0, 16).toUpperCase()}`, "images/f45e5bc7a5342c2c", ""]) {
-      const error = parseField({ key, version: 1, width: 1600, height: 1920 });
-      expect(error.status).toBe(400);
-      expect(error.field).toBe("design.cdnImage.key");
-      expect(error.message).toContain(`designs/${sha256.slice(0, 16)}`);
+  it("rejects a non-object item at its index", () => {
+    expect(parseField(["x"]).field).toBe("design.cdnImage[0]");
+    expect(parseField([mockup(1), [mockup(2)]]).field).toBe("design.cdnImage[1]");
+  });
+
+  it.each([
+    ["the old artwork key", `designs/${sha256.slice(0, 16)}`],
+    ["another design's sha256", `designs/${"b".repeat(16)}/mockups/${"1".repeat(16)}`],
+    ["a wrong segment", `${prefix.replace("/mockups/", "/mocks/")}${"1".repeat(16)}`],
+    ["a short hash", `${prefix}${"1".repeat(15)}`],
+    ["a long hash", `${prefix}${"1".repeat(17)}`],
+    ["an uppercase hash", `${prefix}${"A".repeat(16)}`],
+    ["a trailing path", `${prefix}${"1".repeat(16)}/x`],
+    ["empty", ""],
+  ])("rejects a key with %s", (_name, key) => {
+    const error = parseField([{ ...mockup(1), key }]);
+    expect(error.status).toBe(400);
+    expect(error.code).toBe("VALIDATION");
+    expect(error.field).toBe("design.cdnImage[0].key");
+  });
+
+  it("rejects a non-string key", () => {
+    expect(parseField([{ ...mockup(1), key: 5 }]).field).toBe("design.cdnImage[0].key");
+  });
+
+  it("names the index of the offending item", () => {
+    expect(parseField([mockup(1), { ...mockup(2), key: "designs/x" }]).field).toBe("design.cdnImage[1].key");
+  });
+
+  it.each(["", "side", "FLAT-FULL", null, undefined, 1])("rejects kind %p", kind => {
+    expect(parseField([{ ...mockup(1), kind }]).field).toBe("design.cdnImage[0].kind");
+  });
+
+  it.each(["version", "width", "height"])("rejects a non-positive-integer %s", field => {
+    for (const value of [0, -1, 1.5, "1", null, undefined]) {
+      expect(parseField([{ ...mockup(1), [field]: value }]).field).toBe(`design.cdnImage[0].${field}`);
     }
   });
 
-  it.each([0, -1, 1.5, "1", null, undefined])("rejects version %p", value => {
-    const error = parseField({ key: `designs/${sha256.slice(0, 16)}`, version: value, width: 1600, height: 1920 });
+  it("rejects a duplicate key on the repeating item", () => {
+    const error = parseField([mockup(1), mockup(2, "hanger-full"), mockup(1, "flat-close")]);
     expect(error.status).toBe(400);
-    expect(error.field).toBe("design.cdnImage.version");
+    expect(error.field).toBe("design.cdnImage[2].key");
+    expect(error.message).toMatch(/duplicate/i);
   });
 
-  it.each([0, -1600, 1.5, "1600", undefined])("rejects width %p", value => {
-    const error = parseField({ key: `designs/${sha256.slice(0, 16)}`, version: 1, width: value, height: 1920 });
-    expect(error.status).toBe(400);
-    expect(error.field).toBe("design.cdnImage.width");
+  it("rejects an unknown nested key with its field name", () => {
+    expect(parseField([{ ...mockup(1), format: "webp" }]).field).toBe("design.cdnImage[0].format");
   });
 
-  it.each([0, -1920, 1.5, "1920", undefined])("rejects height %p", value => {
-    const error = parseField({ key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: value });
-    expect(error.status).toBe(400);
-    expect(error.field).toBe("design.cdnImage.height");
-  });
-
-  it("derives the expected key from the lowercased sha256", () => {
-    const input = parseIngestInput({
-      ...body(),
-      design: { ...body().design, sha256: sha256.toUpperCase(), cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 2, width: 800, height: 1000 } },
-    });
-    expect(input.design.cdnImage).toEqual({ key: `designs/${sha256.slice(0, 16)}`, version: 2, width: 800, height: 1000 });
+  it("enforces 1 to 8 items", () => {
+    expect(parseField(Array.from({ length: 9 }, (_, i) => mockup(i + 1))).field).toBe("design.cdnImage");
+    expect(parseOk(Array.from({ length: 8 }, (_, i) => mockup(i + 1))).design.cdnImage).toHaveLength(8);
   });
 });
 

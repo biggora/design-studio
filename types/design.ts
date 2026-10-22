@@ -1,4 +1,6 @@
-import type { CdnImage } from "@/lib/listings";
+/** A legacy single-object `cdnImage` (flat artwork). Ingest now stores an array of mockups instead
+ * (see CdnImage in lib/listings.ts), which the storefront ignores. */
+export type CdnArtwork = { key: string; version: number; width: number; height: number };
 
 export interface Design {
   id: string;
@@ -25,7 +27,7 @@ export interface Design {
    * direct URLs. Defaults to true; the scrapes never rewrite it — it changes only through
    * POST /api/designs/active or the matching CLI. */
   active?: boolean;
-  /** Set only through the listings ingest API; drives the CDN image preference in lib/image.ts. */
-  cdnImage?: CdnImage | null;
+  /** Legacy single-object value; drives the CDN image preference in lib/image.ts. */
+  cdnImage?: CdnArtwork | null;
   props?: object;
 }

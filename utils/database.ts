@@ -12,7 +12,7 @@ import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/
 import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
 import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
-import {hasPinImage, normalizeCdnImage} from "@/lib/image";
+import {hasPinImage, normalizeCdnImage, normalizeCdnImageMockups} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
@@ -1012,7 +1012,7 @@ export async function fetchCollectionFeedDesigns(
                 .eq("design_collections.collections.title", collectionTitle)
                 // Feed pins need a pin source: a Classic T-Shirt mockup (props.mockup_tshirt)
                 // or a pod-uploader CDN image (cdnImage, share JPEG).
-                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1025,7 +1025,7 @@ export async function fetchCollectionFeedDesigns(
                 .select("*")
                 .eq("active", true)
                 .eq("collection", collectionTitle)
-                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1056,7 +1056,7 @@ export async function fetchCollectionFeedDesigns(
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR JSON_EXTRACT(d.cdnImage, '$.key') IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
@@ -1107,7 +1107,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
                 : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
                     .eq("active", true)
                     .in("design_collections.collections.title", titles);
-            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
+            return base.or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
                 .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
         };
         const joined = await run(false);
@@ -1125,7 +1125,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title IN (?))
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR JSON_EXTRACT(d.cdnImage, '$.key') IS NOT NULL)
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
             [titles, fetchLimit],
         );
@@ -1317,7 +1317,7 @@ export async function getDesignListings(lookup: ListingLookup): Promise<{design:
             .select("id, slug, title, externalId, sha256, sourceImageId, cdnImage").eq(field, value).maybeSingle();
         if (error) throw new Error("Failed to look up design", {cause: error});
         if (!design) return null;
-        const response = {...design, cdnImage: normalizeCdnImage(design.cdnImage)} as IngestDesign;
+        const response = {...design, cdnImage: normalizeCdnImageMockups(design.cdnImage)} as IngestDesign;
         const {data: listings, error: listingError} = await client.from("design_listings")
             .select("id, platform, account, externalId, url, title, tags, thumbnailUrl, publishedAt, extra")
             .eq("designId", design.id as string).order("createdAt").order("id");

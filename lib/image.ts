@@ -1,5 +1,5 @@
-import { Design } from "@/types/design";
-import type { CdnImage } from "@/lib/listings";
+import { CdnArtwork, Design } from "@/types/design";
+import { CDN_MOCKUP_KINDS, type CdnImage, type CdnImageMockup } from "@/lib/listings";
 
 export const designCardWidth = 600;
 export const designCardHeight = 400;
@@ -45,8 +45,13 @@ export function imagesCdnHost(): string | null {
   }
 }
 
-/** Row values from both providers arrive as an object (Supabase jsonb) or a JSON string (mysql2). */
-export function normalizeCdnImage(value: unknown): CdnImage | null {
+/**
+ * The storefront's view of `designs.cdnImage`: a single flat-artwork object, or null.
+ * Row values from both providers arrive as an object (Supabase jsonb) or a JSON string (mysql2).
+ * The ingest now stores an ARRAY of mockups there; an array is "no CDN artwork", so every
+ * reader keeps the Redbubble fallback (see normalizeCdnImageMockups for the ingest side).
+ */
+export function normalizeCdnImage(value: unknown): CdnArtwork | null {
   if (typeof value === "string") {
     try {
       value = JSON.parse(value);
@@ -63,7 +68,29 @@ export function normalizeCdnImage(value: unknown): CdnImage | null {
   return { key, version: version as number, width: width as number, height: height as number };
 }
 
-function cdnVariantUrl(base: string, cdn: CdnImage, variant: string): string {
+/** The ingest API's view of `designs.cdnImage`: the stored mockup array (same provider quirk as
+ * normalizeCdnImage). Drops malformed entries; null when none survive or the value is not an array. */
+export function normalizeCdnImageMockups(value: unknown): CdnImage | null {
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!Array.isArray(value)) return null;
+  const mockups = value.flatMap((item): CdnImageMockup[] => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const { key, kind, version, width, height } = item as Record<string, unknown>;
+    if (typeof key !== "string" || !key) return [];
+    if (!(CDN_MOCKUP_KINDS as readonly unknown[]).includes(kind)) return [];
+    if (![version, width, height].every(n => typeof n === "number" && Number.isSafeInteger(n) && n >= 1)) return [];
+    return [{ key, kind: kind as CdnImageMockup["kind"], version: version as number, width: width as number, height: height as number }];
+  });
+  return mockups.length ? mockups : null;
+}
+
+function cdnVariantUrl(base: string, cdn: CdnArtwork, variant: string): string {
   return `${base}/${cdn.key}/${variant}-v${cdn.version}.webp`;
 }
 

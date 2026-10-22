@@ -4,7 +4,7 @@ import { designSlugBase, uniqueSlug } from "@/lib/slug";
 import {
   DesignListing, IngestDesign, IngestInput, IngestResult, ListingsError, MOCKUP_EXTRA_PROPS,
 } from "@/lib/listings";
-import { normalizeCdnImage } from "@/lib/image";
+import { normalizeCdnImageMockups } from "@/lib/image";
 
 type DesignRow = IngestDesign & {
   source: string | null;
@@ -20,7 +20,7 @@ export function ingestDesignResponse(row: IngestDesign): IngestDesign {
     id: row.id, slug: row.slug, title: row.title, externalId: row.externalId,
     sha256: row.sha256, sourceImageId: row.sourceImageId,
     // mysql2 hands JSON columns back as strings; Supabase as objects.
-    cdnImage: normalizeCdnImage((row as { cdnImage?: unknown }).cdnImage),
+    cdnImage: normalizeCdnImageMockups((row as { cdnImage?: unknown }).cdnImage),
   };
 }
 

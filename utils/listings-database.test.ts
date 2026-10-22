@@ -20,7 +20,10 @@ function input(overrides: Partial<IngestInput> = {}): IngestInput {
   });
 }
 const cdnKey = `designs/${"a".repeat(16)}`;
-const cdnImage = { key: cdnKey, version: 1, width: 1600, height: 1920 };
+const cdnImage = (["flat-full", "hanger-full", "flat-close", "hanger-close"] as const).map((kind, i) => (
+  { key: `${cdnKey}/mockups/${String(i + 1).repeat(16)}`, kind, version: 1, width: 1024, height: 1536 }
+));
+const bumpedImage = cdnImage.map(mockup => ({ ...mockup, version: 2 }));
 function sqlString(value: string): string { return `'${value.replace(/'/g, "''")}'`; }
 async function pgSql(sql: string): Promise<string> {
   const { stdout } = await exec("docker", ["exec", pgContainer, "psql", "-X", "-qAt", "-U", "postgres", "-d", "listings_test", "-v", "ON_ERROR_STOP=1", "-c", sql]);
@@ -103,16 +106,20 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
       return typeof raw === "string" ? JSON.parse(raw) : raw;
     };
     const bumped = input();
-    bumped.design.cdnImage = { ...cdnImage, version: 2 };
+    bumped.design.cdnImage = bumpedImage;
     const second = await ingest(bumped);
-    expect(second.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
-    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
+    expect(second.design.cdnImage).toEqual(bumpedImage);
+    expect(await stored()).toEqual(bumpedImage);
     const absent = await ingest(input());
-    expect(absent.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
-    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
+    expect(absent.design.cdnImage).toEqual(bumpedImage);
+    expect(await stored()).toEqual(bumpedImage);
     const identical = await ingest(bumped);
-    expect(identical.design.cdnImage).toEqual({ ...cdnImage, version: 2 });
-    expect(await stored()).toEqual({ ...cdnImage, version: 2 });
+    expect(identical.design.cdnImage).toEqual(bumpedImage);
+    expect(await stored()).toEqual(bumpedImage);
+    const fewer = input();
+    fewer.design.cdnImage = [cdnImage[1]];
+    expect((await ingest(fewer)).design.cdnImage).toEqual([cdnImage[1]]);
+    expect(await stored()).toEqual([cdnImage[1]]);
   });
   it("repeat updates only supplied listing fields; preserves publish time and curated design", async () => {
     const body = input();

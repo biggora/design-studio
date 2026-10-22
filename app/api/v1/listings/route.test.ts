@@ -7,7 +7,8 @@ vi.mock("next/cache", () => ({ revalidatePath: revalidate }));
 import { POST, GET } from "@/app/api/v1/listings/route";
 
 const sha256 = "a".repeat(64);
-const cdnImage = { key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920 };
+const mockup = (n: number, kind: string) => ({ key: `designs/${sha256.slice(0, 16)}/mockups/${String(n).repeat(16)}`, kind, version: 1, width: 1024, height: 1536 });
+const cdnImage = [mockup(1, "flat-full"), mockup(2, "hanger-full"), mockup(3, "flat-close"), mockup(4, "hanger-close")];
 const body = () => ({
   design: { sourceImageId: 299, sha256, title: "Space cat" },
   listing: { platform: "teepublic", account: "teepublic:main", externalId: "123", url: "https://www.teepublic.com/t-shirt/123-space-cat" },
@@ -67,19 +68,23 @@ describe("listings validation", () => {
     ["too many tags", { ...body(), design: { ...body().design, tags: Array(101).fill("cat") } }],
     ["long tag", { ...body(), listing: { ...body().listing, tags: ["x".repeat(101)] } }],
     ["unsafe source ID", { ...body(), design: { ...body().design, sourceImageId: Number.MAX_SAFE_INTEGER + 1 } }],
-    ["cdn key mismatch", { ...body(), design: { ...body().design, cdnImage: { key: "designs/0000000000000000", version: 1, width: 1600, height: 1920 } } }],
-    ["cdn unknown nested key", { ...body(), design: { ...body().design, cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920, format: "webp" } } }],
-    ["cdn zero version", { ...body(), design: { ...body().design, cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 0, width: 1600, height: 1920 } } }],
-    ["cdn fractional height", { ...body(), design: { ...body().design, cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 19.2 } } }],
+    ["cdn old single-object form", { ...body(), design: { ...body().design, cdnImage: { key: `designs/${sha256.slice(0, 16)}`, version: 1, width: 1600, height: 1920 } } }],
+    ["cdn empty array", { ...body(), design: { ...body().design, cdnImage: [] } }],
+    ["cdn key mismatch", { ...body(), design: { ...body().design, cdnImage: [{ ...mockup(1, "flat-full"), key: `designs/${"b".repeat(16)}/mockups/${"1".repeat(16)}` }] } }],
+    ["cdn bad kind", { ...body(), design: { ...body().design, cdnImage: [mockup(1, "side")] } }],
+    ["cdn duplicate key", { ...body(), design: { ...body().design, cdnImage: [mockup(1, "flat-full"), mockup(1, "hanger-full")] } }],
+    ["cdn unknown nested key", { ...body(), design: { ...body().design, cdnImage: [{ ...mockup(1, "flat-full"), format: "webp" }] } }],
+    ["cdn zero version", { ...body(), design: { ...body().design, cdnImage: [{ ...mockup(1, "flat-full"), version: 0 }] } }],
+    ["cdn fractional height", { ...body(), design: { ...body().design, cdnImage: [{ ...mockup(1, "flat-full"), height: 19.2 }] } }],
   ])("rejects %s", async (_name, value) => {
     const response = await POST(request(value));
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ code: "VALIDATION", error: expect.any(String), field: expect.any(String) });
     expect(ingest).not.toHaveBeenCalled();
   });
-  it("names the cdnImage field on a key mismatch", async () => {
-    const response = await POST(request({ ...body(), design: { ...body().design, cdnImage: { key: "designs/0000000000000000", version: 1, width: 1600, height: 1920 } } }));
-    expect(await response.json()).toMatchObject({ code: "VALIDATION", field: "design.cdnImage.key" });
+  it("names the cdnImage item and field on a key mismatch", async () => {
+    const response = await POST(request({ ...body(), design: { ...body().design, cdnImage: [mockup(1, "flat-full"), { ...mockup(2, "hanger-full"), key: `designs/0000000000000000/mockups/${"2".repeat(16)}` }] } }));
+    expect(await response.json()).toMatchObject({ code: "VALIDATION", field: "design.cdnImage[1].key" });
   });
   it("rejects malformed JSON", async () => {
     const response = await POST(new Request("http://localhost/api/v1/listings", { method: "POST", headers: { Authorization: "Bearer test-token" }, body: "{" }));
@@ -99,6 +104,14 @@ describe("listings responses", () => {
   it("returns 200 for an idempotent repeat", async () => {
     ingest.mockResolvedValue({ ...result, created: { design: false, listing: false } });
     expect((await POST(request())).status).toBe(200);
+  });
+  it("passes the four mockups in cdnImage through and returns them in the design (POST round-trip)", async () => {
+    ingest.mockResolvedValue({ ...result, design: { ...result.design, cdnImage } });
+    const input = { ...body(), design: { ...body().design, cdnImage } };
+    const response = await POST(request(input));
+    expect(response.status).toBe(201);
+    expect(ingest).toHaveBeenCalledWith(input);
+    expect((await response.json()).design.cdnImage).toEqual(cdnImage);
   });
   it("revalidates on a repeat whose only change is cdnImage and returns it in the design", async () => {
     ingest.mockResolvedValue({ ...result, created: { design: false, listing: false }, design: { ...result.design, cdnImage } });

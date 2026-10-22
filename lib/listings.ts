@@ -24,10 +24,13 @@ export type ListingInput = {
   publishedAt?: string;
   extra?: Record<string, unknown>;
 };
-/** The design's artwork published to the pod-uploader CDN (NEXT_PUBLIC_IMAGES_CDN).
- * `key` addresses the immutable variant files (`<CDN>/<key>/<variant>-v<version>.webp`);
- * `width`/`height` are the pixel size of the `main` variant. */
-export type CdnImage = { key: string; version: number; width: number; height: number };
+/** The four pod-studio garment mockup photos published to the pod-uploader CDN (opaque, no alpha). */
+export const CDN_MOCKUP_KINDS = ["flat-full", "flat-close", "hanger-full", "hanger-close"] as const;
+/** One mockup photo. `key` addresses the immutable variant files (`<CDN>/<key>/<variant>-v<version>.webp`)
+ * and ends in the first 16 hex of the mockup PNG's sha256; `width`/`height` are the `main` variant's size. */
+export type CdnImageMockup = { key: string; kind: (typeof CDN_MOCKUP_KINDS)[number]; version: number; width: number; height: number };
+/** `design.cdnImage`: the design's mockups on the CDN (stored in `designs."cdnImage"` as-is). */
+export type CdnImage = CdnImageMockup[];
 
 export type IngestInput = {
   design: {
@@ -160,19 +163,33 @@ function positiveInt(value: unknown, field: string): number {
   return value;
 }
 
-// The key is derived, never trusted: the CDN files of a design live under
-// designs/<first 16 hex chars of its sha256>, so a mismatched key would make
-// the site display another design's artwork.
+// Keys are derived, never trusted: a design's CDN files live under designs/<first 16 hex chars of
+// its sha256>, and each mockup under <that>/mockups/<16 hex of the mockup PNG's sha256>, so a
+// mismatched key could never point at another design's files.
 function cdnImage(value: unknown, field: string, sha256: string): CdnImage {
-  const image = strictObject(value, field, ["key", "version", "width", "height"]);
-  const expectedKey = `designs/${sha256.slice(0, 16)}`;
-  if (image.key !== expectedKey) invalid(`${field}.key`, `Expected "${expectedKey}"`);
-  return {
-    key: text(image.key, `${field}.key`, 200),
-    version: positiveInt(image.version, `${field}.version`),
-    width: positiveInt(image.width, `${field}.width`),
-    height: positiveInt(image.height, `${field}.height`),
-  };
+  if (!Array.isArray(value) || value.length < 1 || value.length > 8) invalid(field, "Expected an array of 1 to 8 mockups");
+  const designKey = `designs/${sha256.slice(0, 16)}`;
+  const keyPattern = new RegExp(`^${designKey}/mockups/[0-9a-f]{16}$`);
+  const seen = new Set<string>();
+  return value.map((item, index) => {
+    const at = `${field}[${index}]`;
+    const mockup = strictObject(item, at, ["key", "kind", "version", "width", "height"]);
+    if (typeof mockup.key !== "string" || !keyPattern.test(mockup.key)) {
+      invalid(`${at}.key`, `Expected "${designKey}/mockups/" followed by 16 lowercase hex characters`);
+    }
+    if (seen.has(mockup.key)) invalid(`${at}.key`, "Duplicate mockup key");
+    seen.add(mockup.key);
+    if (!(CDN_MOCKUP_KINDS as readonly unknown[]).includes(mockup.kind)) {
+      invalid(`${at}.kind`, `Expected one of ${CDN_MOCKUP_KINDS.join(", ")}`);
+    }
+    return {
+      key: mockup.key,
+      kind: mockup.kind as CdnImageMockup["kind"],
+      version: positiveInt(mockup.version, `${at}.version`),
+      width: positiveInt(mockup.width, `${at}.width`),
+      height: positiveInt(mockup.height, `${at}.height`),
+    };
+  });
 }
 
 export function parseIngestInput(value: unknown): IngestInput {

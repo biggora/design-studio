@@ -316,7 +316,7 @@ Every site that renders prints from this API and links to `link`/`teepublicLink`
 
 Base URL: your Design Studio deployment, e.g. `http://localhost:3000` locally or `https://your-domain.com` in production. Set `LISTINGS_API_TOKEN` on the server and client; Supabase deployments also need the existing `SUPABASE_SERVICE_ROLE_KEY`. This token is independent of `SYNC_SECRET`. Both methods accept only `Authorization: Bearer <token>`; no query token or `x-sync-secret` fallback. Responses always use `Cache-Control: no-store`; the public API's cross-origin GET policy does not apply to this private CLI endpoint.
 
-Apply migration 003, then migration 005 (the `designs.cdnImage` column and the matching ingest function), before deployment (see [DATABASE.md](DATABASE.md)). No migration is applied automatically by the route.
+Apply migration 003, then migration 005 (the `designs.cdnImage` column and the matching ingest function; plus 006 and 007 where not yet applied), before deployment (see [DATABASE.md](DATABASE.md)). No migration is applied automatically by the route.
 
 ### POST /api/v1/listings
 
@@ -330,7 +330,7 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 | `design.description` | no | ≤ 5000 characters |
 | `design.tags` | no | ≤ 100 strings, each non-empty and ≤ 100 characters |
 | `design.backgroundColor` | no | #rgb or #rrggbb |
-| `design.cdnImage` | no | Object `{ key, version, width, height }` — see below |
+| `design.cdnImage` | no | Array of 1–8 objects `{ key, kind, version, width, height }` — the design's CDN mockups, see below |
 | `listing.platform` | yes | redbubble, teepublic, spreadshirt |
 | `listing.account` | yes | ≤ 100 characters |
 | `listing.externalId` | yes | ≤ 200 characters; digits for Redbubble/TeePublic; Redbubble must fit a JavaScript safe integer |
@@ -343,22 +343,23 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 
 The optional `extra.mockupTshirt`, `extra.mockupHat`, `extra.mockupMug` and `extra.mockupMousepad`, when used for the legacy Redbubble image mirror, must each be an HTTPS URL on a Redbubble image host supported by the existing image allowlist (`*.redbubble.net` / `*.redbubble.com`); a violation is `400 VALIDATION` naming the field, e.g. `listing.extra.mockupHat`. On a Redbubble listing they fill `designs.props.mockup_tshirt`, `mockup_hat`, `mockup_mug` and `mockup_mousepad` respectively, each only while that prop is empty (a stored or curated value is never overwritten). All four are optional and independent; requests without them behave exactly as before, and `extra` keys not listed here are stored in the listing untouched. Installations must apply `init/migrations/006_listing_extra_mockups_postgres.sql` (PostgreSQL; MySQL needs no schema change) before sending the three new keys, otherwise an old database function silently ignores them. Other thumbnail hosts are stored in the listing without adding them to that allowlist.
 
-`design.cdnImage` publishes the design's own artwork on the pod-uploader CDN (Cloudflare R2 behind `NEXT_PUBLIC_IMAGES_CDN`, e.g. `https://images.threadquirk.lv`) so the site can stop showing Redbubble-hosted images. Validation is strict:
+`design.cdnImage` records the design's pod-studio garment mockup photos on the pod-uploader CDN (Cloudflare R2 behind `NEXT_PUBLIC_IMAGES_CDN`, e.g. `https://images.threadquirk.lv`): up to four, one per `kind`. It is an **array**; the earlier single-object form `{ key, version, width, height }` is no longer accepted (`400 VALIDATION`, field `design.cdnImage`). The data is stored and returned only — **no storefront page renders it**: the site treats an array value as "no CDN artwork" and keeps the Redbubble images exactly as before. Validation is strict:
 
-- `key` must be exactly `designs/` + the first 16 lowercase hex characters of the request's `design.sha256` — the derived address of that design's files (a mismatch is `400 VALIDATION`, field `design.cdnImage.key`);
-- `version`, `width`, `height` must be integers ≥ 1 (`400` with the field name otherwise); `width`/`height` describe the `main` variant and every variant shares that aspect ratio;
-- unknown nested keys are rejected like the rest of the schema.
+- an array of 1 to 8 items (`400` on `design.cdnImage` otherwise); every item is a strict object — unknown nested keys are rejected;
+- `key` must match `^designs/<first 16 lowercase hex of design.sha256>/mockups/[0-9a-f]{16}$`, the trailing 16 hex characters being the mockup PNG's own sha256 prefix. The design prefix is derived from the request's `design.sha256`, so a mockup can never point at another design's files (`400 VALIDATION`, field `design.cdnImage[i].key`); two items with the same `key` are rejected on the repeating item;
+- `kind` is one of `flat-full`, `flat-close`, `hanger-full`, `hanger-close` (field `design.cdnImage[i].kind`);
+- `version`, `width`, `height` are integers ≥ 1 (fields `design.cdnImage[i].version` etc.); `width`/`height` describe the `main` variant (1600 px wide, or the source width when narrower).
 
-The uploader publishes four immutable files per key: `thumb-v<version>.webp` (400 px wide), `card-v<version>.webp` (800 px), `main-v<version>.webp` (1600 px, all transparent WebP) and `share-v<version>.jpg` (1200 px, flattened onto the design background — used for OG/Twitter cards, Pinterest pins, JSON-LD and the public API). Semantics inside the ingest transaction: **present** → store it, overwriting a different stored value (e.g. a higher `version` after a re-render); **absent** → keep the stored value; a design created by the request stores what it carries. There is **no way to clear the column through the API**. The field is only ever written here — the Redbubble/TeePublic scrapers and the background tooling never touch it. Note that `set-background` changes `designs.backgroundColor` but not the already-published `share` JPEG; re-send a new `version` through this API to refresh the flattened image.
+Each key has four immutable files: `thumb-v<version>.webp` (400 px wide), `card-v<version>.webp` (800 px), `main-v<version>.webp` and `share-v<version>.jpg` (1200 px). Mockups are opaque photos with a white background (no alpha). Semantics inside the ingest transaction: **present** → the whole array is stored, replacing a different stored value (order preserved, no merging — send all mockups in every request that carries the field); **absent** → keep the stored value; a design created by the request stores what it carries. There is **no way to clear the column through the API**. The field is only ever written here — the Redbubble/TeePublic scrapers and the background tooling never touch it.
 
-`NEXT_PUBLIC_IMAGES_CDN` (not a secret) enables CDN rendering site-wide; until it is set, or for designs without `cdnImage`, every image reader keeps the Redbubble fallback exactly as before. It is a `NEXT_PUBLIC_*` variable, so it is inlined at build time — set it, then redeploy, before the uploader starts sending the field. The deploy order is: migration 005 → code → `NEXT_PUBLIC_IMAGES_CDN` → only then enable `cdn.enabled` in pod-uploader (an older server answers 400 to the unknown field).
+Deploy order: migration 005 (the `designs.cdnImage` column and the `cdnImage`-aware ingest function) → migrations 006 and 007 where not yet applied (006 reinstalls the ingest function with the extra-mockup props; 007 adds `designs.active`, which the current code filters on) → the code → only then send `design.cdnImage` from pod-uploader. The ingest function stores `design->'cdnImage'` as-is, so no migration of its own is needed for the array shape; an older server answers 400 to the array form.
 
-Example: create a Redbubble listing with its CDN artwork, then add TeePublic for the same source design:
+Example: create a Redbubble listing with its four CDN mockups, then add TeePublic for the same source design:
 
 ```bash
 curl -s -X POST http://localhost:3000/api/v1/listings \
   -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
-  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design","tags":["astronaut art","space explorer"],"backgroundColor":"#ffffff","cdnImage":{"key":"designs/f45e5bc7a5342c2c","version":1,"width":1600,"height":1920}},"listing":{"platform":"redbubble","account":"redbubble:shop-a","externalId":"184507566","url":"https://www.redbubble.com/shop/ap/184507566","publishedAt":"2026-10-07T08:10:00Z"}}'
+  -d '{"design":{"sourceImageId":299,"sha256":"f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971","title":"Look Past the Stars Astronaut Design","tags":["astronaut art","space explorer"],"backgroundColor":"#ffffff","cdnImage":[{"key":"designs/f45e5bc7a5342c2c/mockups/1111111111111111","kind":"flat-full","version":1,"width":1024,"height":1536},{"key":"designs/f45e5bc7a5342c2c/mockups/2222222222222222","kind":"hanger-full","version":1,"width":1024,"height":1536},{"key":"designs/f45e5bc7a5342c2c/mockups/3333333333333333","kind":"flat-close","version":1,"width":1024,"height":1536},{"key":"designs/f45e5bc7a5342c2c/mockups/4444444444444444","kind":"hanger-close","version":1,"width":1024,"height":1536}]},"listing":{"platform":"redbubble","account":"redbubble:shop-a","externalId":"184507566","url":"https://www.redbubble.com/shop/ap/184507566","publishedAt":"2026-10-07T08:10:00Z"}}'
 
 curl -s -X POST http://localhost:3000/api/v1/listings \
   -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
@@ -376,12 +377,12 @@ Response:
     "externalId": 184507566,
     "sha256": "f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971",
     "sourceImageId": 299,
-    "cdnImage": {
-      "key": "designs/f45e5bc7a5342c2c",
-      "version": 1,
-      "width": 1600,
-      "height": 1920
-    }
+    "cdnImage": [
+      { "key": "designs/f45e5bc7a5342c2c/mockups/1111111111111111", "kind": "flat-full", "version": 1, "width": 1024, "height": 1536 },
+      { "key": "designs/f45e5bc7a5342c2c/mockups/2222222222222222", "kind": "hanger-full", "version": 1, "width": 1024, "height": 1536 },
+      { "key": "designs/f45e5bc7a5342c2c/mockups/3333333333333333", "kind": "flat-close", "version": 1, "width": 1024, "height": 1536 },
+      { "key": "designs/f45e5bc7a5342c2c/mockups/4444444444444444", "kind": "hanger-close", "version": 1, "width": 1024, "height": 1536 }
+    ]
   },
   "listing": {
     "id": "fe5b49a4-f3fb-4bd0-8a3e-a73364c99f70",
@@ -399,7 +400,7 @@ Response:
 }
 ```
 
-`design.cdnImage` is the stored object, or `null` when the design has none; a repeat request without the field leaves it untouched (the response above shows a design carrying one).
+`design.cdnImage` is the stored mockup array (malformed stored entries are dropped), or `null` when the design has none (a legacy single-object value also reads as `null`); a repeat request without the field leaves it untouched (the response above shows a design carrying one).
 
 New listing: **201**, even when attaching it to an existing design. Same listing repeat: **200**, updates the supplied fields and preserves omitted metadata (including publishedAt). Identity lookup uses hash, then sourceImageId; if absent, Redbubble externalId or legacy props.teepublicId can adopt a scraper row. It never joins designs by title or silently renames a title conflict. A known source ID/hash cannot be replaced with a different identity. Existing catalog values are only filled when NULL. The explicit marketplace mirrors update canonical legacy links and preserve other props; `extra.mockupTshirt`, `extra.mockupHat`, `extra.mockupMug` and `extra.mockupMousepad` each fill their empty Redbubble mockup prop. Multiple accounts per platform are allowed; the first legacy Redbubble ID stays stable and the legacy link reflects the latest ingested Redbubble listing. All changes occur in one transaction and successful POSTs revalidate the root layout, as the background mutation endpoint does.
 
