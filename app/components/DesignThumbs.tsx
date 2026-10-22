@@ -10,7 +10,7 @@ type DesignThumbsProps = {
 
 /**
  * Decorative portrait thumbnails for index cards — the catalog card's 3:4
- * object-contain treatment over the baked background color, repeated up to
+ * object-cover fill over the baked background color, repeated up to
  * three times inside a link whose text already names the target.
  */
 export function DesignThumbs({ designs, className }: DesignThumbsProps) {
@@ -24,7 +24,7 @@ export function DesignThumbs({ designs, className }: DesignThumbsProps) {
           className="relative aspect-[3/4] overflow-hidden rounded-md bg-muted"
           style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
         >
-          <DesignImage design={design} alt="" fill sizes="120px" className="object-contain" />
+          <DesignImage design={design} alt="" fill sizes="120px" className="object-cover object-center" />
         </div>
       ))}
     </div>

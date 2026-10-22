@@ -213,7 +213,7 @@
       "Do source every color from the token layer — :root custom properties consumed via the Tailwind theme mapping (bg-primary, text-accent, border-input, ring-ring, bg-surface) or the primitives in components/ui/.",
       "Do keep every deployment-specific value (name, logo via siteLogo, hero copy, philosophy band, buy links, theme stylesheet) in config/config.json or the studio table — never inside a component.",
       "Do give every interactive element a visible 2px Ember focus ring (focus-visible), and let the global CSS carry the browser chrome: color-scheme: dark, ember selection and caret, thin token scrollbars.",
-      "Do frame catalog media in a portrait 3:4 inset tile with object-contain over the design's baked background color — nothing is ever cropped.",
+      "Do frame catalog media in a portrait 3:4 inset tile with object-cover object-center — the image fills the tile edge to edge, no empty bars; the baked background color shows only while it loads.",
       "Do mirror the token block as literal values inside any satori renderer (they cannot read CSS variables) and re-sync those literals whenever the tokens change.",
       "Do treat Poppins, Inter, and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values."
     ],

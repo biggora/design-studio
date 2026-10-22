@@ -22,7 +22,7 @@ vi.mock("@/utils/database", () => ({
     .filter(page => page.sections.some(section => section.collection !== "Empty")),
 }));
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));
-vi.mock("next/image", () => ({default: ({src, alt}: {src: string; alt: string}) => React.createElement("img", {src, alt})}));
+vi.mock("next/image", () => ({default: ({src, alt, className}: {src: string; alt: string; className?: string}) => React.createElement("img", {src, alt, className})}));
 
 beforeEach(() => {
   config = {...defaults, name: "Example Studio", domain: "example.test"};
@@ -84,6 +84,18 @@ describe("home catalog discovery", () => {
     expect($("section[aria-labelledby=\"home-heading\"] img")).toHaveLength(1);
     expect($('section[aria-labelledby="featured-heading"] img')).toHaveLength(6);
     expect($('section[aria-labelledby="featured-heading"]').text()).not.toContain("Design 1");
+  });
+
+  it("fills the hero art frame with the artwork (cover in a 3:4 box, no bars)", async () => {
+    designs = [designFixture()];
+    const {default: Home} = await import("./page");
+    const $ = load(renderToStaticMarkup(await Home()));
+    const img = $("section[aria-labelledby=\"home-heading\"] img");
+    expect(img.attr("class")).toContain("object-cover");
+    expect(img.attr("class")).toContain("object-center");
+    expect(img.attr("class")).not.toContain("object-contain");
+    expect(img.parent().attr("class")).toContain("aspect-[3/4]");
+    expect(img.closest("a").attr("class")).toContain("overflow-hidden");
   });
 
   it("shows a Gift ideas block only when gift pages are configured", async () => {

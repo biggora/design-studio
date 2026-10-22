@@ -121,7 +121,7 @@ export default async function PinLandingPage(props: Props) {
             fill
             priority
             sizes="(max-width: 640px) 100vw, 576px"
-            className="object-contain"
+            className="object-cover object-center"
           />
         </div>
         <h1 className="mt-4 line-clamp-2 text-center text-sm font-semibold leading-tight text-foreground sm:text-md">

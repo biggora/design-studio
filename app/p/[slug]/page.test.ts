@@ -118,6 +118,16 @@ describe("/p/[slug] landing page", () => {
     expect(moreIndex).toBeGreaterThan(disclosureIndex);
   });
 
+  it("fills the 3:4 image box with the mockup (cover, clipped, rounded)", async () => {
+    const design = makeDesign();
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    const html = await renderPage(design.slug as string);
+    const imgClasses = (/<img[^>]*class="([^"]*)"/.exec(html)?.[1] ?? "").split(/\s+/);
+    expect(imgClasses).toEqual(expect.arrayContaining(["object-cover", "object-center"]));
+    expect(imgClasses).not.toContain("object-contain");
+    expect(html).toMatch(/<div [^>]*class="[^"]*aspect-\[3\/4\][^"]*overflow-hidden[^"]*rounded-lg/);
+  });
+
   it("wraps both marketplace links with the affiliate tracking and required rel", async () => {
     const design = makeDesign({
       props: { teepublicLink: "https://www.teepublic.com/t-shirt/99914330-look-past-the-stars" },

@@ -208,7 +208,7 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Background:** Panel, on the field or band it sits on
 - **Shadow Strategy:** structural `shadow-md`, constant; the framed artwork card alone lifts with `shadow-xl`
 - **Internal Padding:** 16px; detail pages step to 24px
-- **Design-card anatomy:** padded inset media tile (portrait 3:4, `object-contain` over the design's baked background color, never cropped at rest), Poppins title (2-line clamp, hovers to Ember), Ash collection caption resolved through the curated display-name map (URLs keep the raw collection value), Ash description (3-line clamp), outline "View design →" action anchored to the card bottom (`mt-auto`). Hovering the card zooms the media to 140% inside the clipped tile. The image tile is decorative (`aria-hidden`, non-focusable); the title and action are the accessible links.
+- **Design-card anatomy:** padded inset media tile (portrait 3:4, `object-cover object-center` filling the tile edge to edge over the design's baked background color; the 2:3 and 4:5 mockups lose only a sliver), Poppins title (2-line clamp, hovers to Ember), Ash collection caption resolved through the curated display-name map (URLs keep the raw collection value), Ash description (3-line clamp), outline "View design →" action anchored to the card bottom (`mt-auto`). Hovering the card zooms the media to 140% inside the clipped tile. The image tile is decorative (`aria-hidden`, non-focusable); the title and action are the accessible links.
 - **Index-card anatomy:** the collections/gifts directory card — a 3× strip of the same 3:4 artwork thumbnails over the panel skin, Poppins title, Ash description, optional Ash meta line; the whole card is one link whose border hovers to Ember.
 - **Value tile:** philosophy-band card — Ember two-digit numeral (`01`…, Poppins semibold, decorative), Poppins title, Ash body.
 - **About point tile:** hairline-bordered flat tile (no fill) with a small semibold title and Ash caption, in a 2-up grid.
@@ -268,7 +268,7 @@ Primary and secondary/outline buttons stay on `components/ui/button.tsx`; the ou
 - **Do** source every color from the token layer — `:root` custom properties consumed via the Tailwind theme mapping (`bg-primary`, `text-accent`, `border-input`, `ring-ring`, `bg-surface`) or the primitives in `components/ui/`.
 - **Do** keep every deployment-specific value (name, logo via `siteLogo`, hero copy, philosophy band, buy links, theme stylesheet) in `config/config.json` or the `studio` table — never inside a component.
 - **Do** give every interactive element a visible 2px Ember focus ring (`focus-visible`), and let the global CSS carry the browser chrome: `color-scheme: dark`, ember selection and caret, thin token scrollbars.
-- **Do** frame catalog media in a portrait 3:4 inset tile with `object-contain` over the design's baked background color — nothing is ever cropped.
+- **Do** frame catalog media in a portrait 3:4 inset tile with `object-cover object-center` — the image fills the tile edge to edge, no empty bars; the baked background color shows only while it loads.
 - **Do** mirror the token block as literal values inside any satori renderer (they cannot read CSS variables) and re-sync those literals whenever the tokens change.
 - **Do** treat Poppins, Inter, and this palette as swappable defaults: build against roles (primary, muted, surface), not against specific values.
 

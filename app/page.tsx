@@ -87,15 +87,16 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
         aria-hidden="true"
       >
         <div
-          className="relative aspect-[4/3] w-full bg-muted"
+          className="relative aspect-[3/4] w-full bg-muted"
           style={bakedBackground ? { backgroundColor: bakedBackground } : undefined}
         >
           <DesignImage
             design={design}
             alt=""
+            fill
             priority={priority}
             sizes="(max-width: 1024px) 100vw, 40vw"
-            className="object-contain w-full h-full"
+            className="object-cover object-center"
           />
         </div>
       </AccentLink>
