@@ -34,6 +34,7 @@ DECLARE
   chosen_slug TEXT := slug_base;
   suffix INTEGER := 2;
   props_value JSONB;
+  mockup RECORD;
   constraint_name TEXT;
 BEGIN
   -- A short ingest serializes with catalog writes (including scraper inserts),
@@ -105,8 +106,14 @@ BEGIN
   RETURNING * INTO entry;
 
   props_value := coalesce(target.props::JSONB, '{}'::JSONB);
-  IF platform_name = 'redbubble' AND l->'extra' ? 'mockupTshirt' AND coalesce(props_value->>'mockup_tshirt', '') = '' THEN
-    props_value := props_value || jsonb_build_object('mockup_tshirt', l->'extra'->>'mockupTshirt');
+  IF platform_name = 'redbubble' THEN
+    -- Each extra.mockup* fills its props key only while that key is empty; stored values win.
+    FOR mockup IN SELECT * FROM (VALUES ('mockupTshirt', 'mockup_tshirt'), ('mockupHat', 'mockup_hat'),
+      ('mockupMug', 'mockup_mug'), ('mockupMousepad', 'mockup_mousepad')) AS m(extra_key, prop_key) LOOP
+      IF l->'extra' ? mockup.extra_key AND coalesce(props_value->>mockup.prop_key, '') = '' THEN
+        props_value := props_value || jsonb_build_object(mockup.prop_key, l->'extra'->>mockup.extra_key);
+      END IF;
+    END LOOP;
   ELSIF platform_name = 'teepublic' THEN
     props_value := props_value || jsonb_build_object('teepublicLink', l->>'url', 'teepublicId', work_id);
   END IF;

@@ -1,6 +1,16 @@
 import { NextResponse } from "next/server";
 import { constantTimeCompare } from "@/lib/sync-auth";
 
+/** `listing.extra` keys carrying a Redbubble product mockup, and the `designs.props` key each fills
+ * (only while that key is empty). */
+export const MOCKUP_EXTRA_PROPS = {
+  mockupTshirt: "mockup_tshirt",
+  mockupHat: "mockup_hat",
+  mockupMug: "mockup_mug",
+  mockupMousepad: "mockup_mousepad",
+} as const;
+const MOCKUP_EXTRA_KEYS = Object.keys(MOCKUP_EXTRA_PROPS) as (keyof typeof MOCKUP_EXTRA_PROPS)[];
+
 export type ListingPlatform = "redbubble" | "teepublic" | "spreadshirt";
 export type ListingInput = {
   platform: ListingPlatform;
@@ -208,10 +218,11 @@ export function parseIngestInput(value: unknown): IngestInput {
     if (!l.extra || typeof l.extra !== "object" || Array.isArray(l.extra)) invalid("listing.extra", "Expected an object");
     if (Buffer.byteLength(JSON.stringify(l.extra), "utf8") > 16 * 1024) invalid("listing.extra", "extra exceeds 16 KiB");
     listing.extra = l.extra as Record<string, unknown>;
-    if (listing.extra.mockupTshirt !== undefined) {
-      const mockup = new URL(httpUrl(listing.extra.mockupTshirt, "listing.extra.mockupTshirt"));
+    for (const key of MOCKUP_EXTRA_KEYS) {
+      if (listing.extra[key] === undefined) continue;
+      const mockup = new URL(httpUrl(listing.extra[key], `listing.extra.${key}`));
       if (mockup.protocol !== "https:" || !(mockup.hostname.endsWith(".redbubble.net") || mockup.hostname.endsWith(".redbubble.com"))) {
-        invalid("listing.extra.mockupTshirt", "Expected an HTTPS image on a Redbubble image host");
+        invalid(`listing.extra.${key}`, "Expected an HTTPS image on a Redbubble image host");
       }
     }
   }

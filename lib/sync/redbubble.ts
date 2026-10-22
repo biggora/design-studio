@@ -81,9 +81,9 @@ export type SyncResult = {
   };
 };
 
-// Used to check whether a design already exists in the database and, for props.mockup_tshirt
-// backfill, to read its current `props` (to know whether a mockup is already stored, and to
-// preserve any other keys already in it) — its full curated content is otherwise never read;
+// Used to check whether a design already exists in the database and, for props.mockup_* backfill,
+// to read its current `props` (to know which mockups are already stored, and to preserve any
+// other keys already in it) — its full curated content is otherwise never read;
 // nothing but `collection`/`props`/`updatedAt` may be sent back on update.
 const EXISTENCE_CHECK_COLUMNS = "externalId, props, source";
 
@@ -253,6 +253,64 @@ export function extractClassicTeeMockupUrl(html: string, workId: number): string
   if (!match) return null;
   const [, host, imageId, colorToken] = match;
   return `https://${host}/image.${imageId}.${last4}/ssrco,classic_tee,flatlay,${colorToken},front,tall_portrait,x1000.jpg`;
+}
+
+// The extra products stored next to `mockup_tshirt`, each read from the same `/shop/ap/<workId>`
+// Apollo state and scoped to this work by the same image-id-suffix rule as the tee. The page
+// exposes one image per product for the work: the dad hat carries a colour token (101010 for
+// dark designs, FFFDF5 for light ones — the page picks it, we copy it), while the mug and mouse
+// pad are separate per-design renders with no token. Each URL is rebuilt in the wide portrait
+// 750x1000 webp shape the site uses.
+export const MOCKUP_PROP_KEYS = ["mockup_tshirt", "mockup_hat", "mockup_mug", "mockup_mousepad"] as const;
+export type MockupPropKey = (typeof MOCKUP_PROP_KEYS)[number];
+export type ProductMockups = Partial<Record<MockupPropKey, string>>;
+
+function matchOwnProduct(html: string, workId: number, productPath: string): RegExpMatchArray | null {
+  const decoded = html.replace(/\{\{%2F\}\}/g, "/");
+  const last4 = String(workId).slice(-4);
+  return decoded.match(new RegExp(`https://(ih\\d\\.redbubble\\.net)/image\\.(\\d+)\\.${last4}/${productPath}`));
+}
+
+export function extractDadHatMockupUrl(html: string, workId: number): string | null {
+  const match = matchOwnProduct(html, workId, "ssrco,dad_hat,product,([0-9a-fA-F]{6}:[0-9a-f]{10}),");
+  if (!match) return null;
+  const [, host, imageId, colorToken] = match;
+  return `https://${host}/image.${imageId}.${String(workId).slice(-4)}/ssrco,dad_hat,product,${colorToken},front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp`;
+}
+
+export function extractClassicMugMockupUrl(html: string, workId: number): string | null {
+  const match = matchOwnProduct(html, workId, "ur,classic_mug_(left|right),");
+  if (!match) return null;
+  const [, host, imageId, side] = match;
+  return `https://${host}/image.${imageId}.${String(workId).slice(-4)}/ur,classic_mug_${side},wide_portrait,750x1000.webp`;
+}
+
+export function extractMousePadMockupUrl(html: string, workId: number): string | null {
+  const match = matchOwnProduct(html, workId, "ur,mouse_pad_small_flatlay(?:_prop)?,");
+  if (!match) return null;
+  const [, host, imageId] = match;
+  return `https://${host}/image.${imageId}.${String(workId).slice(-4)}/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp`;
+}
+
+// Every mockup the page exposes for this work; a product the page doesn't show is simply absent.
+export function extractProductMockups(html: string, workId: number): ProductMockups {
+  const found: ProductMockups = {};
+  const tee = extractClassicTeeMockupUrl(html, workId);
+  const hat = extractDadHatMockupUrl(html, workId);
+  const mug = extractClassicMugMockupUrl(html, workId);
+  const pad = extractMousePadMockupUrl(html, workId);
+  if (tee) found.mockup_tshirt = tee;
+  if (hat) found.mockup_hat = hat;
+  if (mug) found.mockup_mug = mug;
+  if (pad) found.mockup_mousepad = pad;
+  return found;
+}
+
+// Mockup keys a row's props don't hold yet — the backfill selection rule: a design is
+// re-fetched from its `/shop/ap/<workId>` page only while this is non-empty.
+export function missingMockupKeys(props: object | null | undefined): MockupPropKey[] {
+  const stored = (props ?? {}) as Record<string, unknown>;
+  return MOCKUP_PROP_KEYS.filter((key) => typeof stored[key] !== "string" || !stored[key]);
 }
 
 function sanitizeText(value: string | undefined | null): string {
@@ -606,16 +664,35 @@ async function runWithConcurrency<T, R>(
   return results;
 }
 
-export type ShopApPageData = { description: string; mockupUrl: string | null };
+type ExistingProps = Record<string, unknown> | null;
+
+const MOCKUP_LABELS: Record<MockupPropKey, string> = {
+  mockup_tshirt: "Classic T-Shirt",
+  mockup_hat: "Dad Hat",
+  mockup_mug: "Classic Mug",
+  mockup_mousepad: "Mouse Pad",
+};
+
+function missingMockupWarnings(
+  externalId: number,
+  keys: readonly MockupPropKey[],
+  found: ProductMockups,
+): string[] {
+  return keys
+    .filter((key) => !found[key])
+    .map((key) => `No ${MOCKUP_LABELS[key]} preview for ${externalId}; ${key} not set`);
+}
+
+export type ShopApPageData = { description: string; mockupUrl: string | null; mockups: ProductMockups };
 
 // Fetches `/shop/ap/<workId>` for a batch of work ids, through whichever fetch path the
 // active mode uses, paced by `pacer`, and extracts both the work description
-// (`<meta name="description">`) and the artist's Classic T-Shirt mockup color
-// (`extractClassicTeeMockupUrl`). Called for every new design (description + mockup) and
-// every existing design still missing `props.mockup_tshirt` (mockup only) — see
-// `writeDesignsToSupabase`. A work id missing from the returned map means the fetch itself
-// failed (`onError` was called for it); a work id present with `mockupUrl: null` means the
-// page was fetched fine but no Classic T-Shirt preview was found for it.
+// (`<meta name="description">`) and the product mockups (`extractProductMockups`; `mockupUrl`
+// is the Classic T-Shirt one, whose color also drives the artwork background). Called for every
+// new design (description + mockups) and every existing design still missing any `props.mockup_*`
+// key (mockups only) — see `writeDesignsToSupabase`. A work id missing from the returned map
+// means the fetch itself failed (`onError` was called for it); a work id present with an absent
+// product in `mockups` means the page was fetched fine but doesn't show that product.
 async function fetchShopApPages(
   workIds: number[],
   browserSession: BrowserSession | null,
@@ -634,7 +711,11 @@ async function fetchShopApPages(
         const html = browserSession ? await browserSession.fetchHtml(url) : await fetchHtml(url, requestHeaders);
         return [
           workId,
-          { description: extractMetaDescription(html), mockupUrl: extractClassicTeeMockupUrl(html, workId) },
+          {
+            description: extractMetaDescription(html),
+            mockupUrl: extractClassicTeeMockupUrl(html, workId),
+            mockups: extractProductMockups(html, workId),
+          },
         ];
       } catch (error) {
         onError(workId, error);
@@ -656,7 +737,7 @@ export async function fetchRedbubbleDesigns(options: RedbubbleScrapeOptions): Pr
   collectionsComplete: boolean;
   errors: string[];
   warnings: string[];
-  // Fetches `/shop/ap/<workId>` (description + Classic T-Shirt mockup color) for the given
+  // Fetches `/shop/ap/<workId>` (description + product mockups) for the given
   // work ids. Kept open here so it can reuse the same browser session/pacer as the listing
   // crawl; callers must call `close()` when done.
   fetchShopApPages: (
@@ -814,6 +895,8 @@ export async function writeDesignsToSupabase(
   const insertRows: (typeof rows)[0][] = [];
   const updateRows: { externalId: number; collection?: string; props?: object }[] = [];
   const successfulExternalIds: number[] = [];
+  // API-linked rows whose props write is intended, so it skips the pod-studio write-time guard.
+  const apiPropsExternalIds = new Set<number>();
 
   try {
     if (rows.length) {
@@ -845,7 +928,7 @@ export async function writeDesignsToSupabase(
 
         const existingExternalIds = new Set<number>();
         const apiExternalIds = new Set<number>();
-        const existingRowByExternalId = new Map<number, { props: { mockup_tshirt?: string } | null }>();
+        const existingRowByExternalId = new Map<number, { props: ExistingProps }>();
         for (const rowChunk of chunk(batchRows, 100)) {
           const idChunk = rowChunk.map((r) => r.externalId);
           const { data: listings, error: listingsError } = await supabase
@@ -868,7 +951,7 @@ export async function writeDesignsToSupabase(
             continue;
           }
           for (const row of (data as
-            | { externalId: number; props: { mockup_tshirt?: string } | null; source?: string | null }[]
+            | { externalId: number; props: ExistingProps; source?: string | null }[]
             | null) || []) {
             existingExternalIds.add(row.externalId);
             if (row.source === "pod-studio") apiExternalIds.add(row.externalId);
@@ -903,8 +986,10 @@ export async function writeDesignsToSupabase(
         // the shop/ap fetch below, once we know whether a missing mockup was found.
         const existingCandidates: {
           row: (typeof rows)[0];
-          existingProps: { mockup_tshirt?: string } | null;
+          existingProps: ExistingProps;
           needsMockupBackfill: boolean;
+          // API-linked / pod-studio row: only its collection and empty mockup keys are written.
+          api: boolean;
         }[] = [];
 
         for (const r of batchRows) {
@@ -918,19 +1003,21 @@ export async function writeDesignsToSupabase(
           // membership is a Redbubble platform fact, so it is synced for API-written
           // rows too, exactly as for scraper-created ones (complete crawl only);
           // everything else they carry stays protected — no duplicate insert, no
-          // product fetch, no mockup backfill, no curated-field write.
+          // curated-field write. The one other exception is empty mockup keys: like any row
+          // they are fetched and filled (never overwritten) through a props-only write.
           if (apiExternalIds.has(r.externalId)) {
             if (!existingExternalIds.has(r.externalId)) {
               skipped++;
               warnings.push(`Skipped API-linked Redbubble work ${r.externalId}: no design row to update`);
               continue;
             }
-            if (!collectionsComplete) {
-              skipped++;
-              warnings.push(`Skipped API-linked Redbubble work ${r.externalId}: collections crawl incomplete`);
-              continue;
-            }
-            updateRows.push({ externalId: r.externalId, collection: r.collection });
+            const existingProps = existingRowByExternalId.get(r.externalId)?.props ?? null;
+            existingCandidates.push({
+              row: r,
+              existingProps,
+              needsMockupBackfill: missingMockupKeys(existingProps).length > 0,
+              api: true,
+            });
             continue;
           }
 
@@ -948,7 +1035,8 @@ export async function writeDesignsToSupabase(
             existingCandidates.push({
               row: r,
               existingProps,
-              needsMockupBackfill: !existingProps?.mockup_tshirt,
+              needsMockupBackfill: missingMockupKeys(existingProps).length > 0,
+              api: false,
             });
           } else {
             newRows.push(r);
@@ -1000,9 +1088,9 @@ export async function writeDesignsToSupabase(
           slugByExternalId.set(r.externalId, slug);
         }
 
-        // One /shop/ap/<workId> fetch per new design (description + mockup color) and per
-        // existing design still missing props.mockup_tshirt (mockup color only) — a design
-        // that already has a mockup is never fetched.
+        // One /shop/ap/<workId> fetch per new design (description + mockups) and per
+        // existing design still missing any props.mockup_* key (mockups only) — a design
+        // that already has all of them is never fetched.
         const backfillCandidates = existingCandidates.filter((c) => c.needsMockupBackfill);
         const shopApWorkIds = [
           ...newRows.map((r) => r.externalId),
@@ -1020,12 +1108,12 @@ export async function writeDesignsToSupabase(
         const nowIso = new Date().toISOString();
         for (const r of newRows) {
           const data = shopApData.get(r.externalId);
-          let props: { mockup_tshirt: string } | null = null;
+          let props: ProductMockups | null = null;
           let externalImageUrl = r.externalImageUrl;
           let backgroundColor = r.backgroundColor;
           if (data) {
+            if (Object.keys(data.mockups).length) props = { ...data.mockups };
             if (data.mockupUrl) {
-              props = { mockup_tshirt: data.mockupUrl };
               // New designs get the artist's own mockup color baked into the artwork image
               // right away, instead of shipping with the "white fills transparency" default.
               // Built from the mockup URL's own image id, not the listing preview's — Redbubble
@@ -1037,9 +1125,8 @@ export async function writeDesignsToSupabase(
                 externalImageUrl = buildBackgroundImageUrl(data.mockupUrl, token);
                 backgroundColor = tokenToHex(token);
               }
-            } else {
-              warnings.push(`No Classic T-Shirt preview for ${r.externalId}; mockup_tshirt not set`);
             }
+            warnings.push(...missingMockupWarnings(r.externalId, MOCKUP_PROP_KEYS, data.mockups));
           }
           insertRows.push({
             ...r,
@@ -1053,24 +1140,33 @@ export async function writeDesignsToSupabase(
         }
 
         for (const c of existingCandidates) {
-          let propsUpdate: { mockup_tshirt: string } | undefined;
+          let propsUpdate: object | undefined;
           if (c.needsMockupBackfill) {
             const data = shopApData.get(c.row.externalId);
             if (data) {
-              if (data.mockupUrl) {
-                propsUpdate = { ...(c.existingProps || {}), mockup_tshirt: data.mockupUrl };
-              } else {
-                warnings.push(`No Classic T-Shirt preview for ${c.row.externalId}; mockup_tshirt not set`);
+              // Fill-when-empty merge: only keys the row lacks are added, every stored key
+              // (mockups included) stays exactly as it is.
+              const missing = missingMockupKeys(c.existingProps);
+              const fill: ProductMockups = {};
+              for (const key of missing) {
+                const url = data.mockups[key];
+                if (url) fill[key] = url;
               }
+              if (Object.keys(fill).length) propsUpdate = { ...(c.existingProps || {}), ...fill };
+              warnings.push(...missingMockupWarnings(c.row.externalId, missing, data.mockups));
             }
           }
 
           // Redbubble is the source of truth for `collection` once the collections crawl
-          // succeeded; otherwise the existing row's collection is left untouched, but a
-          // missing mockup_tshirt is still backfilled independently.
+          // succeeded; otherwise the existing row's collection is left untouched, but missing
+          // mockups are still backfilled independently.
+          if (propsUpdate && c.api) apiPropsExternalIds.add(c.row.externalId);
           if (!collectionsComplete) {
             if (propsUpdate) {
               updateRows.push({ externalId: c.row.externalId, props: propsUpdate });
+            } else if (c.api) {
+              skipped++;
+              warnings.push(`Skipped API-linked Redbubble work ${c.row.externalId}: collections crawl incomplete`);
             } else {
               unchanged++;
             }
@@ -1149,11 +1245,15 @@ export async function writeDesignsToSupabase(
       if (r.collection !== undefined) changes.collection = r.collection;
       if (r.props !== undefined) changes.props = r.props;
       // Collection membership syncs for every row, API-written ones included; a `props`
-      // (mockup) backfill keeps the source filter so it can never touch a pod-studio row
-      // adopted while the scrape was running. A filtered no-op (0 rows matched) is not
-      // counted as an update.
+      // (mockup) backfill of a row classified as scraper-created keeps the source filter so
+      // it can never touch a pod-studio row adopted while the scrape was running. A filtered
+      // no-op (0 rows matched) is not counted as an update. The filter is a plain `source IS
+      // NULL`: PostgREST rejects an `or(...)` tree in a PATCH here ("column designs.source does
+      // not exist"), which made every such props write fail.
       let query = supabase.from("designs").update(changes).eq("externalId", r.externalId);
-      if (r.props !== undefined) query = query.or("source.is.null,source.neq.pod-studio");
+      if (r.props !== undefined && !apiPropsExternalIds.has(r.externalId)) {
+        query = query.is("source", null);
+      }
       const { data, error } = await query.select("externalId");
       if (error) {
         errorsCount += 1;

@@ -8,6 +8,11 @@ import {
   parseShopNextData,
   buildArtworkImageUrl,
   extractClassicTeeMockupUrl,
+  extractDadHatMockupUrl,
+  extractClassicMugMockupUrl,
+  extractMousePadMockupUrl,
+  extractProductMockups,
+  missingMockupKeys,
 } from "@/lib/sync/redbubble";
 
 // Fixture work ids used throughout: the mockup extractor keys off the last 4 digits of the
@@ -40,6 +45,43 @@ function mockupUrl(opts: { host?: string; imageA: string; last4: string; colorTo
   const host = opts.host ?? "ih1.redbubble.net";
   return `https://${host}/image.${opts.imageA}.${opts.last4}/ssrco,classic_tee,flatlay,${opts.colorToken},front,tall_portrait,x1000.jpg`;
 }
+
+// Dad hat colour tokens as the real page serves them (uppercase hex, unlike the tee's).
+const HAT_LIGHT_TOKEN = "FFFDF5:8c3db69414";
+const HAT_DARK_TOKEN = "101010:01c5ca27c6";
+
+// Product entries of a real /shop/ap/<workId> page (shapes copied from a live page): the dad hat
+// carries a colour token, the mug and mouse pad are token-less per-design renders. Every URL's
+// image id ends in the work id's last 4 digits.
+function shopApProductsHtml(opts: {
+  workId: number;
+  tee?: { imageA: string; colorToken: string };
+  hat?: { imageA: string; colorToken: string };
+  mug?: { imageA: string; side?: "left" | "right" };
+  pad?: { imageA: string };
+  host?: string;
+  encodeSlashes?: boolean;
+}): string {
+  const host = opts.host ?? "ih1.redbubble.net";
+  const last4 = String(opts.workId).slice(-4);
+  const image = (imageA: string, rest: string) => `https://${host}/image.${imageA}.${last4}/${rest}`;
+  const urls: string[] = [];
+  if (opts.tee) urls.push(image(opts.tee.imageA, `ssrco,classic_tee,mens_02,${opts.tee.colorToken},front,square_close_portrait,x1000.jpg`));
+  if (opts.hat) urls.push(image(opts.hat.imageA, `ssrco,dad_hat,product,${opts.hat.colorToken},front_three_quarter,square,1000x1000-bg,f8f8f8.jpg`));
+  if (opts.mug) urls.push(image(opts.mug.imageA, `ur,classic_mug_${opts.mug.side ?? "right"},full,1000x1000.jpg`));
+  if (opts.pad) urls.push(image(opts.pad.imageA, "ur,mouse_pad_small_flatlay_prop,square,1000x1000.jpg"));
+  const body = urls.map((u) => (opts.encodeSlashes ? u.replace(/\//g, "{{%2F}}") : u)).map((u) => `{"preview":"${u}"}`).join(",");
+  return `<!doctype html><html><body><script>[${body}]</script></body></html>`;
+}
+
+// Full mockup set a design carries once it was backfilled; existing-row fixtures that are not
+// about mockups use it so the row needs no product fetch.
+const COMPLETE_MOCKUP_PROPS = {
+  mockup_tshirt: mockupUrl({ imageA: "1", last4: "1111", colorToken: WHITE_TOKEN }),
+  mockup_hat: "https://ih1.redbubble.net/image.2.1111/ssrco,dad_hat,product,FFFDF5:8c3db69414,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp",
+  mockup_mug: "https://ih1.redbubble.net/image.3.1111/ur,classic_mug_right,wide_portrait,750x1000.webp",
+  mockup_mousepad: "https://ih1.redbubble.net/image.4.1111/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp",
+};
 
 // ---------------------------------------------------------------------------
 // normalizeShopUrl
@@ -237,7 +279,7 @@ type Call =
   | { type: "select-filter"; table: string; col: string; op: string; value: string }
   | { type: "select-like"; table: string; col: string; pattern: string }
   | { type: "insert"; table: string; rows: Row[] }
-  | { type: "update"; table: string; changes: Row; filters: { col: string; val: unknown }[] }
+  | { type: "update"; table: string; changes: Row; filters: { col: string; val: unknown }[]; guarded?: boolean }
   | { type: "upsert"; table: string; rows: Row[]; opts: Record<string, unknown> }
   | { type: "delete"; table: string; filters: DeleteFilter[] };
 
@@ -316,14 +358,22 @@ vi.mock("@supabase/supabase-js", () => ({
       }),
       update: (changes: Row) => ({
         eq: (col: string, val: unknown) => {
-          calls.push({ type: "update", table, changes, filters: [{ col, val }] });
+          const call: Extract<Call, { type: "update" }> = { type: "update", table, changes, filters: [{ col, val }] };
+          calls.push(call);
           // The source awaits `.select()` directly for collection-only updates and
-          // through `.or(...)` for props backfills (the pod-studio write guard).
+          // through `.is("source", null)` for props backfills (the pod-studio write guard).
           const run = () => {
             const queued = updateResponses.shift();
             return Promise.resolve(queued ? { data: [{ externalId: val }], ...queued } : { error: null, data: [{ externalId: val }] });
           };
-          return { select: run, or: () => ({ select: run }) };
+          return {
+            select: run,
+            is: (col: string, val: unknown) => {
+              expect([col, val]).toEqual(["source", null]);
+              call.guarded = true;
+              return { select: run };
+            },
+          };
         },
       }),
       upsert: (rows: Row[], opts: Record<string, unknown>) => ({
@@ -521,9 +571,9 @@ describe("syncRedbubbleToSupabase", () => {
     vi.stubGlobal("fetch", fetchMock);
     if (protection === "listing") {
       listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
-      selectByIdResponses = [{ data: [{ externalId: 11111111, props: null }], error: null }];
+      selectByIdResponses = [{ data: [{ externalId: 11111111, props: COMPLETE_MOCKUP_PROPS }], error: null }];
     } else {
-      selectByIdResponses = [{ data: [{ externalId: 11111111, source: "pod-studio", props: null }], error: null }];
+      selectByIdResponses = [{ data: [{ externalId: 11111111, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }], error: null }];
     }
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -770,7 +820,7 @@ describe("syncRedbubbleToSupabase", () => {
         data: [
           {
             externalId: 11111111,
-            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+            props: { ...COMPLETE_MOCKUP_PROPS, mockup_tshirt: "https://existing.example/already-there.jpg" },
           },
         ],
         error: null,
@@ -1782,8 +1832,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
     selectByIdResponses = [
       {
         data: [
-          existingRow({ externalId: 11111111, source: "pod-studio", props: null }),
-          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null }),
+          existingRow({ externalId: 11111111, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }),
+          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }),
         ],
         error: null,
       },
@@ -1823,8 +1873,8 @@ describe("syncRedbubbleToSupabase — collections", () => {
     selectByIdResponses = [
       {
         data: [
-          existingRow({ externalId: 11111111, source: "pod-studio", props: null }),
-          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null }),
+          existingRow({ externalId: 11111111, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }),
+          existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }),
         ],
         error: null,
       },
@@ -1857,7 +1907,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
 
   it("API row: a failed link upsert issues no stale-link deletes (upsert-before-delete)", async () => {
     vi.stubGlobal("fetch", mockShopWithCollections());
-    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111, source: "pod-studio", props: null })], error: null }];
+    selectByIdResponses = [{ data: [existingRow({ externalId: 11111111, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS })], error: null }];
     designCollectionsUpsertResponses = [{ data: null, error: { message: "link upsert failed" } }];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -1878,7 +1928,7 @@ describe("syncRedbubbleToSupabase — collections", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     selectByIdResponses = [
-      { data: [existingRow({ externalId: 11111111, source: "pod-studio", props: null }), existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: null })], error: null },
+      { data: [existingRow({ externalId: 11111111, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS }), existingRow({ id: "existing-uuid-2", externalId: 22222222, source: "pod-studio", props: COMPLETE_MOCKUP_PROPS })], error: null },
     ];
 
     const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
@@ -1995,7 +2045,7 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
         data: [
           {
             externalId: 11111111,
-            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+            props: { ...COMPLETE_MOCKUP_PROPS, mockup_tshirt: "https://existing.example/already-there.jpg" },
           },
         ],
         error: null,
@@ -2039,7 +2089,7 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
         data: [
           {
             externalId: 11111111,
-            props: { mockup_tshirt: "https://existing.example/already-there.jpg" },
+            props: { ...COMPLETE_MOCKUP_PROPS, mockup_tshirt: "https://existing.example/already-there.jpg" },
           },
         ],
         error: null,
@@ -2166,5 +2216,347 @@ describe("syncRedbubbleToSupabase — props.mockup_tshirt backfill", () => {
     expect(
       result.warnings.some((w) => w === "No Classic T-Shirt preview for 11111111; mockup_tshirt not set"),
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dad hat / mug / mouse pad mockups
+// ---------------------------------------------------------------------------
+
+describe("extractDadHatMockupUrl / extractClassicMugMockupUrl / extractMousePadMockupUrl", () => {
+  const WORK = 184787601; // last4 "7601"
+
+  it("rebuilds a light-variant dad hat (FFFDF5) in the wide portrait webp shape", () => {
+    const html = shopApProductsHtml({ workId: WORK, hat: { imageA: "6259892896", colorToken: HAT_LIGHT_TOKEN } });
+    expect(extractDadHatMockupUrl(html, WORK)).toBe(
+      "https://ih1.redbubble.net/image.6259892896.7601/ssrco,dad_hat,product,FFFDF5:8c3db69414,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp",
+    );
+  });
+
+  it("rebuilds a dark-variant dad hat (101010) keeping the colour token the page serves", () => {
+    const html = shopApProductsHtml({ workId: 184699802, hat: { imageA: "6257247326", colorToken: HAT_DARK_TOKEN } });
+    expect(extractDadHatMockupUrl(html, 184699802)).toBe(
+      "https://ih1.redbubble.net/image.6257247326.9802/ssrco,dad_hat,product,101010:01c5ca27c6,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp",
+    );
+  });
+
+  it("rebuilds the classic mug, keeping the side the page serves (right and left)", () => {
+    const right = shopApProductsHtml({ workId: WORK, mug: { imageA: "6259892899" } });
+    expect(extractClassicMugMockupUrl(right, WORK)).toBe(
+      "https://ih1.redbubble.net/image.6259892899.7601/ur,classic_mug_right,wide_portrait,750x1000.webp",
+    );
+    const left = shopApProductsHtml({ workId: 174574347, mug: { imageA: "6264480729", side: "left" } });
+    expect(extractClassicMugMockupUrl(left, 174574347)).toBe(
+      "https://ih1.redbubble.net/image.6264480729.4347/ur,classic_mug_left,wide_portrait,750x1000.webp",
+    );
+  });
+
+  it("rebuilds the small mouse pad flatlay-prop render", () => {
+    const html = shopApProductsHtml({ workId: WORK, pad: { imageA: "6259892893" } });
+    expect(extractMousePadMockupUrl(html, WORK)).toBe(
+      "https://ih1.redbubble.net/image.6259892893.7601/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp",
+    );
+  });
+
+  it("decodes {{%2F}}-encoded slashes before matching", () => {
+    const html = shopApProductsHtml({
+      workId: WORK,
+      hat: { imageA: "6259892896", colorToken: HAT_LIGHT_TOKEN },
+      mug: { imageA: "6259892899" },
+      pad: { imageA: "6259892893" },
+      encodeSlashes: true,
+    });
+    expect(html).toContain("{{%2F}}");
+    expect(extractDadHatMockupUrl(html, WORK)).toContain("/ssrco,dad_hat,product,FFFDF5:8c3db69414,");
+    expect(extractClassicMugMockupUrl(html, WORK)).toContain("/ur,classic_mug_right,");
+    expect(extractMousePadMockupUrl(html, WORK)).toContain("/ur,mouse_pad_small_flatlay_prop,");
+  });
+
+  it("returns null for a product the page does not show", () => {
+    const onlyTee = shopApProductsHtml({ workId: WORK, tee: { imageA: "6259892908", colorToken: WHITE_TOKEN } });
+    expect(extractDadHatMockupUrl(onlyTee, WORK)).toBeNull();
+    expect(extractClassicMugMockupUrl(onlyTee, WORK)).toBeNull();
+    expect(extractMousePadMockupUrl(onlyTee, WORK)).toBeNull();
+    expect(extractProductMockups("<html><body>no previews</body></html>", WORK)).toEqual({});
+  });
+
+  it("ignores a related work's products (different image-id suffix)", () => {
+    const related = shopApProductsHtml({
+      workId: 199999999,
+      hat: { imageA: "111", colorToken: HAT_DARK_TOKEN },
+      mug: { imageA: "222" },
+      pad: { imageA: "333" },
+    });
+    expect(extractProductMockups(related, WORK)).toEqual({});
+  });
+
+  it("rejects a non-Redbubble image host", () => {
+    for (const host of ["evil.example", "ih1.redbubble.net.evil.example", "redbubble.net"]) {
+      const html = shopApProductsHtml({
+        workId: WORK,
+        hat: { imageA: "1", colorToken: HAT_LIGHT_TOKEN },
+        mug: { imageA: "2" },
+        pad: { imageA: "3" },
+        host,
+      });
+      expect(extractProductMockups(html, WORK)).toEqual({});
+    }
+  });
+
+  it("extractProductMockups returns every product the page shows, keyed by props key", () => {
+    const html = shopApProductsHtml({
+      workId: WORK,
+      tee: { imageA: "6259892908", colorToken: WHITE_TOKEN },
+      hat: { imageA: "6259892896", colorToken: HAT_LIGHT_TOKEN },
+      mug: { imageA: "6259892899" },
+      pad: { imageA: "6259892893" },
+    });
+    expect(Object.keys(extractProductMockups(html, WORK)).sort()).toEqual([
+      "mockup_hat",
+      "mockup_mousepad",
+      "mockup_mug",
+      "mockup_tshirt",
+    ]);
+  });
+});
+
+describe("missingMockupKeys (backfill selection rule)", () => {
+  it("lists every key for null / empty props", () => {
+    const all = ["mockup_tshirt", "mockup_hat", "mockup_mug", "mockup_mousepad"];
+    expect(missingMockupKeys(null)).toEqual(all);
+    expect(missingMockupKeys(undefined)).toEqual(all);
+    expect(missingMockupKeys({})).toEqual(all);
+  });
+
+  it("lists only the keys the row lacks; unrelated keys do not count", () => {
+    expect(missingMockupKeys({ mockup_tshirt: "x", teepublicLink: "y" })).toEqual([
+      "mockup_hat",
+      "mockup_mug",
+      "mockup_mousepad",
+    ]);
+  });
+
+  it("treats empty and non-string values as missing", () => {
+    expect(missingMockupKeys({ ...COMPLETE_MOCKUP_PROPS, mockup_hat: "", mockup_mug: null })).toEqual([
+      "mockup_hat",
+      "mockup_mug",
+    ]);
+  });
+
+  it("is empty for a fully backfilled row", () => {
+    expect(missingMockupKeys(COMPLETE_MOCKUP_PROPS)).toEqual([]);
+  });
+});
+
+describe("syncRedbubbleToSupabase — hat / mug / mouse pad mockups", () => {
+  beforeEach(() => {
+    calls = [];
+    selectByIdResponses = [];
+    listingResponses = [];
+    selectByTitleResponses = [];
+    insertResponses = [];
+    updateResponses = [];
+    upsertResponses = [];
+    collectionsUpsertResponses = [];
+    designIdLookupResponses = [];
+    designCollectionsUpsertResponses = [];
+    designCollectionsDeleteResponses = [];
+    slugLikeResponses = [];
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  const productA = "https://www.redbubble.com/i/t-shirt/Design-A-by-someartist/11111111.FB110";
+  const PAGE = shopApProductsHtml({
+    workId: 11111111,
+    tee: { imageA: "5", colorToken: BLACK_TOKEN },
+    hat: { imageA: "6", colorToken: HAT_DARK_TOKEN },
+    mug: { imageA: "7" },
+    pad: { imageA: "8" },
+  });
+  const NEW_PROPS = {
+    mockup_tshirt: mockupUrl({ imageA: "5", last4: "1111", colorToken: BLACK_TOKEN }),
+    mockup_hat: "https://ih1.redbubble.net/image.6.1111/ssrco,dad_hat,product,101010:01c5ca27c6,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp",
+    mockup_mug: "https://ih1.redbubble.net/image.7.1111/ur,classic_mug_right,wide_portrait,750x1000.webp",
+    mockup_mousepad: "https://ih1.redbubble.net/image.8.1111/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp",
+  };
+
+  function mockSimpleShop(shopApByWorkId: Record<number, string> = {}) {
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({
+          workId: 11111111,
+          title: "Design A",
+          productPageUrl: productA,
+          imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg",
+        }),
+      ],
+      pagination: { totalPages: 1 },
+    });
+    return mockShop(shopPage, shopApByWorkId);
+  }
+
+  it("new design is inserted with all four mockups in props", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: PAGE }));
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const inserts = insertCalls();
+    expect(inserts).toHaveLength(1);
+    expect(inserts[0].rows[0].props).toEqual(NEW_PROPS);
+  });
+
+  it("existing design with only mockup_tshirt gets the three new keys; tshirt and other keys stay untouched", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: PAGE }));
+    const storedTee = "https://ih1.redbubble.net/image.9.1111/ssrco,classic_tee,flatlay,fafafa:ca443f4786,front,tall_portrait,x1000.jpg";
+    selectByIdResponses = [
+      {
+        data: [{ externalId: 11111111, props: { mockup_tshirt: storedTee, teepublicLink: "https://tp.example/x" } }],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual({
+      mockup_tshirt: storedTee, // page now shows another tee, but a stored value is never overwritten
+      teepublicLink: "https://tp.example/x",
+      mockup_hat: NEW_PROPS.mockup_hat,
+      mockup_mug: NEW_PROPS.mockup_mug,
+      mockup_mousepad: NEW_PROPS.mockup_mousepad,
+    });
+    expect(result.updated).toBe(1);
+  });
+
+  it("a product the page does not show is left out — no placeholder, no null, no overwrite", async () => {
+    const pageWithoutMug = shopApProductsHtml({
+      workId: 11111111,
+      tee: { imageA: "5", colorToken: BLACK_TOKEN },
+      hat: { imageA: "6", colorToken: HAT_DARK_TOKEN },
+    });
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: pageWithoutMug }));
+    selectByIdResponses = [
+      {
+        data: [{ externalId: 11111111, props: { mockup_tshirt: NEW_PROPS.mockup_tshirt, mockup_mousepad: "https://ih1.redbubble.net/kept.webp" } }],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const props = updateCalls()[0].changes.props as Record<string, unknown>;
+    expect(props).toEqual({
+      mockup_tshirt: NEW_PROPS.mockup_tshirt,
+      mockup_mousepad: "https://ih1.redbubble.net/kept.webp",
+      mockup_hat: NEW_PROPS.mockup_hat,
+    });
+    expect(props).not.toHaveProperty("mockup_mug");
+    expect(result.warnings).toContain("No Classic Mug preview for 11111111; mockup_mug not set");
+    expect(result.warnings.some((w) => w.includes("Mouse Pad"))).toBe(false);
+  });
+
+  it("existing design with no product on the page: props not written, one warning per missing key", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: shopApHtml("Desc A") }));
+    selectByIdResponses = [{ data: [{ externalId: 11111111, props: { foo: "bar" } }], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(updates[0].changes).not.toHaveProperty("props");
+    expect(result.warnings.filter((w) => /^No .* preview for 11111111;/.test(w))).toHaveLength(4);
+  });
+
+  it("fully backfilled row is not fetched again", async () => {
+    // No /shop/ap mock registered: a fetch attempt would be recorded as an error.
+    vi.stubGlobal("fetch", mockSimpleShop());
+    selectByIdResponses = [{ data: [{ externalId: 11111111, props: COMPLETE_MOCKUP_PROPS }], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(result.errors).toBe(0);
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(updates[0].changes).not.toHaveProperty("props");
+  });
+
+  it("pod-studio row: missing mockups are backfilled props-only (plus collection), nothing else is written", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: PAGE }));
+    selectByIdResponses = [
+      {
+        data: [{ externalId: 11111111, source: "pod-studio", props: { mockup_tshirt: NEW_PROPS.mockup_tshirt, cdn: "keep" } }],
+        error: null,
+      },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["collection", "props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual({ ...NEW_PROPS, cdn: "keep" });
+    expect(updates[0].guarded).toBeUndefined();
+    expect(insertCalls()).toEqual([]);
+    expect(result.updated).toBe(1);
+  });
+
+  it("API-listing row: missing mockups backfilled even when the collections crawl is incomplete (props only)", async () => {
+    const shopPage = nextDataHtml({
+      results: [
+        rbResultEntry({ workId: 11111111, title: "Design A", productPageUrl: productA, imageUrl: "https://ih1.redbubble.net/image.111.1/a.jpg" }),
+      ],
+      pagination: { totalPages: 1 },
+      artistInfo: { collections: [rbCollection(100, "Cats")] },
+    });
+    const fetchMock = vi.fn(async (url: string) => {
+      const u = url.toString();
+      if (u.startsWith(SHOP_URL) && u.includes("collections=100")) throw new Error("network error fetching Cats collection");
+      if (u.startsWith(SHOP_URL) && u.includes("page=1")) return new Response(shopPage, { status: 200 });
+      if (u.startsWith(SHOP_URL) && u.includes("page=2")) return new Response(nextDataHtml({ results: [] }), { status: 200 });
+      if (u === "https://www.redbubble.com/shop/ap/11111111") return new Response(PAGE, { status: 200 });
+      throw new Error(`unexpected fetch: ${u}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    listingResponses = [{ data: [{ platform: "redbubble", externalId: "11111111" }], error: null }];
+    selectByIdResponses = [{ data: [{ externalId: 11111111, props: null }], error: null }];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    const updates = updateCalls();
+    expect(updates).toHaveLength(1);
+    expect(Object.keys(updates[0].changes).sort()).toEqual(["props", "updatedAt"]);
+    expect(updates[0].changes.props).toEqual(NEW_PROPS);
+    expect(updates[0].guarded).toBeUndefined();
+    expect(result.skipped).toBe(0);
+  });
+
+  it("scraper-created row keeps the pod-studio write-time guard on its props update", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: PAGE }));
+    selectByIdResponses = [{ data: [{ externalId: 11111111, props: null }], error: null }];
+
+    await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL }));
+
+    expect(updateCalls()[0].guarded).toBe(true);
+  });
+
+  it("dry-run: plan.update carries the merged props and nothing is written", async () => {
+    vi.stubGlobal("fetch", mockSimpleShop({ 11111111: PAGE }));
+    selectByIdResponses = [
+      { data: [{ externalId: 11111111, props: { mockup_tshirt: NEW_PROPS.mockup_tshirt } }], error: null },
+    ];
+
+    const result = await syncRedbubbleToSupabase(baseOptions({ shopUrl: SHOP_URL, dryRun: true }));
+
+    expect(updateCalls()).toEqual([]);
+    expect(insertCalls()).toEqual([]);
+    expect(result.plan?.update).toEqual([
+      { externalId: 11111111, collection: "no_collection", props: NEW_PROPS },
+    ]);
   });
 });

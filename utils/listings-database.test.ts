@@ -60,6 +60,8 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
       await pgSql(readFileSync("init/migrations/003_design_listings_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/005_design_cdn_image_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/006_listing_extra_mockups_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/006_listing_extra_mockups_postgres.sql", "utf8"));
       await pgSql("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;");
     } else {
       pool = mysql.createPool({ host: "127.0.0.1", port: 33316, user: "root", password: "listings-test", database: "listings_test", dateStrings: true, multipleStatements: true });
@@ -165,6 +167,16 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
     const [saved] = await designs();
     expect(saved).toMatchObject({ description: "Curated description", keywords: "curated tags", source: "pod-studio", sha256: "a".repeat(64), sourceImageId: 299, props: { custom: "curated" } });
     if (platform === "redbubble") expect(saved.props).toMatchObject({ mockup_tshirt: body.listing.extra!.mockupTshirt });
+  });
+  it("fills empty hat/mug/mousepad mockup props from extra and never overwrites a stored value", async () => {
+    const hat = "https://ih1.redbubble.net/image.2.7566/ssrco,dad_hat,product,101010:01c5ca27c6,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp";
+    const mug = "https://ih1.redbubble.net/image.3.7566/ur,classic_mug_left,wide_portrait,750x1000.webp";
+    const pad = "https://ih1.redbubble.net/image.4.7566/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp";
+    await execute(`INSERT INTO designs (${provider === "postgres" ? '"externalId"' : "externalId"}, title, description, keywords, props) VALUES (184507566, 'Curated title', 'Curated description', 'curated tags', ${sqlString(JSON.stringify({ mockup_mug: "https://ih1.redbubble.net/curated-mug.webp", custom: "curated" }))})`);
+    const body = input();
+    body.listing.extra = { mockupHat: hat, mockupMug: mug, mockupMousepad: pad };
+    await ingest(body);
+    expect((await designs())[0].props).toEqual({ custom: "curated", mockup_mug: "https://ih1.redbubble.net/curated-mug.webp", mockup_hat: hat, mockup_mousepad: pad });
   });
   it("rejects a title clash and rolls back all writes", async () => {
     await ingest(input());

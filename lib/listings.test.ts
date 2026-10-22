@@ -82,3 +82,40 @@ describe("parseIngestInput cdnImage", () => {
     expect(input.design.cdnImage).toEqual({ key: `designs/${sha256.slice(0, 16)}`, version: 2, width: 800, height: 1000 });
   });
 });
+
+describe("parseIngestInput extra mockups", () => {
+  const redbubble = (extra: unknown) => parseIngestInput({ ...body(), listing: { ...body().listing, extra } });
+  const mockups = {
+    mockupTshirt: "https://ih1.redbubble.net/image.1.7566/ssrco,classic_tee,flatlay,fafafa:ca443f4786,front,tall_portrait,x1000.jpg",
+    mockupHat: "https://ih1.redbubble.net/image.2.7566/ssrco,dad_hat,product,101010:01c5ca27c6,front_three_quarter,wide_portrait,750x1000-bg,f8f8f8.webp",
+    mockupMug: "https://ih1.redbubble.net/image.3.7566/ur,classic_mug_left,wide_portrait,750x1000.webp",
+    mockupMousepad: "https://ih1.redbubble.net/image.4.7566/ur,mouse_pad_small_flatlay_prop,wide_portrait,750x1000.webp",
+  };
+
+  it("accepts all four mockups, and requests without them parse as before", () => {
+    expect(redbubble(mockups).listing.extra).toEqual(mockups);
+    expect(redbubble({ mockupHat: mockups.mockupHat }).listing.extra).toEqual({ mockupHat: mockups.mockupHat });
+    expect(parseIngestInput(body()).listing.extra).toBeUndefined();
+  });
+
+  it.each(["mockupTshirt", "mockupHat", "mockupMug", "mockupMousepad"])("rejects a %s on a foreign host", key => {
+    expect(() => redbubble({ [key]: "https://evil.example/x.webp" })).toThrow(ListingsError);
+    expect(() => redbubble({ [key]: "http://ih1.redbubble.net/x.webp" })).toThrow(ListingsError);
+    expect(() => redbubble({ [key]: "https://ih1.redbubble.net.evil.example/x.webp" })).toThrow(ListingsError);
+    expect(() => redbubble({ [key]: 5 })).toThrow(ListingsError);
+  });
+
+  it("names the offending mockup field", () => {
+    try {
+      redbubble({ mockupMug: "https://evil.example/x.webp" });
+    } catch (error) {
+      expect(error).toMatchObject({ field: "listing.extra.mockupMug" });
+      return;
+    }
+    throw new Error("expected a rejection");
+  });
+
+  it("still rejects unknown top-level listing fields", () => {
+    expect(() => parseIngestInput({ ...body(), listing: { ...body().listing, mockupHat: mockups.mockupHat } })).toThrow(ListingsError);
+  });
+});

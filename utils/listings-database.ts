@@ -2,7 +2,7 @@ import mysql from "mysql2/promise";
 import { randomUUID } from "node:crypto";
 import { designSlugBase, uniqueSlug } from "@/lib/slug";
 import {
-  DesignListing, IngestDesign, IngestInput, IngestResult, ListingsError,
+  DesignListing, IngestDesign, IngestInput, IngestResult, ListingsError, MOCKUP_EXTRA_PROPS,
 } from "@/lib/listings";
 import { normalizeCdnImage } from "@/lib/image";
 
@@ -101,7 +101,12 @@ export async function ingestListingMySQL(pool: mysql.Pool, input: IngestInput): 
     }
     await connection.query(`UPDATE design_listings SET ${fields.join(", ")} WHERE id = ?`, [...values, listingId]);
     const props = { ...design.props };
-    if (l.platform === "redbubble" && l.extra?.mockupTshirt && !props.mockup_tshirt) props.mockup_tshirt = l.extra.mockupTshirt;
+    if (l.platform === "redbubble") {
+      for (const [extraKey, propKey] of Object.entries(MOCKUP_EXTRA_PROPS)) {
+        const url = l.extra?.[extraKey];
+        if (url && !props[propKey]) props[propKey] = url;
+      }
+    }
     if (l.platform === "teepublic") Object.assign(props, { teepublicLink: l.url, teepublicId: l.externalId });
     await connection.query(
       // A present cdnImage overwrites (e.g. a higher version); an absent one keeps the
