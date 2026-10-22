@@ -1,4 +1,4 @@
-/** The storefront's display image from `designs.cdnImage`: the `flat-full` mockup (else the first) of the
+/** The storefront's display image from `designs.cdnImage`: the first vertical (portrait) mockup, else `flat-full`, else the first, of the
  * stored mockup array (see CdnImage in lib/listings.ts), or a legacy single object. See normalizeCdnImage. */
 export type CdnArtwork = { key: string; version: number; width: number; height: number };
 

@@ -93,28 +93,43 @@ const mockups = [
 ];
 
 describe("a stored cdnImage mockup array on the storefront", () => {
-  const fourMockups = [
-    { key: "designs/f45e5bc7a5342c2c/mockups/002a102ae0ec24d0", kind: "hanger-full", version: 1, width: 1024, height: 1536 },
-    mockups[0],
-    { key: "designs/f45e5bc7a5342c2c/mockups/1111111111111111", kind: "flat-close", version: 1, width: 1024, height: 1536 },
-    mockups[1],
-  ];
-  const flatFull = { key: mockups[0].key, version: 1, width: 1024, height: 1536 };
+  const entry = (hex: string, kind: string, width: number, height: number) => ({
+    key: `designs/f45e5bc7a5342c2c/mockups/${hex.repeat(16)}`, kind, version: 1, width, height,
+  });
+  const pick = (m: { key: string; version: number; width: number; height: number }) => ({
+    key: m.key, version: m.version, width: m.width, height: m.height,
+  });
+  // The ingest order; the flat shots are landscape, the hanger shots portrait.
+  const flatFull = entry("1", "flat-full", 1536, 1024);
+  const hangerFull = entry("2", "hanger-full", 1024, 1536);
+  const flatClose = entry("3", "flat-close", 1536, 1024);
+  const hangerClose = entry("4", "hanger-close", 1024, 1536);
+  const fourMockups = [flatFull, hangerFull, flatClose, hangerClose];
 
-  it("normalizes to the flat-full mockup, wherever it sits in the array", () => {
-    expect(normalizeCdnImage(fourMockups)).toEqual(flatFull);
+  it("prefers the first portrait mockup in array order over a landscape flat-full", () => {
+    expect(normalizeCdnImage(fourMockups)).toEqual(pick(hangerFull));
+    expect(normalizeCdnImage([flatFull, flatClose, hangerClose, hangerFull])).toEqual(pick(hangerClose));
   });
 
-  it("falls back to the first valid mockup when there is no flat-full", () => {
-    const withoutFlatFull = [{ ...mockups[1], kind: "side" }, mockups[1], fourMockups[0]];
-    expect(normalizeCdnImage(withoutFlatFull)).toEqual({ key: mockups[1].key, version: 1, width: 1024, height: 1536 });
-    expect(normalizeCdnImage(fourMockups.filter(m => m.kind !== "flat-full"))).toEqual({
-      key: fourMockups[0].key, version: 1, width: 1024, height: 1536,
-    });
+  it("picks flat-full when every mockup is landscape", () => {
+    expect(normalizeCdnImage([flatClose, flatFull, entry("5", "hanger-full", 1536, 1024)])).toEqual(pick(flatFull));
+  });
+
+  it("picks the first entry when all are portrait", () => {
+    const allPortrait = [entry("6", "flat-close", 1024, 1536), entry("7", "flat-full", 1024, 1536), hangerFull];
+    expect(normalizeCdnImage(allPortrait)).toEqual(pick(allPortrait[0]));
+  });
+
+  it("picks the first valid entry when none is portrait and there is no flat-full", () => {
+    expect(normalizeCdnImage([{ ...flatFull, kind: "side" }, flatClose, entry("8", "hanger-close", 1536, 1024)])).toEqual(pick(flatClose));
+  });
+
+  it("ignores invalid entries when looking for the portrait one", () => {
+    expect(normalizeCdnImage([flatFull, { ...hangerFull, version: 0 }, { ...hangerFull, kind: "side" }, hangerClose])).toEqual(pick(hangerClose));
   });
 
   it("parses a mysql2 JSON-string array", () => {
-    expect(normalizeCdnImage(JSON.stringify(fourMockups))).toEqual(flatFull);
+    expect(normalizeCdnImage(JSON.stringify(fourMockups))).toEqual(pick(hangerFull));
   });
 
   it("still accepts the legacy single object", () => {
@@ -128,10 +143,10 @@ describe("a stored cdnImage mockup array on the storefront", () => {
     }
   });
 
-  it("serves the CDN card, srcSet and flat-full size for getDesignImage", () => {
+  it("serves the CDN card, srcSet and the portrait mockup size for getDesignImage", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
     const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups) });
-    const base = `${CDN}/${mockups[0].key}`;
+    const base = `${CDN}/${hangerFull.key}`;
     expect(getDesignImage(design)).toEqual({
       kind: "cdn",
       src: `${base}/card-v1.webp`,
@@ -145,8 +160,8 @@ describe("a stored cdnImage mockup array on the storefront", () => {
   it("uses the share JPEG for share URL and pins", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
     const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups), externalImageUrl: "" });
-    expect(cdnShareImageUrl(design)).toBe(`${CDN}/${mockups[0].key}/share-v1.jpg`);
-    expect(getShareImageUrl(design)).toBe(`${CDN}/${mockups[0].key}/share-v1.jpg`);
+    expect(cdnShareImageUrl(design)).toBe(`${CDN}/${hangerFull.key}/share-v1.jpg`);
+    expect(getShareImageUrl(design)).toBe(`${CDN}/${hangerFull.key}/share-v1.jpg`);
     expect(hasPinImage(design)).toBe(true);
   });
 
