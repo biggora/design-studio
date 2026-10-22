@@ -1013,7 +1013,7 @@ export async function fetchCollectionFeedDesigns(
                 .eq("design_collections.collections.title", collectionTitle)
                 // Feed pins need a pin source: a Classic T-Shirt mockup (props.mockup_tshirt)
                 // or a pod-uploader CDN image (cdnImage, share JPEG).
-                .or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1026,7 +1026,7 @@ export async function fetchCollectionFeedDesigns(
                 .select("*")
                 .eq("active", true)
                 .eq("collection", collectionTitle)
-                .or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
+                .or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false})
                 .order("id", {ascending: false})
                 .range(0, fetchLimit - 1);
@@ -1057,7 +1057,7 @@ export async function fetchCollectionFeedDesigns(
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title = ?)
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR JSON_EXTRACT(d.cdnImage, '$.key') IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
                ${excludePinned ? `AND NOT EXISTS (SELECT 1 FROM design_social_posts sp
                                   WHERE sp.designId = d.id AND sp.channel = 'pinterest' AND sp.status = 'published')` : ""}
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
@@ -1108,7 +1108,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
                 : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
                     .eq("active", true)
                     .in("design_collections.collections.title", titles);
-            return base.or("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null")
+            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null")
                 .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
         };
         const joined = await run(false);
@@ -1126,7 +1126,7 @@ export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], 
              WHERE d.active = TRUE
                AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
                            WHERE dc.designId = d.id AND c.title IN (?))
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR JSON_EXTRACT(d.cdnImage, '$.key') IS NOT NULL)
+               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL)
              ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
             [titles, fetchLimit],
         );

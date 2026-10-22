@@ -46,10 +46,11 @@ export function imagesCdnHost(): string | null {
 }
 
 /**
- * The storefront's view of `designs.cdnImage`: a single flat-artwork object, or null.
- * Row values from both providers arrive as an object (Supabase jsonb) or a JSON string (mysql2).
- * The ingest now stores an ARRAY of mockups there; an array is "no CDN artwork", so every
- * reader keeps the Redbubble fallback (see normalizeCdnImageMockups for the ingest side).
+ * The storefront's view of `designs.cdnImage`: the single display image, or null.
+ * Row values from both providers arrive as an object/array (Supabase jsonb) or a JSON string (mysql2).
+ * The column holds the array of the design's garment mockups (see normalizeCdnImageMockups): the
+ * display image is the `flat-full` mockup, else the first valid entry. A legacy single
+ * `{key, version, width, height}` object is still accepted as-is.
  */
 export function normalizeCdnImage(value: unknown): CdnArtwork | null {
   if (typeof value === "string") {
@@ -59,7 +60,12 @@ export function normalizeCdnImage(value: unknown): CdnArtwork | null {
       return null;
     }
   }
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  if (Array.isArray(value)) {
+    const mockups = normalizeCdnImageMockups(value);
+    const pick = mockups?.find(mockup => mockup.kind === "flat-full") ?? mockups?.[0];
+    return pick ? { key: pick.key, version: pick.version, width: pick.width, height: pick.height } : null;
+  }
+  if (!value || typeof value !== "object") return null;
   const { key, version, width, height } = value as Record<string, unknown>;
   if (typeof key !== "string" || !key) return null;
   if (![version, width, height].every(n => typeof n === "number" && Number.isSafeInteger(n) && n >= 1)) {

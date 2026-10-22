@@ -93,15 +93,66 @@ const mockups = [
 ];
 
 describe("a stored cdnImage mockup array on the storefront", () => {
-  it("is not CDN artwork: normalizeCdnImage returns null for arrays and their JSON strings", () => {
-    expect(normalizeCdnImage(mockups)).toBeNull();
-    expect(normalizeCdnImage(JSON.stringify(mockups))).toBeNull();
-    expect(normalizeCdnImage([cdnImage])).toBeNull();
+  const fourMockups = [
+    { key: "designs/f45e5bc7a5342c2c/mockups/002a102ae0ec24d0", kind: "hanger-full", version: 1, width: 1024, height: 1536 },
+    mockups[0],
+    { key: "designs/f45e5bc7a5342c2c/mockups/1111111111111111", kind: "flat-close", version: 1, width: 1024, height: 1536 },
+    mockups[1],
+  ];
+  const flatFull = { key: mockups[0].key, version: 1, width: 1024, height: 1536 };
+
+  it("normalizes to the flat-full mockup, wherever it sits in the array", () => {
+    expect(normalizeCdnImage(fourMockups)).toEqual(flatFull);
   });
 
-  it("keeps the Redbubble fallback for images, share URL and pins even with the env set", () => {
+  it("falls back to the first valid mockup when there is no flat-full", () => {
+    const withoutFlatFull = [{ ...mockups[1], kind: "side" }, mockups[1], fourMockups[0]];
+    expect(normalizeCdnImage(withoutFlatFull)).toEqual({ key: mockups[1].key, version: 1, width: 1024, height: 1536 });
+    expect(normalizeCdnImage(fourMockups.filter(m => m.kind !== "flat-full"))).toEqual({
+      key: fourMockups[0].key, version: 1, width: 1024, height: 1536,
+    });
+  });
+
+  it("parses a mysql2 JSON-string array", () => {
+    expect(normalizeCdnImage(JSON.stringify(fourMockups))).toEqual(flatFull);
+  });
+
+  it("still accepts the legacy single object", () => {
+    expect(normalizeCdnImage(cdnImage)).toEqual(cdnImage);
+    expect(normalizeCdnImage(JSON.stringify(cdnImage))).toEqual(cdnImage);
+  });
+
+  it("returns null for junk arrays", () => {
+    for (const value of [[], "[]", [null, "x", []], [{ ...mockups[0], version: 0 }], [{ key: "", kind: "flat-full", version: 1, width: 1, height: 1 }], "[not json", 7, true]) {
+      expect(normalizeCdnImage(value)).toBeNull();
+    }
+  });
+
+  it("serves the CDN card, srcSet and flat-full size for getDesignImage", () => {
     vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
-    const design = makeDesign({ cdnImage: normalizeCdnImage(mockups) });
+    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups) });
+    const base = `${CDN}/${mockups[0].key}`;
+    expect(getDesignImage(design)).toEqual({
+      kind: "cdn",
+      src: `${base}/card-v1.webp`,
+      srcSet: `${base}/thumb-v1.webp 400w, ${base}/card-v1.webp 800w, ${base}/main-v1.webp 1600w`,
+      width: 1024,
+      height: 1536,
+      backgroundColor: "#ffffff",
+    });
+  });
+
+  it("uses the share JPEG for share URL and pins", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", CDN);
+    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups), externalImageUrl: "" });
+    expect(cdnShareImageUrl(design)).toBe(`${CDN}/${mockups[0].key}/share-v1.jpg`);
+    expect(getShareImageUrl(design)).toBe(`${CDN}/${mockups[0].key}/share-v1.jpg`);
+    expect(hasPinImage(design)).toBe(true);
+  });
+
+  it("keeps the Redbubble fallback without the CDN env", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    const design = makeDesign({ cdnImage: normalizeCdnImage(fourMockups) });
     expect(getDesignImage(design)).toEqual({ kind: "remote", src: "https://ih1.redbubble.net/images/flat.png" });
     expect(cdnShareImageUrl(design)).toBeNull();
     expect(getShareImageUrl(design)).toBe("https://ih1.redbubble.net/images/flat.png");

@@ -31,7 +31,7 @@ export type PublicPrint = {
 // `bg` is an optional on-the-fly background override (see lib/background.ts) — when it
 // resolves for this design, imageUrl/backgroundColor reflect the requested background instead
 // of the stored ones; otherwise the design is returned unchanged.
-// For designs published to the pod-uploader CDN (`cdnImage` + NEXT_PUBLIC_IMAGES_CDN),
+// For designs published to the pod-uploader CDN (`cdnImage` mockups + NEXT_PUBLIC_IMAGES_CDN),
 // `imageUrl` is the share JPEG (already flattened onto the background color, no WebP or
 // transparency); with a `bg` override, or without a CDN image, it stays the stored
 // Redbubble artwork. `mockupUrl` is untouched by any of this.

@@ -1,5 +1,5 @@
-/** A legacy single-object `cdnImage` (flat artwork). Ingest now stores an array of mockups instead
- * (see CdnImage in lib/listings.ts), which the storefront ignores. */
+/** The storefront's display image from `designs.cdnImage`: the `flat-full` mockup (else the first) of the
+ * stored mockup array (see CdnImage in lib/listings.ts), or a legacy single object. See normalizeCdnImage. */
 export type CdnArtwork = { key: string; version: number; width: number; height: number };
 
 export interface Design {

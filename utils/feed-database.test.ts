@@ -269,6 +269,8 @@ describe("fetchCollectionFeedDesigns", () => {
             designs: {data: [
                 supabaseRow({id: "mockup-only", externalImageUrl: ""}),
                 supabaseRow({id: "cdn-only", props: {}, cdnImage: {key: "designs/a1", version: 1, width: 1600, height: 1920}}),
+                // The stored shape: an array of mockups (JSON string as mysql2 returns it).
+                supabaseRow({id: "cdn-array", props: {}, cdnImage: JSON.stringify([{key: "designs/f45e5bc7a5342c2c/mockups/66c018b96d9c6dac", kind: "flat-full", version: 1, width: 1024, height: 1536}])}),
                 supabaseRow({id: "no-image-at-all", externalImageUrl: "", props: {}}),
             ], error: null},
             design_social_posts: {data: [], error: null},
@@ -277,10 +279,10 @@ describe("fetchCollectionFeedDesigns", () => {
 
         const {fetchCollectionFeedDesigns} = await importFacade();
         const {designs} = await fetchCollectionFeedDesigns("Space", 100, SPACE_FEED);
-        expect(designs.map(design => design.id)).toEqual(["mockup-only", "cdn-only"]);
+        expect(designs.map(design => design.id)).toEqual(["mockup-only", "cdn-only", "cdn-array"]);
         // The pin-source requirement is one PostgREST or/is-null filter over both sources.
         const orStep = steps.designs.filter(step => step.method === "or")[0];
-        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null,cdnImage->>key.not.is.null");
+        expect(String(orStep.args[0])).toBe("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null");
     });
 
     it("excludes designs already pinned through the API (published pinterest post)", async () => {
@@ -386,7 +388,7 @@ describe("fetchCollectionFeedDesigns", () => {
 
         const [sql, params] = mysqlQuery.mock.calls[0];
         expect(String(sql)).toContain("JOIN collections c ON c.id = dc.collectionId");
-        expect(String(sql)).toContain("JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR JSON_EXTRACT(d.cdnImage, '$.key') IS NOT NULL");
+        expect(String(sql)).toContain("JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL");
         expect(String(sql)).toContain("NOT EXISTS");
         expect(String(sql)).toContain("design_social_posts");
         expect(params[0]).toBe("Space");
