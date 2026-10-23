@@ -13,8 +13,8 @@ import { assignedPinResponse } from "@/lib/pinterest-image-response";
  * composition with its frozen sources. Designs without an assignment use
  * the share image — the pod-uploader CDN's pre-flattened share
  * JPEG when the design has one, else the Redbubble mockup — fetched
- * server-side from an allow-listed host (Pinterest only ever sees this site's
- * URL — every feed URL must stay on the claimed domain). The optional ?v=
+ * server-side from an allow-listed host. Feed image URLs stay on this site
+ * to preserve the address and transparently serve a fallback. The optional ?v=
  * version param from the feed is ignored here; it exists purely so a changed
  * design gets a fresh URL past caches. Upstream failures answer 503 with
  * no-store so the CDN never pins a broken image.
