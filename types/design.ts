@@ -1,3 +1,4 @@
+import type { OgImage } from "@pod/og-renderer/contract";
 import type { CdnImage } from "@/lib/listings";
 import type { PinterestImage } from "@pod/pinterest-renderer/contract";
 
@@ -35,5 +36,6 @@ export interface Design {
    * entry). Each surface picks its own orientation in lib/image.ts. */
   cdnImage?: CdnImage | null;
   pinterestImage?: PinterestImage | null;
+  ogImage?: OgImage | null;
   props?: object;
 }

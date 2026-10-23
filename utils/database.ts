@@ -1,3 +1,6 @@
+import { normalizeOgImage } from "@/lib/og-image";
+import type { OgLookup, OgWrite, OgWriteResult, OgContext } from "@/lib/og-image";
+import { setOgImageMySQL } from "@/utils/og-image-database";
 import {cache} from "react";
 import {unstable_cache} from "next/cache";
 import {createClient} from "@supabase/supabase-js";
@@ -84,13 +87,22 @@ function getProvider(): string {
     return provider;
 }
 
-/** Authenticated Pinterest preparation context; no artwork is exposed through the public DTO. */
-export async function getPinterestContexts(
+export async function getPinterestContexts(lookup: PinLookup | null, page: number, limit: number, brand: string) {
+    return getSocialImageContexts("pinterest", lookup, page, limit, brand);
+}
+export async function getOgContexts(lookup: OgLookup | null, page: number, limit: number, brand: string) {
+    return getSocialImageContexts("og", lookup, page, limit, brand);
+}
+type SocialContextMap = { pinterest: PinContext; og: OgContext };
+/** Authenticated preparation context; no artwork is exposed through the public DTO. */
+async function getSocialImageContexts<K extends keyof SocialContextMap>(
+    kind: K,
     lookup: PinLookup | null,
     page: number,
     limit: number,
     brand: string,
-): Promise<{ items: PinContext[]; total: number }> {
+): Promise<{ items: SocialContextMap[K][]; total: number }> {
+    const imageColumn = kind === "pinterest" ? "pinterestImage" : "ogImage";
     const columns: Record<string, string> = {
         id: "id",
         sha256: "sha256",
@@ -106,7 +118,7 @@ export async function getPinterestContexts(
     ): Promise<Record<string, unknown>[]> => {
         if (getProvider() === "mysql") {
             const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
-                `SELECT id, sha256, sourceImageId, externalId, active, title, props, pinterestImage FROM designs WHERE active = TRUE${field ? ` AND ${field} = ?` : ""} ORDER BY id LIMIT ? OFFSET ?`,
+                `SELECT id, sha256, sourceImageId, externalId, active, title, collection, props, ${imageColumn} FROM designs WHERE active = TRUE${field ? ` AND ${field} = ?` : ""} ORDER BY id LIMIT ? OFFSET ?`,
                 field ? [value, 1, 0] : [limit, (page - 1) * limit],
             );
             return rows;
@@ -114,7 +126,7 @@ export async function getPinterestContexts(
         let query = getSupabase()
             .from("designs")
             .select(
-                "id, sha256, sourceImageId, externalId, active, title, props, pinterestImage",
+                `id, sha256, sourceImageId, externalId, active, title, collection, props, ${imageColumn}`,
             )
             .eq("active", true)
             .order("id");
@@ -122,7 +134,7 @@ export async function getPinterestContexts(
         else query = query.range((page - 1) * limit, page * limit - 1);
         const { data, error } = await query;
         if (error)
-            throw new Error("Failed to read Pinterest context", {
+            throw new Error("Failed to read social image context", {
                 cause: error,
             });
         return data ?? [];
@@ -163,7 +175,7 @@ export async function getPinterestContexts(
                 .select("id", { count: "exact", head: true })
                 .eq("active", true);
             if (r.error)
-                throw new Error("Failed to count Pinterest contexts", {
+                throw new Error("Failed to count social image contexts", {
                     cause: r.error,
                 });
             total = r.count ?? 0;
@@ -196,8 +208,10 @@ export async function getPinterestContexts(
                 title: String(r.title),
                 brand,
                 sources,
-                pinterestImage: normalizePinterestImage(r.pinterestImage),
-            };
+                ...(kind === "pinterest"
+                    ? {pinterestImage: normalizePinterestImage(r.pinterestImage)}
+                    : {ogImage: normalizeOgImage(r.ogImage), category: normalizeCollection(r.collection) || "Original design"}),
+            } as SocialContextMap[K];
         }),
     };
 }
@@ -214,6 +228,20 @@ export async function setPinterestImage(
     if (error)
         throw new Error("Failed to save Pinterest image", { cause: error });
     return data as PinWriteResult;
+}
+
+export async function setOgImage(
+    write: OgWrite,
+): Promise<OgWriteResult> {
+    if (getProvider() === "mysql")
+        return setOgImageMySQL(getMySQLPool(), write);
+    const { data, error } = await getSupabase().rpc(
+        "set_design_og_image",
+        { write },
+    );
+    if (error)
+        throw new Error("Failed to save Og image", { cause: error });
+    return data as OgWriteResult;
 }
 
 // The sync pipeline stores "no_collection" when a design has no collection;
@@ -264,6 +292,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         active: normalizeActive(row.active),
         cdnImage: normalizeCdnArtworkOptions(row.cdnImage),
         pinterestImage: normalizePinterestImage(row.pinterestImage),
+        ogImage: normalizeOgImage(row.ogImage),
         props: row.props as object | undefined,
     };
 }
@@ -649,6 +678,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         active: normalizeActive(item.active),
         cdnImage: normalizeCdnArtworkOptions(item.cdnImage),
         pinterestImage: normalizePinterestImage(item.pinterestImage),
+        ogImage: normalizeOgImage(item.ogImage),
         props: item.props as object | undefined,
     };
 }

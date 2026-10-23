@@ -26,6 +26,7 @@ CREATE TABLE designs (
   active BOOLEAN NOT NULL DEFAULT TRUE,
   `cdnImage` JSON,
   `pinterestImage` JSON,
+  `ogImage` JSON,
   props JSON,
   `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP NULL,

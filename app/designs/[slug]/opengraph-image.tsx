@@ -2,7 +2,8 @@ import { ImageResponse } from "next/og";
 import { getDesignById, getDesignBySlug, getSiteConfig } from "@/utils/database";
 import { getShareImageUrl } from "@/lib/image";
 import { SLUG_PATTERN, UUID_PATTERN } from "@/lib/slug";
-import { BrandCard, DesignCard, OG_SIZE, fetchImageDataUrl, loadOgFonts, loadOgLogo } from "@/lib/og";
+import { DesignCard, OG_SIZE, fetchImageDataUrl, loadOgFonts, loadOgLogo } from "@/lib/og";
+import { assignedOgResponse } from "@/lib/og-image-response";
 
 export const alt = "Design preview";
 export const size = { width: 1200, height: 630 }; // keep equal to OG_SIZE (segment config must be a literal)
@@ -19,22 +20,30 @@ async function resolveDesign(param: string) {
 
 export default async function Image({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [data, config, fonts, logoDataUrl] = await Promise.all([
-    resolveDesign(slug),
+  const data = await resolveDesign(slug);
+  if (!data?.design) return new Response(null, {status: 404, headers: {"Cache-Control": "no-store"}});
+  const { design } = data;
+  if (design.ogImage) {
+    try {
+      const result = await assignedOgResponse(design.ogImage);
+      return new Response(new Uint8Array(result.bytes), {headers: {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": result.cloud
+          ? "public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400"
+          : "public, max-age=60, s-maxage=60",
+      }});
+    } catch (error) {
+      console.error("Saved OG image unavailable", design.id, error);
+      return new Response(null, {status: 503, headers: {"Cache-Control": "no-store"}});
+    }
+  }
+  const [config, fonts, logoDataUrl] = await Promise.all([
     getSiteConfig(),
     loadOgFonts(),
     loadOgLogo(),
   ]);
   const options = { ...OG_SIZE, fonts };
 
-  if (!data?.design) {
-    return new ImageResponse(
-      <BrandCard siteName={config.name} intro={config.intro} description={config.description} domain={config.domain} logoDataUrl={logoDataUrl} />,
-      options,
-    );
-  }
-
-  const { design } = data;
   // The share image: the CDN's pre-flattened JPEG when published (satori cannot
   // decode the transparent WebP variants), else the Redbubble display image.
   const imageDataUrl = await fetchImageDataUrl(getShareImageUrl(design));

@@ -26,6 +26,24 @@ vi.mock("@/app/components/FeaturedDesigns", () => ({ default: () => null }));
 vi.mock("@/app/components/BackToCatalog", () => ({ default: () => null }));
 vi.mock("@/app/components/ShareLinks", () => ({ default: () => null }));
 import DesignDetails, { generateMetadata } from "@/app/designs/[slug]/page";
+import { createAssignment } from "@pod/og-renderer";
+
+it("versions both social images by the permanent assignment rather than updatedAt", async () => {
+  const before = {ogImage:design.ogImage,updatedAt:design.updatedAt};
+  try {
+    const assignment=await createAssignment({designId:design.id,title:design.title,brand:config.domain,category:"Original design",sources:[{
+      role:"tee",url:"https://ih1.redbubble.net/tee.jpg",sha256:"a".repeat(64),crop:{left:0,top:0,width:750,height:1000},
+    }]});
+    design.ogImage={assignment,asset:null};
+    const first=await generateMetadata({params:Promise.resolve({slug:"space-cat"})});
+    design.updatedAt="2030-01-01T00:00:00Z";
+    const next=await generateMetadata({params:Promise.resolve({slug:"space-cat"})});
+    expect(first.openGraph?.images).toEqual(next.openGraph?.images);
+    expect(first.twitter?.images).toEqual(next.twitter?.images);
+    expect(JSON.stringify(first.openGraph?.images)).toContain(assignment.hash);
+    expect(JSON.stringify(first.openGraph?.images)).toContain("image/jpeg");
+  } finally {Object.assign(design,before);}
+});
 
 // Collects the BuyLink client islands in a page element's tree, in render order.
 function findBuyLinks(node: unknown): ReactElement<BuyLinkProps>[] {

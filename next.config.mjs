@@ -1,8 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["@pod/pinterest-renderer", "fontkit", "sharp"],
+  serverExternalPackages: ["@pod/pinterest-renderer", "@pod/og-renderer", "fontkit", "sharp"],
   outputFileTracingIncludes: {
     "/p/*/pin.jpg": ["./node_modules/@pod/pinterest-renderer/fonts/**/*"],
+    "/designs/*/opengraph-image": ["./node_modules/@pod/og-renderer/fonts/**/*"],
+    "/designs/*/twitter-image": ["./node_modules/@pod/og-renderer/fonts/**/*"],
   },
   images: {
     remotePatterns: [

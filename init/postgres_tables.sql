@@ -29,6 +29,7 @@ create table
                        active boolean not null default true,
                        "cdnImage" jsonb null,
                        "pinterestImage" jsonb null,
+                       "ogImage" jsonb null,
                        props json null,
                        "createdAt" timestamp with time zone not null default now(),
                        "updatedAt" timestamp without time zone null,

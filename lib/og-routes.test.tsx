@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import sharp from "sharp";
+import {createAssignment,assetKey,digest} from "@pod/og-renderer";
 import config from "@/config/config.json";
 import type { Design } from "@/types/design";
 
@@ -50,6 +51,29 @@ async function expectCard(response: Response) {
 }
 
 describe("OpenGraph image routes", () => {
+  it("serves a registered JPEG intact with cloud caching and fails closed when both sources fail", async () => {
+    const assignment=await createAssignment({designId:design.id,title:design.title,brand:"example.org",category:"Space",sources:[{
+      role:"tee",url:"https://ih1.redbubble.net/tee.png",sha256:"a".repeat(64),crop:{left:0,top:0,width:750,height:1000},
+    }]});
+    const jpeg=await sharp({create:{width:1200,height:630,channels:3,background:"#555555"}}).jpeg().toBuffer();
+    const ogImage={assignment,asset:{key:assetKey(assignment),sha256:digest(jpeg),width:1200 as const,height:630 as const,bytes:jpeg.length}};
+    getDesignBySlugMock.mockResolvedValue({design:{...design,ogImage},relatedDesigns:[]});
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN","https://images.example.org");
+    const fetcher=vi.fn().mockResolvedValue(new Response(new Uint8Array(jpeg)));
+    vi.stubGlobal("fetch",fetcher);
+    const response=await DesignImage({params:Promise.resolve({slug:"space-cat"})});
+    expect(response.headers.get("content-type")).toBe("image/jpeg");
+    expect(response.headers.get("cache-control")).toContain("max-age=86400");
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(jpeg);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    fetcher.mockImplementation(async()=>new Response(null,{status:503}));
+    const error=vi.spyOn(console,"error").mockImplementation(()=>{});
+    try {
+      const failed=await DesignImage({params:Promise.resolve({slug:"space-cat"})});
+      expect(failed.status).toBe(503);
+      expect(failed.headers.get("cache-control")).toBe("no-store");
+    } finally {error.mockRestore();vi.unstubAllEnvs();}
+  });
   it("renders 1200x630 for a known slug with its mockup", async () => {
     const jpeg = await sharp({ create: { width: 30, height: 40, channels: 3, background: "#888" } }).jpeg().toBuffer();
     stubMockupFetch(async () => new Response(new Uint8Array(jpeg), { headers: { "content-type": "image/jpeg" } }));
@@ -80,8 +104,10 @@ describe("OpenGraph image routes", () => {
     vi.unstubAllEnvs();
   });
 
-  it("falls back to the brand card for an unknown slug", async () => {
-    await expectCard(await DesignImage({ params: Promise.resolve({ slug: "nope" }) }));
+  it("returns an uncached 404 for an unknown or inactive slug", async () => {
+    const response = await DesignImage({ params: Promise.resolve({ slug: "nope" }) });
+    expect(response.status).toBe(404);
+    expect(response.headers.get("cache-control")).toBe("no-store");
   });
 
   it("renders the site brand card", async () => {

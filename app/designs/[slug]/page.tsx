@@ -71,12 +71,17 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
     keywords: `${design.keywords}, art, t-shirt design, ${config.name} design`,
     alternates: { canonical: designPath(design) },
     openGraph: {
+      ...(design.ogImage ? { images: [{
+        url: `https://${config.domain}${designPath(design)}/opengraph-image?v=${design.ogImage.assignment.hash}`,
+        width: 1200, height: 630, type: "image/jpeg", alt: design.ogImage.assignment.title,
+      }] } : {}),
       url: `https://${config.domain}${designPath(design)}`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...(design.ogImage ? { images: [`https://${config.domain}${designPath(design)}/opengraph-image?v=${design.ogImage.assignment.hash}`] } : {}),
       card: "summary_large_image",
       title,
       description,
