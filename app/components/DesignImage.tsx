@@ -28,8 +28,8 @@ type DesignImageProps = {
   /**
    * Render this URL instead of the design's primary image — for the product
    * mockups (`props.mockup_hat` / `mockup_mug` / `mockup_mousepad`) the detail
-   * page shows beside the artwork. Always a marketplace-hosted remote image,
-   * so it takes the next/image branch.
+   * page shows beside the artwork. These ready-made product previews load
+   * directly, without Vercel Image Optimization transformations.
    */
   src?: string;
   /**
@@ -46,6 +46,7 @@ type DesignImageProps = {
  * Vercel holds no CDN credentials and must not fetch-and-reproxy those
  * files; the browser picks the variant by rendered width. Every other
  * design keeps next/image (Redbubble hosts, blur placeholder, optimizer).
+ * Explicit product mockups bypass optimization as well.
  * When NEXT_PUBLIC_WATERMARK is set, a DOM-only checkerboard watermark is
  * tiled over the artwork (absent from OG/Pinterest/API image URLs by design).
  */
@@ -79,6 +80,7 @@ export function DesignImage({ design, alt, className, sizes, priority, fill = fa
     <>
       <Image
         src={source.src}
+        unoptimized={!!src}
         alt={alt}
         fill={fill}
         sizes={sizes}
