@@ -78,7 +78,7 @@ CREATE POLICY "Service Role Design Collections All" ON public.design_collections
 CREATE TABLE IF NOT EXISTS public.design_listings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
-  platform TEXT NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt')),
+  platform TEXT NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt', 'tostadora')),
   account TEXT NOT NULL,
   "externalId" TEXT NOT NULL,
   url TEXT NOT NULL,

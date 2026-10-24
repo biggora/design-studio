@@ -7,6 +7,7 @@ import BuyLink, { BuyLinkProps } from "@/app/components/BuyLink";
 const getSiteConfig = vi.fn();
 const getDesignBySlug = vi.fn();
 const getDesignById = vi.fn();
+const fetchDesignListingUrl = vi.fn();
 
 vi.mock("next/navigation", () => ({
   notFound: () => {
@@ -17,6 +18,7 @@ vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
   getDesignBySlug: (slug: string) => getDesignBySlug(slug),
   getDesignById: (id: string) => getDesignById(id),
+  fetchDesignListingUrl: (id: string, platform: string) => fetchDesignListingUrl(id, platform),
 }));
 
 function makeDesign(overrides: Partial<Design> = {}): Design {
@@ -93,6 +95,7 @@ beforeEach(() => {
   getSiteConfig.mockReset().mockResolvedValue(config);
   getDesignBySlug.mockReset();
   getDesignById.mockReset();
+  fetchDesignListingUrl.mockReset().mockResolvedValue(null);
 });
 
 describe("/p/[slug] landing page", () => {
@@ -116,6 +119,27 @@ describe("/p/[slug] landing page", () => {
     expect(teepublicIndex).toBeGreaterThan(redbubbleIndex);
     expect(disclosureIndex).toBeGreaterThan(teepublicIndex);
     expect(moreIndex).toBeGreaterThan(disclosureIndex);
+  });
+
+  it("adds a Buy on Tostadora button from the stored listing", async () => {
+    const design = makeDesign();
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    fetchDesignListingUrl.mockResolvedValue("https://www.tostadora.co.uk/web/choose-joy/4929330");
+
+    const html = await renderPage(design.slug as string);
+    expect(html).toContain("Buy on Tostadora");
+    const tostadora = (await renderBuyLinks(design.slug as string)).find(link => link.props.platform === "tostadora");
+    expect(tostadora?.props).toMatchObject({
+      href: "https://www.tostadora.co.uk/web/choose-joy/4929330",
+      pageType: "landing",
+      position: "secondary",
+    });
+  });
+
+  it("omits the Tostadora button when the design has no tostadora listing", async () => {
+    const design = makeDesign();
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    expect(await renderPage(design.slug as string)).not.toContain("Buy on Tostadora");
   });
 
   it("fills the 3:4 image box with the mockup (cover, clipped, rounded)", async () => {

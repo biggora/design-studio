@@ -51,6 +51,7 @@ describe("listings validation", () => {
   it.each([
     ["bad hash", { ...body(), design: { ...body().design, sha256: "bad" } }],
     ["bad domain", { ...body(), listing: { ...body().listing, url: "https://teepublic.com.evil.example/x" } }],
+    ["tostadora on a foreign host", { ...body(), listing: { platform: "tostadora", account: "tostadora:uk", externalId: "4929329", url: "https://evil.example/account/shop/products?designId=4929329" } }],
     ["oversized extra", { ...body(), listing: { ...body().listing, extra: { data: "x".repeat(16384) } } }],
     ["extra bytes", { ...body(), listing: { ...body().listing, extra: { data: "🐈".repeat(5000) } } }],
     ["unknown root", { ...body(), unknown: true }],
@@ -100,6 +101,20 @@ describe("listings responses", () => {
     expect(await response.json()).toEqual(result);
     expect(ingest).toHaveBeenCalledWith(body());
     expect(revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+  it("accepts the pod-uploader tostadora listing body", async () => {
+    const tostadoraBody = {
+      design: { sourceImageId: 1193, sha256, title: "Choose Joy Brush Script On Watercolor" },
+      listing: {
+        platform: "tostadora",
+        account: "tostadora:uk",
+        externalId: "4929329",
+        url: "https://www.tostadora.co.uk/account/shop/products?designId=4929329",
+      },
+    };
+    const response = await POST(request(tostadoraBody));
+    expect(response.status).toBe(201);
+    expect(ingest).toHaveBeenCalledWith(tostadoraBody);
   });
   it("returns 200 for an idempotent repeat", async () => {
     ingest.mockResolvedValue({ ...result, created: { design: false, listing: false } });

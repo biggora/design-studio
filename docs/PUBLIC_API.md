@@ -331,10 +331,10 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 | `design.tags` | no | ≤ 100 strings, each non-empty and ≤ 100 characters |
 | `design.backgroundColor` | no | #rgb or #rrggbb |
 | `design.cdnImage` | no | Array of 1–8 objects `{ key, kind, version, width, height }` — the design's CDN mockups, see below |
-| `listing.platform` | yes | redbubble, teepublic, spreadshirt |
+| `listing.platform` | yes | redbubble, teepublic, spreadshirt, tostadora |
 | `listing.account` | yes | ≤ 100 characters |
-| `listing.externalId` | yes | ≤ 200 characters; digits for Redbubble/TeePublic; Redbubble must fit a JavaScript safe integer |
-| `listing.url` | yes | http(s), ≤ 2000 characters, platform's .com domain or subdomain, no credentials |
+| `listing.externalId` | yes | ≤ 200 characters; digits for Redbubble/TeePublic/Tostadora; Redbubble must fit a JavaScript safe integer |
+| `listing.url` | yes | http(s), ≤ 2000 characters, no credentials. Redbubble/TeePublic/Spreadshirt: the platform's .com domain or a subdomain. Tostadora: any of its country storefront domains — `tostadora.com`, `tostadora.co.uk`, `tostadora.fr`, `tostadora.de`, `tostadora.it`, `latostadora.com` (subdomains allowed) |
 | `listing.title`, `listing.description` | no | ≤ 500 / 5000 characters |
 | `listing.tags` | no | Same limits as design.tags |
 | `listing.thumbnailUrl` | no | http(s) URL, ≤ 2000 characters, no credentials |

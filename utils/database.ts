@@ -1544,3 +1544,29 @@ export async function fetchPublicListings(ids: string[]): Promise<Record<string,
     for (const row of rows) (byDesign[row.designId] ??= []).push({platform: row.platform, url: row.url});
     return byDesign;
 }
+
+/** The stored listing URL for one design and platform — the detail page's and the Pinterest
+ * landing's "Buy on Tostadora" button (whose URL lives only in design_listings, not in
+ * designs.externalLink or props). Null when the design has no listing there. */
+export async function fetchDesignListingUrl(designId: string, platform: ListingPlatform): Promise<string | null> {
+    if (getProvider() === "supabase") {
+        const {data, error} = await getSupabase()
+            .from("design_listings")
+            .select("url")
+            .eq("designId", designId)
+            .eq("platform", platform)
+            .limit(1)
+            .maybeSingle();
+        if (error) {
+            console.error("Error fetching design listing URL:", error);
+            return null;
+        }
+        return (data?.url as string | undefined) ?? null;
+    }
+    const pool = getMySQLPool();
+    const [rows] = await pool.query<mysql.RowDataPacket[]>(
+        "SELECT url FROM design_listings WHERE designId = ? AND platform = ? LIMIT 1",
+        [designId, platform],
+    );
+    return (rows[0]?.url as string | undefined) ?? null;
+}

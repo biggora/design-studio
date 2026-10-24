@@ -14,13 +14,16 @@ const design: Design = {
   props: { teepublicLink: "https://teepublic.com/t-shirt/123-space-cat" },
 };
 const fetchRandomDesigns = vi.fn();
+const fetchDesignListingUrl = vi.fn();
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   getDesignBySlug: async () => ({ design, relatedDesigns: [] }),
   getDesignById: async () => ({ design, relatedDesigns: [] }),
   fetchRandomDesigns: (...args: unknown[]) => fetchRandomDesigns(...args),
+  fetchDesignListingUrl: (...args: unknown[]) => fetchDesignListingUrl(...args),
 }));
 fetchRandomDesigns.mockResolvedValue([]);
+fetchDesignListingUrl.mockResolvedValue(null);
 vi.mock("next/image", () => ({ default: ({ src, alt }: { src: string; alt: string }) => createElement("img", { src, alt }) }));
 vi.mock("@/app/components/FeaturedDesigns", () => ({ default: () => null }));
 vi.mock("@/app/components/BackToCatalog", () => ({ default: () => null }));
@@ -136,6 +139,20 @@ describe("non-Redbubble design page", () => {
     } finally {
       design.props = original;
     }
+  });
+  it("renders Buy on Tostadora from the stored listing only when there is one", async () => {
+    fetchDesignListingUrl.mockResolvedValue("https://www.tostadora.co.uk/web/choose-joy/4929330");
+    const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("Buy on Tostadora");
+    expect(html).toContain("https://www.tostadora.co.uk/web/choose-joy/4929330");
+    const tostadora = findBuyLinks(page).find(link => link.props.platform === "tostadora");
+    expect(tostadora?.props).toMatchObject({ position: "secondary", pageType: "design" });
+    expect(fetchDesignListingUrl).toHaveBeenCalledWith(design.id, "tostadora");
+
+    fetchDesignListingUrl.mockResolvedValue(null);
+    expect(renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) })))
+      .not.toContain("Buy on Tostadora");
   });
   it("fills the related row from random picks when the design has no related designs", async () => {
     fetchRandomDesigns.mockClear();

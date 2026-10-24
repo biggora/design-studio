@@ -142,3 +142,65 @@ describe("parseIngestInput extra mockups", () => {
     expect(() => parseIngestInput({ ...body(), listing: { ...body().listing, mockupHat: mockups.mockupHat } })).toThrow(ListingsError);
   });
 });
+
+describe("parseIngestInput tostadora", () => {
+  const tostadoraBody = () => ({
+    design: { sourceImageId: 1193, sha256, title: "Choose Joy Brush Script On Watercolor" },
+    listing: {
+      platform: "tostadora",
+      account: "tostadora:uk",
+      externalId: "4929329",
+      url: "https://www.tostadora.co.uk/account/shop/products?designId=4929329",
+    },
+  });
+  const tostadoraListing = (listing: Record<string, unknown>) =>
+    parseIngestInput({ ...tostadoraBody(), listing });
+  const tostadoraError = (url: string): ListingsError => {
+    try {
+      tostadoraListing({ ...tostadoraBody().listing, url });
+    } catch (error) {
+      if (error instanceof ListingsError) return error;
+      throw error;
+    }
+    throw new Error("Expected parseIngestInput to reject the value");
+  };
+
+  it("accepts the pod-uploader tostadora listing body", () => {
+    const { listing } = tostadoraListing(tostadoraBody().listing);
+    expect(listing.platform).toBe("tostadora");
+    expect(listing.account).toBe("tostadora:uk");
+    expect(listing.externalId).toBe("4929329");
+    expect(listing.url).toBe("https://www.tostadora.co.uk/account/shop/products?designId=4929329");
+  });
+
+  it.each([
+    ["https://www.tostadora.com/shop/x", "the .com shop"],
+    ["https://www.tostadora.fr/shop/x", "the French shop"],
+    ["https://www.tostadora.de/shop/x", "the German shop"],
+    ["https://www.tostadora.it/shop/x", "the Italian shop"],
+    ["https://www.latostadora.com/shop/x", "the latostadora shop"],
+    ["https://mx.latostadora.com/shop/x", "the Mexican shop"],
+    ["https://shop.tostadora.co.uk/shop/x", "a subdomain of a Tostadora domain"],
+  ])("accepts a URL on %s (%s)", (url) => {
+    expect(tostadoraListing({ ...tostadoraBody().listing, url }).listing.url).toBe(url);
+  });
+
+  it("rejects a non-Tostadora host with platform tostadora", () => {
+    const error = tostadoraError("https://evil.example/account/shop/products?designId=4929329");
+    expect(error.status).toBe(400);
+    expect(error.field).toBe("listing.url");
+    expect(error.message).toContain("tostadora.co.uk");
+  });
+
+  it("still rejects a spoofed Tostadora host", () => {
+    expect(tostadoraError("https://www.tostadora.co.uk.evil.example/x").field).toBe("listing.url");
+  });
+
+  it("requires digits in the externalId, like the other digit platforms", () => {
+    expect(() => tostadoraListing({ ...tostadoraBody().listing, externalId: "t4929329" })).toThrow(ListingsError);
+  });
+
+  it("rejects an unsupported platform as before", () => {
+    expect(() => tostadoraListing({ ...tostadoraBody().listing, platform: "redbubblefr" })).toThrow(ListingsError);
+  });
+});
