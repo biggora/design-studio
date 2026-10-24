@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const config = await getSiteConfig();
   return {
     title: `Publisher Privacy Policy - ${config.name}`,
-    description: `How ${config.name} Publisher uses Facebook data and how to request its deletion.`,
+    description: `How ${config.name} Publisher uses Facebook and Instagram data and how to request its deletion.`,
     alternates: { canonical: "/publisher-privacy" },
   };
 }
@@ -19,12 +19,13 @@ export default async function PublisherPrivacy() {
   const app = `${config.name} Publisher`;
   return (
     <PageShell>
-      <PageHeader title={`${app}: Privacy Policy`} intro="Effective date: October 24, 2026" />
+      <PageHeader title={`${app}: Privacy Policy`} intro="Effective date: October 25, 2026" />
       <div className="prose prose-lg max-w-prose text-foreground">
         <p>
           {app} is an internal publishing tool operated by {config.name}.
           Our authorized administrators use it to share our published Tumblr articles
-          and catalog prints on our own Facebook Page. Store visitors do not sign
+          and catalog prints on our own Facebook Page and connected professional
+          Instagram account. Store visitors do not sign
           into this tool. This policy covers the publishing app; our{" "}
           <AccentLink href="/privacy-policy">website privacy policy</AccentLink>{" "}
           covers visits to this site.
@@ -36,11 +37,16 @@ export default async function PublisherPrivacy() {
           permissions and access tokens to authorize publishing. We read that
           Page&apos;s own posts, including their text, links, images, IDs and publication
           times, to check publication status and avoid duplicate posts.
+          For Instagram, we also use the connected professional account&apos;s ID,
+          username and its own published media, captions, images,
+          links and publication times for the same purpose.
         </p>
         <p>
           The app requests pages_show_list, pages_read_engagement and
-          pages_manage_posts. Facebook also includes public_profile. Access is
-          limited to the Page chosen during authorization. Although these
+          pages_manage_posts, plus instagram_basic and instagram_content_publish
+          for the connected Instagram account. Facebook also includes public_profile.
+          Access is limited to the Page and Instagram account chosen during
+          authorization. Although these
           permissions can make additional Page information available, this publisher
           does not collect follower identities, comments, private messages, friend
           lists or personal timeline posts.
@@ -49,13 +55,13 @@ export default async function PublisherPrivacy() {
         <p>
           We use these data to connect our Page, publish approved content, check the
           result and prevent duplicate publication. We send post text, article and
-          catalog links, and print images to Meta for publication on Facebook.
+          catalog links, and images to Meta for publication on Facebook and Instagram.
           We obtain article content from our Tumblr blog and print information from
           our public catalog. Links may contain campaign identifiers to measure
           visits; these identifiers describe the content, not a particular visitor.
         </p>
         <p>
-          We do not sell Facebook data or share access tokens with advertisers.
+          We do not sell Facebook or Instagram data or share access tokens with advertisers.
           Meta processes information under its own{" "}
           <AccentLink href="https://www.facebook.com/privacy/policy/">Privacy Policy</AccentLink>.
           Published posts are public and can be viewed or shared by others.
@@ -90,7 +96,7 @@ export default async function PublisherPrivacy() {
               {config.email}
             </AccentLink>{" "}
             with the subject &quot;Publisher data deletion&quot;. Include the Page
-            name or URL and identify the connection or records concerned. Do not
+            or Instagram account name or URL and identify the connection or records concerned. Do not
             send a password or access token.
           </li>
           <li>
@@ -99,7 +105,7 @@ export default async function PublisherPrivacy() {
             publishing records, and confirm completion by email. Any retained
             records required by law are explained in that reply. Existing public
             posts and copies held by Meta or other users are separate; tell us if
-            your request also concerns posts on our Page.
+            your request also concerns posts on our Page or Instagram account.
           </li>
         </ol>
         <SectionHeading className="mt-8">Questions and changes</SectionHeading>
