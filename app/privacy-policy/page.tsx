@@ -36,6 +36,11 @@ export default async function PrivacyPolicy() {
       <div className="prose prose-lg max-w-prose text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>
 
+        <p>
+          For our Facebook Page publishing tool, see the{" "}
+          <AccentLink href="/publisher-privacy">Publisher Privacy Policy and data deletion instructions</AccentLink>.
+        </p>
+
         <SectionHeading className="mt-8">1. Introduction</SectionHeading>
         <p>
           Welcome to {config.name} (&quot;Company&quot;, &quot;we&quot;,
