@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import {
   SiFacebook,
@@ -8,10 +6,9 @@ import {
   SiLinkedin,
   SiPinterest,
 } from "@icons-pack/react-simple-icons";
-import { useContext } from "react";
-import { ConfigContext } from "@/app/wrapper";
 import { cn, focusRingClasses } from "@/lib/utils";
 import { applyRedbubbleAffiliate, applyTeepublicReferral } from "@/lib/affiliate";
+import { getSiteConfig } from "@/utils/database";
 import { IconLink } from "@/app/components/IconLink";
 import { BrandMark } from "@/app/components/BrandMark";
 
@@ -69,8 +66,15 @@ function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyAr
   );
 }
 
-export default function Footer() {
-  const config = useContext(ConfigContext);
+/**
+ * Server component: the config comes from the cached `getSiteConfig()` (the
+ * same per-request cache the layout uses) instead of ConfigContext, so the
+ * footer renders no client JS — it sits in ContextWrapper's children, which
+ * the server still renders. Only the tiny BrandMark island stays client-side
+ * (its logo-fallback state).
+ */
+export default async function Footer() {
+  const config = await getSiteConfig();
 
   // Canonical marketplace shop URLs from config, affiliate-wrapped at render
   // time (no-op while the affiliate templates are empty) — same sources and
