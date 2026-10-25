@@ -52,7 +52,8 @@ const legalLinks = [
 function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyArray<{ href: string; label: string }> }) {
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-2">{heading}</h2>
+      {/* Styled label, not a heading: column titles must not join the page outline. */}
+      <p className="font-display text-base font-semibold mb-2">{heading}</p>
       <ul className="text-sm">
         {links.map(({ href, label }) => (
           <li key={href}>
@@ -108,11 +109,11 @@ export default async function Footer() {
   ].filter((shop) => shop.href);
 
   return (
-    <footer className="bg-secondary text-primary-foreground pb-[var(--mobile-buy-bar-space,0px)] md:pb-0">
+    <footer className="border-t border-border bg-secondary text-primary-foreground pb-[var(--mobile-buy-bar-space,0px)] md:pb-0">
       <div className="container mx-auto px-6 pt-16 pb-10 md:pb-16">
         <div className="grid grid-cols-2 gap-x-8 gap-y-10 items-start md:grid-cols-4 lg:grid-cols-12">
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
-            <p className="flex items-center gap-2.5 text-lg font-semibold">
+            <p className="flex items-center gap-2.5 font-display text-lg font-semibold">
               <BrandMark siteLogo={config.siteLogo} name={config.name} className="h-7 w-7" />
               {config.name}
             </p>
@@ -151,7 +152,7 @@ export default async function Footer() {
             </div>
           </nav>
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
-            <h2 className="text-lg font-semibold mb-2">Connect With Us</h2>
+            <p className="font-display text-base font-semibold mb-2">Connect With Us</p>
             <div className="flex space-x-4">
               {socialNetworks.map(({ key, name, Icon }) => {
                 const href = config.social?.[key];

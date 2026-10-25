@@ -28,7 +28,7 @@ export function IconLink({ href, label, variant = "field", className, children }
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "rounded-sm transition-colors",
+        "rounded-sm p-1.5 transition-colors",
         variantClasses[variant],
         focusRingClasses,
         className,
