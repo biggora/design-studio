@@ -5,6 +5,9 @@
   "tagline": "Innovative designs that weave stories.",
   "description": "We are a cutting-edge design studio specializing in unique and quirky print-on-demand designs.",
   "keywords": "print-on-demand, apparel design, t-shirt print",
+  "articles": {
+    "label": "Oddly Useful"
+  },
   "home": {
     "title": "Print Designs & Gifts by Interest",
     "heading": "Find your next print",

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { SiteConfig } from "@/lib/store";
 import { Design } from "@/types/design";
-import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages } from "@/utils/database";
+import { getSiteConfig, fetchDesigns, fetchFeaturedCollections, fetchLiveGiftPages, fetchPublishedArticles } from "@/utils/database";
 import { designPath } from "@/lib/slug";
 import { escapeXml } from "@/lib/pinterest-feed";
 import {collectionPath} from "@/lib/collections";
@@ -42,7 +42,9 @@ function entryXml(entry: SitemapEntry): string {
 
 export async function GET(): Promise<NextResponse> {
   const config: SiteConfig = await getSiteConfig();
+  const articles = await fetchPublishedArticles();
   const staticRoutes: SitemapEntry[] = [
+    ...(articles.length ? [{url: `https://${config.domain}/articles`, priority: 0.8, changefreq: "monthly" as const}] : []),
     { url: `https://${config.domain}/`, priority: 1, changefreq: "monthly" },
     { url: `https://${config.domain}/about`, priority: 0.8, changefreq: "monthly" },
     { url: `https://${config.domain}/designs`, priority: 0.8, changefreq: "monthly" },

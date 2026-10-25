@@ -1,0 +1,29 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: design-studio-articles-postgres
+    environment:
+      POSTGRES_PASSWORD: articles-test
+      POSTGRES_DB: articles_test
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d articles_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  mysql:
+    image: mysql:8.4
+    container_name: design-studio-articles-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: articles-test
+      MYSQL_DATABASE: articles_test
+    ports: ["127.0.0.1:${ARTICLES_MYSQL_PORT:-33327}:3306"]
+    volumes: ["mysql-data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -particles-test --silent"]
+      interval: 2s
+      timeout: 3s
+      retries: 45
+volumes:
+  postgres-data:
+  mysql-data:

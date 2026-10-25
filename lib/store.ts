@@ -71,6 +71,8 @@ export interface SiteConfig {
   giftPages?: GiftPage[] | string;
   /** Home discovery copy; studio rows can override any field below. */
   home?: HomeConfig;
+  /** Navigation label for the article index; overridable with studio articles.label. */
+  articles?: { label?: string };
 }
 
 export interface HomeValue {

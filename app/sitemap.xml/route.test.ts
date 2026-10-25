@@ -7,8 +7,10 @@ const getSiteConfig = vi.fn();
 const fetchDesigns = vi.fn();
 const fetchFeaturedCollections = vi.fn();
 const fetchLiveGiftPages = vi.fn();
+const fetchPublishedArticles = vi.fn(async () => [] as unknown[]);
 
 vi.mock("@/utils/database", () => ({
+  fetchPublishedArticles: () => fetchPublishedArticles(),
   getSiteConfig: () => getSiteConfig(),
   fetchDesigns: (page: number, q: string, collection: string, itemsPerPage: number) =>
     fetchDesigns(page, q, collection, itemsPerPage),
@@ -87,6 +89,13 @@ describe("/sitemap.xml", () => {
     expect(xml).toContain("<changefreq>monthly</changefreq>");
     expect(xml).toContain("<priority>1</priority>");
     expect(xml).toContain("<priority>0.5</priority>");
+  });
+
+  it("includes Articles only when a verified public article exists", async () => {
+    const {GET} = await import("@/app/sitemap.xml/route");
+    expect(await (await GET()).text()).not.toContain("/articles");
+    fetchPublishedArticles.mockResolvedValueOnce([{}]);
+    expect(await (await GET()).text()).toContain("<loc>https://threadquirk.test/articles</loc>");
   });
 
   it("lists /gifts and only the live gift pages returned by fetchLiveGiftPages", async () => {

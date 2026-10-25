@@ -8,17 +8,17 @@ import { ConfigContext } from "@/app/wrapper";
 import { BrandMark } from "@/app/components/BrandMark";
 import { cn, focusRingClasses } from "@/lib/utils";
 
-const navItems = [
-  { href: "/designs", label: "Our Designs" },
-  { href: "/collections", label: "Collections" },
-  { href: "/gifts", label: "Gift Ideas" },
-  { href: "/about", label: "About Us" },
-  { href: "/services", label: "Services" },
-  { href: "/contact", label: "Contact" },
-] as const;
-
 export default function Header() {
   const config = useContext(ConfigContext);
+  const navItems = [
+    { href: "/designs", label: "Our Designs" },
+    { href: "/collections", label: "Collections" },
+    { href: "/gifts", label: "Gift Ideas" },
+    { href: "/articles", label: config.articles?.label || "Articles" },
+    { href: "/about", label: "About Us" },
+    { href: "/services", label: "Services" },
+    { href: "/contact", label: "Contact" },
+  ] as const;
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -63,7 +63,7 @@ export default function Header() {
             <BrandMark siteLogo={config.siteLogo} name={config.name} />
             {config.name}
           </Link>
-          <nav className="hidden md:flex space-x-6">
+          <nav className="hidden lg:flex space-x-6">
             {navItems.map(({ href, label }) => (
               <Link
                 key={href}
@@ -75,7 +75,7 @@ export default function Header() {
               </Link>
             ))}
           </nav>
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <button
               onClick={toggleMenu}
               aria-label={isMenuOpen ? "Close menu" : "Open menu"}
@@ -89,7 +89,7 @@ export default function Header() {
       </div>
       {/* Mobile menu */}
       {isMenuOpen && (
-        <nav className="md:hidden bg-primary">
+        <nav className="lg:hidden bg-primary">
           <div className="container mx-auto px-4 py-4 space-y-4">
             {navItems.map(({ href, label }) => (
               <Link

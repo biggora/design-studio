@@ -220,7 +220,7 @@ For each: character first, then shape, color assignment, states, and behavior.
 - **Error / Disabled:** reserved semantic status colors (green/red pairs) exist only in form feedback banners; the "not configured" state uses the muted fill instead
 
 ### Navigation
-- **Header:** fixed Basalt band at 90% opacity with structural shadow; brand is the configured `siteLogo` asset in the 32px tile (falling back to a monogram tile — the name's first letter on an Ember square — never a hardcoded mark) plus the name in Poppins; light links rest at 70% Bone and hover to Ember; active route goes full-Bone semibold with `aria-current`; collapses to a hamburger menu below `md` with a near-opaque Basalt panel; 2px focus-visible rings throughout
+- **Header:** fixed Basalt band at 90% opacity with structural shadow; brand is the configured `siteLogo` asset in the 32px tile (falling back to a monogram tile — the name's first letter on an Ember square — never a hardcoded mark) plus the name in Poppins; light links rest at 70% Bone and hover to Ember; active route goes full-Bone semibold with `aria-current`; collapses to a hamburger menu below `lg` so all seven navigation links fit comfortably, with a near-opaque Basalt panel; 2px focus-visible rings throughout
 - **Footer:** Coal Deep band, three flex-wrap columns (brand + tagline, quick links including the Affiliate Disclosure, social icons), links at 70% Bone hovering to full Bone
 
 ### Framed Artwork Card (signature)

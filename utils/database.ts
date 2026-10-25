@@ -25,6 +25,93 @@ import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
 import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
+import {createHash} from "node:crypto";
+import type {ArticleAnnouncement, ArticleRecord, PublishedArticle} from "@/lib/articles";
+import {resolveArticlePublications} from "@/lib/article-publication";
+
+function requireArticleAccess() {
+    if (getProvider() === "supabase" && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for articles");
+    }
+}
+
+export async function upsertArticleAnnouncement(article: ArticleAnnouncement): Promise<void> {
+    requireArticleAccess();
+    const revision = createHash("sha256").update(JSON.stringify(article)).digest("hex");
+    if (getProvider() === "mysql") {
+        const fields = Object.keys(article);
+        await getMySQLPool().query(
+            `INSERT INTO article_announcements (${fields.map(f => `\`${f}\``).join(",")}, revision) VALUES (${fields.map(() => "?").join(",")}, ?)
+             ON DUPLICATE KEY UPDATE checkedAt = IF(revision = VALUES(revision), checkedAt, NULL),
+             ${fields.filter(f => f !== "blog" && f !== "sourceArticleId").map(f => `\`${f}\` = VALUES(\`${f}\`)`).join(",")}, revision = VALUES(revision)`,
+            [...Object.values(article), revision],
+        );
+        return;
+    }
+    // Do not overwrite the last verified public snapshot on content updates.
+    const {data: existing, error: readError} = await getSupabase().from("article_announcements")
+        .select("revision,checkedAt").eq("blog", article.blog).eq("sourceArticleId", article.sourceArticleId).maybeSingle();
+    if (readError) throw new Error("Failed to read article revision");
+    const {error} = await getSupabase().from("article_announcements").upsert({
+        ...article, revision, checkedAt: existing?.revision === revision ? existing.checkedAt : null,
+    }, {onConflict: "blog,sourceArticleId"});
+    if (error) throw new Error("Failed to save article announcement");
+}
+
+export async function fetchArticleAnnouncements(): Promise<ArticleRecord[]> {
+    requireArticleAccess();
+    if (getProvider() === "mysql") {
+        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>("SELECT * FROM article_announcements ORDER BY blog, sourceArticleId");
+        return rows.map(row => ({...row,
+            checkedAt: row.checkedAt ? new Date(`${String(row.checkedAt).replace(" ", "T")}Z`).toISOString() : null,
+            publication: typeof row.publication === "string" ? JSON.parse(row.publication) : row.publication,
+        })) as ArticleRecord[];
+    }
+    const rows: ArticleRecord[] = [];
+    for (let offset = 0; ; offset += 1000) {
+        const {data, error} = await getSupabase().from("article_announcements").select("*")
+            .order("blog").order("sourceArticleId").range(offset, offset + 999);
+        if (error) throw new Error("Failed to read article announcements");
+        rows.push(...data as ArticleRecord[]);
+        if (data.length < 1000) return rows;
+    }
+}
+
+export async function saveArticlePublication(article: ArticleRecord, publication: PublishedArticle | null, checkedAt: string): Promise<void> {
+    requireArticleAccess();
+    if (getProvider() === "mysql") {
+        await getMySQLPool().query("UPDATE article_announcements SET publication = ?, checkedAt = ? WHERE blog = ? AND sourceArticleId = ? AND revision = ?",
+            [publication ? JSON.stringify(publication) : null, checkedAt.slice(0, 23).replace("T", " "), article.blog, article.sourceArticleId, article.revision]);
+        return;
+    }
+    const {error} = await getSupabase().from("article_announcements").update({publication, checkedAt})
+        .eq("blog", article.blog).eq("sourceArticleId", article.sourceArticleId).eq("revision", article.revision);
+    if (error) throw new Error("Failed to save article publication check");
+}
+
+/** Persistent verification TTL and last-good snapshots survive serverless restarts. */
+export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]> => {
+    const rows = await fetchArticleAnnouncements();
+    const due = rows.filter(row => !row.checkedAt || Date.now() - Date.parse(row.checkedAt) >= 300_000);
+    if (due.length) {
+        const checkedAt = new Date().toISOString();
+        let verified: Map<string, PublishedArticle | null> | undefined;
+        try {
+            if (!process.env.TUMBLR_API_KEY) throw new Error("TUMBLR_API_KEY is not configured");
+            verified = await resolveArticlePublications(due, process.env.TUMBLR_API_KEY);
+        } catch {
+            // Never log request URLs: they carry the Tumblr API key.
+            console.error("Article publication verification unavailable; keeping the last verified articles");
+        }
+        for (const row of due) {
+            const publication = verified ? verified.get(`${row.blog}:${row.sourceArticleId}`) ?? null : row.publication;
+            await saveArticlePublication(row, publication, checkedAt);
+            row.publication = publication;
+        }
+    }
+    return rows.flatMap(row => row.publication ? [row.publication] : [])
+        .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.sourceArticleId.localeCompare(b.sourceArticleId));
+});
 
 const globalForMySQL = globalThis as unknown as { mysqlPool?: mysql.Pool };
 

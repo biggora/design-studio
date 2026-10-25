@@ -33,12 +33,6 @@ const socialNetworks = [
   { key: "pinterest", name: "Pinterest", Icon: SiPinterest },
 ] as const;
 
-const exploreLinks = [
-  { href: "/designs", label: "Our Designs" },
-  { href: "/collections", label: "Collections" },
-  { href: "/gifts", label: "Gift Ideas" },
-] as const;
-
 const companyLinks = [
   { href: "/about", label: "About Us" },
   { href: "/services", label: "Services" },
@@ -78,6 +72,12 @@ function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyAr
  */
 export default async function Footer() {
   const config = await getSiteConfig();
+  const exploreLinks = [
+    { href: "/designs", label: "Our Designs" },
+    { href: "/collections", label: "Collections" },
+    { href: "/gifts", label: "Gift Ideas" },
+    { href: "/articles", label: config.articles?.label || "Articles" },
+  ] as const;
 
   // Canonical marketplace shop URLs from config, affiliate-wrapped at render
   // time (no-op while the affiliate templates are empty) — same sources and
@@ -155,7 +155,7 @@ export default async function Footer() {
           </nav>
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
             <p className="font-display text-base font-semibold mb-2">Connect With Us</p>
-            <div className="flex space-x-4">
+            <div className="flex flex-wrap gap-4">
               {socialNetworks.map(({ key, name, Icon }) => {
                 const href = config.social?.[key];
                 return href ? (
