@@ -65,11 +65,11 @@ export default function Footer() {
   const config = useContext(ConfigContext);
 
   return (
-    <footer className="bg-secondary text-primary-foreground">
-      <div className="container mx-auto px-6 py-4">
-        <div className="flex flex-wrap justify-between items-center">
-          <div className="w-full md:w-1/3 text-center md:text-left">
-            <p className="flex items-center justify-center gap-2.5 md:justify-start text-lg font-semibold">
+    <footer className="bg-secondary text-primary-foreground pb-[var(--mobile-buy-bar-space,0px)] md:pb-0">
+      <div className="container mx-auto px-6 pt-16 pb-10 md:pb-16">
+        <div className="grid grid-cols-2 gap-x-8 gap-y-10 items-start md:grid-cols-4 lg:grid-cols-12">
+          <div className="col-span-2 md:col-span-1 lg:col-span-4">
+            <p className="flex items-center gap-2.5 text-lg font-semibold">
               <BrandMark siteLogo={config.siteLogo} name={config.name} className="h-7 w-7" />
               {config.name}
             </p>
@@ -79,15 +79,15 @@ export default function Footer() {
               </p>
             )}
           </div>
-          <div className="w-full md:w-1/3 mt-4 md:mt-0">
-            <div className="grid grid-cols-2 gap-x-8">
-              <FooterLinkList heading="Explore" links={exploreLinks} />
-              <FooterLinkList heading="Company" links={companyLinks} />
-            </div>
+          <div className="lg:col-span-2">
+            <FooterLinkList heading="Explore" links={exploreLinks} />
           </div>
-          <div className="w-full md:w-1/3 mt-4 md:mt-0 text-center md:text-right">
+          <div className="lg:col-span-2">
+            <FooterLinkList heading="Company" links={companyLinks} />
+          </div>
+          <div className="col-span-2 md:col-span-1 lg:col-span-4">
             <h2 className="text-lg font-semibold mb-2">Connect With Us</h2>
-            <div className="flex justify-center md:justify-end space-x-4">
+            <div className="flex space-x-4">
               {socialNetworks.map(({ key, name, Icon }) => {
                 const href = config.social?.[key];
                 return href ? (
@@ -99,9 +99,9 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-8 flex flex-col items-center gap-3 border-t border-border pt-4 text-sm text-primary-foreground/70 sm:flex-row sm:justify-between">
+        <div className="mt-8 flex flex-col items-start gap-3 border-t border-border pt-4 text-sm text-primary-foreground/70 sm:flex-row sm:items-center sm:justify-between">
           <p>&copy; {new Date().getFullYear()} {config.name}. All rights reserved.</p>
-          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+          <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legalLinks.map(({ href, label }) => (
               <li key={href}>
                 <Link href={href} className={bandLinkClasses}>

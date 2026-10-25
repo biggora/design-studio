@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import BuyLink from "@/app/components/BuyLink";
@@ -15,13 +15,16 @@ type MobileBuyBarProps = {
  * stays reachable from anywhere below the first screen. It appears after the
  * visitor scrolls past the top and hides while the in-card CTA
  * (`[data-in-card-buy]`) is on screen, so the two never compete. Parks above
- * the cookie banner (`[data-cookie-banner]`) while it is up. Desktop keeps
- * the two-column layout where the CTA is always in view.
+ * the cookie banner (`[data-cookie-banner]`) while it is up. The stack's
+ * occupied height is published as the `--mobile-buy-bar-space` CSS variable
+ * so page chrome (the footer) can reserve clearance below its last line.
+ * Desktop keeps the two-column layout where the CTA is always in view.
  */
 export function MobileBuyBar({ href, designSlug }: MobileBuyBarProps) {
   const [pastFirstScreen, setPastFirstScreen] = useState(false);
   const [ctaVisible, setCtaVisible] = useState(false);
   const [bannerHeight, setBannerHeight] = useState(0);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onScroll = () => setPastFirstScreen(window.scrollY > 240);
@@ -59,10 +62,29 @@ export function MobileBuyBar({ href, designSlug }: MobileBuyBarProps) {
     };
   }, []);
 
+  // Extend the [data-cookie-banner] parking pattern: publish the vertical
+  // space the bar stack occupies (bar height plus the parked banner offset)
+  // so page chrome can reserve clearance and keep content above the stack
+  // reachable. Re-computed only when the banner stack changes, never on
+  // scroll, so it cannot shift layout mid-scroll.
+  useEffect(() => {
+    const update = () => {
+      const space = (barRef.current?.offsetHeight ?? 0) + bannerHeight;
+      document.documentElement.style.setProperty(
+        "--mobile-buy-bar-space",
+        `${space}px`,
+      );
+    };
+    update();
+    return () =>
+      document.documentElement.style.removeProperty("--mobile-buy-bar-space");
+  }, [bannerHeight]);
+
   const visible = pastFirstScreen && !ctaVisible;
 
   return (
     <div
+      ref={barRef}
       aria-hidden={!visible}
       className={cn(
         "fixed inset-x-0 z-40 md:hidden transition-opacity duration-200",
