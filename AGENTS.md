@@ -30,8 +30,8 @@ npm run lint             # eslint . (next core-web-vitals + typescript)
 npm test                 # vitest run (node env, "@" alias → repo root)
 npx vitest run lib/utils.test.ts          # single file
 npx vitest run -t "formatDate"            # single test by name
-# Stale git worktrees under .claude/worktrees/ duplicate the suite and fail —
-# delete them, or run: npx vitest run --exclude "**/.claude/**"
+# Stale git worktrees under .claude/worktrees/ are excluded via vitest.config.ts —
+# delete them anyway to keep them from confusing other tooling
 npm run sync:redbubble   # run the Redbubble → DB sync via tsx (reads .env)
 npm run sync:redbubble:dry  # preview the sync (no writes) via --dry-run, prints the insert/update plan
 npm run sync:redbubble:json  # scrape only, write .cache/redbubble-sync.json — never touches Supabase
