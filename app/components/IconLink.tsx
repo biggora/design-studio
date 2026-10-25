@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn, sanitizeUrl } from "@/lib/utils";
+import { cn, focusRingClasses, sanitizeUrl } from "@/lib/utils";
 
 type IconLinkProps = {
   href: string;
@@ -12,8 +12,8 @@ type IconLinkProps = {
 };
 
 const variantClasses = {
-  field: "text-muted-foreground hover:text-accent focus-visible:ring-ring",
-  band: "text-primary-foreground/70 hover:text-primary-foreground focus-visible:ring-primary-foreground",
+  field: "text-muted-foreground hover:text-accent",
+  band: "text-primary-foreground/70 hover:text-primary-foreground",
 } as const;
 
 /**
@@ -28,8 +28,9 @@ export function IconLink({ href, label, variant = "field", className, children }
       target="_blank"
       rel="noopener noreferrer"
       className={cn(
-        "rounded-sm transition-colors focus-visible:outline-none focus-visible:ring-2",
+        "rounded-sm transition-colors",
         variantClasses[variant],
+        focusRingClasses,
         className,
       )}
     >

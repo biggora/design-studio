@@ -10,13 +10,19 @@ import {
 } from "@icons-pack/react-simple-icons";
 import { useContext } from "react";
 import { ConfigContext } from "@/app/wrapper";
+import { cn, focusRingClasses } from "@/lib/utils";
 import { IconLink } from "@/app/components/IconLink";
 import { BrandMark } from "@/app/components/BrandMark";
 
 // Shared by every footer link: Bone at 70% hovering to full Bone on the
-// Coal Deep band.
-const bandLinkClasses =
-  "text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground";
+// Coal Deep band, the shared 2px ember focus ring on a soft plate, and
+// padding that keeps the tap target at 44px on mobile (chip language)
+// and ≥24px on desktop.
+const bandLinkClasses = cn(
+  "inline-block rounded-sm py-3 md:py-1.5",
+  "text-primary-foreground/70 hover:text-primary-foreground transition-colors",
+  focusRingClasses,
+);
 
 const socialNetworks = [
   { key: "facebook", name: "Facebook", Icon: SiFacebook },
@@ -79,12 +85,12 @@ export default function Footer() {
               </p>
             )}
           </div>
-          <div className="lg:col-span-2">
-            <FooterLinkList heading="Explore" links={exploreLinks} />
-          </div>
-          <div className="lg:col-span-2">
-            <FooterLinkList heading="Company" links={companyLinks} />
-          </div>
+          <nav aria-label="Footer" className="col-span-2 md:col-span-2 lg:col-span-4">
+            <div className="grid grid-cols-2 gap-x-8">
+              <FooterLinkList heading="Explore" links={exploreLinks} />
+              <FooterLinkList heading="Company" links={companyLinks} />
+            </div>
+          </nav>
           <div className="col-span-2 md:col-span-1 lg:col-span-4">
             <h2 className="text-lg font-semibold mb-2">Connect With Us</h2>
             <div className="flex space-x-4">
