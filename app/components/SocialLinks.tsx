@@ -3,6 +3,7 @@
 import {
   SiFacebook,
   SiInstagram,
+  SiTumblr,
   SiLinkedin,
   SiPinterest,
   SiX,
@@ -16,6 +17,7 @@ const socialNetworks = [
   { key: "facebook", name: "Facebook", Icon: SiFacebook },
   { key: "twitter", name: "Twitter", Icon: SiX },
   { key: "instagram", name: "Instagram", Icon: SiInstagram },
+  { key: "tumblr", name: "Tumblr", Icon: SiTumblr },
   { key: "linkedin", name: "LinkedIn", Icon: SiLinkedin },
   { key: "pinterest", name: "Pinterest", Icon: SiPinterest },
 ] as const;

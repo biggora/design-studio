@@ -57,3 +57,5 @@ next-env.d.ts
 /.codex/
 /docs/threadquirk_brand_book_by_pomelli.pdf
 /.impeccable/review/
+/outputs/audience-communities-2026-10-25/node_modules/
+/outputs/

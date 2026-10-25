@@ -3,6 +3,7 @@ import {
   SiFacebook,
   SiX,
   SiInstagram,
+  SiTumblr,
   SiLinkedin,
   SiPinterest,
 } from "@icons-pack/react-simple-icons";
@@ -27,6 +28,7 @@ const socialNetworks = [
   { key: "facebook", name: "Facebook", Icon: SiFacebook },
   { key: "twitter", name: "Twitter", Icon: SiX },
   { key: "instagram", name: "Instagram", Icon: SiInstagram },
+  { key: "tumblr", name: "Tumblr", Icon: SiTumblr },
   { key: "linkedin", name: "LinkedIn", Icon: SiLinkedin },
   { key: "pinterest", name: "Pinterest", Icon: SiPinterest },
 ] as const;

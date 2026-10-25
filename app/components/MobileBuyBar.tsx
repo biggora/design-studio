@@ -76,8 +76,11 @@ export function MobileBuyBar({ href, designSlug }: MobileBuyBarProps) {
       );
     };
     update();
-    return () =>
+    // Block body, not an expression arrow: removeProperty is typed as
+    // returning string, and an EffectCallback destructor must return void.
+    return () => {
       document.documentElement.style.removeProperty("--mobile-buy-bar-space");
+    };
   }, [bannerHeight]);
 
   const visible = pastFirstScreen && !ctaVisible;
