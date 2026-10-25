@@ -11,18 +11,20 @@ import {
 import { useContext } from "react";
 import { ConfigContext } from "@/app/wrapper";
 import { cn, focusRingClasses } from "@/lib/utils";
+import { applyRedbubbleAffiliate, applyTeepublicReferral } from "@/lib/affiliate";
 import { IconLink } from "@/app/components/IconLink";
 import { BrandMark } from "@/app/components/BrandMark";
 
 // Shared by every footer link: Bone at 70% hovering to full Bone on the
-// Coal Deep band, the shared 2px ember focus ring on a soft plate, and
-// padding that keeps the tap target at 44px on mobile (chip language)
-// and ≥24px on desktop.
+// Coal Deep band, the shared 2px ember focus ring on a soft plate. Nav
+// rows add padding for 44px mobile / ≥24px desktop tap targets; inline
+// text links (shop line, email) stay tight.
 const bandLinkClasses = cn(
-  "inline-block rounded-sm py-3 md:py-1.5",
+  "inline-block rounded-sm py-1",
   "text-primary-foreground/70 hover:text-primary-foreground transition-colors",
   focusRingClasses,
 );
+const paddedBandLinkClasses = cn(bandLinkClasses, "py-3 md:py-1.5");
 
 const socialNetworks = [
   { key: "facebook", name: "Facebook", Icon: SiFacebook },
@@ -57,7 +59,7 @@ function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyAr
       <ul className="text-sm">
         {links.map(({ href, label }) => (
           <li key={href}>
-            <Link href={href} className={bandLinkClasses}>
+            <Link href={href} className={paddedBandLinkClasses}>
               {label}
             </Link>
           </li>
@@ -69,6 +71,37 @@ function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyAr
 
 export default function Footer() {
   const config = useContext(ConfigContext);
+
+  // Canonical marketplace shop URLs from config, affiliate-wrapped at render
+  // time (no-op while the affiliate templates are empty) — same sources and
+  // sponsored flags as the contact page's ShopLinks. Tostadora has no
+  // affiliate program. Only configured shops render.
+  const shops = [
+    {
+      label: "Redbubble",
+      href: config.representation.redbuble
+        ? applyRedbubbleAffiliate(
+            config.representation.redbuble,
+            config.affiliate.redbubbleTemplate,
+          )
+        : "",
+      sponsored: true,
+    },
+    {
+      label: "TeePublic",
+      href:
+        applyTeepublicReferral(
+          config.representation.teepublic || null,
+          config.affiliate.teepublicReferralId,
+        ) || "",
+      sponsored: true,
+    },
+    {
+      label: "Tostadora",
+      href: config.representation.tostadora || config.representation.tostaDora || "",
+      sponsored: false,
+    },
+  ].filter((shop) => shop.href);
 
   return (
     <footer className="bg-secondary text-primary-foreground pb-[var(--mobile-buy-bar-space,0px)] md:pb-0">
@@ -82,6 +115,28 @@ export default function Footer() {
             {config.tagline && (
               <p className="mt-2 text-sm text-primary-foreground/70">
                 {config.tagline}
+              </p>
+            )}
+            {shops.length > 0 && (
+              <p className="mt-2 text-sm text-primary-foreground/70">
+                Our shops:{" "}
+                {shops.map((shop, index) => (
+                  <span key={shop.label}>
+                    {index > 0 && " · "}
+                    <a
+                      href={shop.href}
+                      target="_blank"
+                      rel={
+                        shop.sponsored
+                          ? "sponsored noopener noreferrer"
+                          : "noopener noreferrer"
+                      }
+                      className={bandLinkClasses}
+                    >
+                      {shop.label} <span aria-hidden="true">&#8599;</span>
+                    </a>
+                  </span>
+                ))}
               </p>
             )}
           </div>
@@ -106,11 +161,18 @@ export default function Footer() {
           </div>
         </div>
         <div className="mt-8 flex flex-col items-start gap-3 border-t border-border pt-4 text-sm text-primary-foreground/70 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} {config.name}. All rights reserved.</p>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-4">
+            <p>&copy; {new Date().getFullYear()} {config.name}. All rights reserved.</p>
+            {config.email && (
+              <a href={`mailto:${config.email}`} className={bandLinkClasses}>
+                {config.email}
+              </a>
+            )}
+          </div>
           <ul className="flex flex-wrap gap-x-5 gap-y-2">
             {legalLinks.map(({ href, label }) => (
               <li key={href}>
-                <Link href={href} className={bandLinkClasses}>
+                <Link href={href} className={paddedBandLinkClasses}>
                   {label}
                 </Link>
               </li>
