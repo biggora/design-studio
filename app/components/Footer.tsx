@@ -13,8 +13,8 @@ import { ConfigContext } from "@/app/wrapper";
 import { IconLink } from "@/app/components/IconLink";
 import { BrandMark } from "@/app/components/BrandMark";
 
-// Shared by the quick links and the social icons: Bone at 70% hovering
-// to full Bone on the Coal Deep band.
+// Shared by every footer link: Bone at 70% hovering to full Bone on the
+// Coal Deep band.
 const bandLinkClasses =
   "text-primary-foreground/70 hover:text-primary-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-foreground";
 
@@ -26,16 +26,40 @@ const socialNetworks = [
   { key: "pinterest", name: "Pinterest", Icon: SiPinterest },
 ] as const;
 
-const quickLinks = [
+const exploreLinks = [
   { href: "/designs", label: "Our Designs" },
   { href: "/collections", label: "Collections" },
   { href: "/gifts", label: "Gift Ideas" },
+] as const;
+
+const companyLinks = [
   { href: "/about", label: "About Us" },
+  { href: "/services", label: "Services" },
   { href: "/contact", label: "Contact" },
+] as const;
+
+const legalLinks = [
   { href: "/privacy-policy", label: "Privacy Policy" },
   { href: "/terms-of-service", label: "Terms of Service" },
   { href: "/disclosure", label: "Affiliate Disclosure" },
 ] as const;
+
+function FooterLinkList({ heading, links }: { heading: string; links: ReadonlyArray<{ href: string; label: string }> }) {
+  return (
+    <div>
+      <h2 className="text-lg font-semibold mb-2">{heading}</h2>
+      <ul className="text-sm">
+        {links.map(({ href, label }) => (
+          <li key={href}>
+            <Link href={href} className={bandLinkClasses}>
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 export default function Footer() {
   const config = useContext(ConfigContext);
@@ -56,16 +80,10 @@ export default function Footer() {
             )}
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0">
-            <h2 className="text-lg font-semibold mb-2">Quick Links</h2>
-            <ul className="text-sm">
-              {quickLinks.map(({ href, label }) => (
-                <li key={href}>
-                  <Link href={href} className={bandLinkClasses}>
-                    {label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <div className="grid grid-cols-2 gap-x-8">
+              <FooterLinkList heading="Explore" links={exploreLinks} />
+              <FooterLinkList heading="Company" links={companyLinks} />
+            </div>
           </div>
           <div className="w-full md:w-1/3 mt-4 md:mt-0 text-center md:text-right">
             <h2 className="text-lg font-semibold mb-2">Connect With Us</h2>
@@ -81,8 +99,17 @@ export default function Footer() {
             </div>
           </div>
         </div>
-        <div className="mt-8 text-center text-sm text-primary-foreground/70">
-          &copy; {new Date().getFullYear()} {config.name}. All rights reserved.
+        <div className="mt-8 flex flex-col items-center gap-3 border-t border-border pt-4 text-sm text-primary-foreground/70 sm:flex-row sm:justify-between">
+          <p>&copy; {new Date().getFullYear()} {config.name}. All rights reserved.</p>
+          <ul className="flex flex-wrap justify-center gap-x-5 gap-y-2">
+            {legalLinks.map(({ href, label }) => (
+              <li key={href}>
+                <Link href={href} className={bandLinkClasses}>
+                  {label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>
