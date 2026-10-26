@@ -5,7 +5,7 @@ import { sendGAEvent } from "@next/third-parties/google";
 
 export type BuyLinkProps = {
   href: string;
-  platform: "redbubble" | "teepublic" | "tostadora";
+  platform: "redbubble" | "teepublic" | "tostadora" | "zazzle";
   designSlug: string;
   pageType: "design" | "landing";
   /** Where the link sits: "primary" in-card, "secondary" below it,

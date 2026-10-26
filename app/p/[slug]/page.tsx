@@ -94,8 +94,10 @@ export default async function PinLandingPage(props: Props) {
   const teePublicLink = sanitizeUrl(
     applyTeepublicReferral(getTeepublicLink(design), config.affiliate.teepublicReferralId),
   );
-  // Tostadora's listing URL lives only in design_listings; "#" (absent/junk) hides the button.
+  // Tostadora's and Zazzle's listing URLs live only in design_listings; "#" (absent/junk)
+  // hides the button.
   const tostadoraUrl = sanitizeUrl(await fetchDesignListingUrl(design.id, "tostadora"));
+  const zazzleUrl = sanitizeUrl(await fetchDesignListingUrl(design.id, "zazzle"));
   const hasRedbubble = buyUrl !== "#";
   // Same "has a place to buy it" rule as the feed's item filter — a design on
   // no marketplace at all has no landing page to show.
@@ -163,6 +165,19 @@ export default async function PinLandingPage(props: Props) {
             className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
           >
             Buy on Tostadora
+            <span aria-hidden="true">&#8599;</span>
+          </BuyLink>
+        )}
+        {zazzleUrl !== "#" && (
+          <BuyLink
+            href={zazzleUrl}
+            platform="zazzle"
+            designSlug={design.slug || design.id}
+            pageType="landing"
+            position="secondary"
+            className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
+          >
+            Buy on Zazzle
             <span aria-hidden="true">&#8599;</span>
           </BuyLink>
         )}

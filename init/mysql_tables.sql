@@ -59,7 +59,7 @@ CREATE TABLE design_collections (
 CREATE TABLE design_listings (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   `designId` CHAR(36) NOT NULL,
-  platform VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt', 'tostadora')),
+  platform VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (platform IN ('redbubble', 'teepublic', 'spreadshirt', 'tostadora', 'zazzle')),
   account VARCHAR(100) COLLATE utf8mb4_bin NOT NULL,
   `externalId` VARCHAR(200) COLLATE utf8mb4_bin NOT NULL,
   url TEXT NOT NULL,

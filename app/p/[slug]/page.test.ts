@@ -142,6 +142,32 @@ describe("/p/[slug] landing page", () => {
     expect(await renderPage(design.slug as string)).not.toContain("Buy on Tostadora");
   });
 
+  it("adds a Buy on Zazzle button from the stored listing", async () => {
+    const design = makeDesign();
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    fetchDesignListingUrl.mockImplementation(
+      (_id: string, platform: string) =>
+        platform === "zazzle"
+          ? Promise.resolve("https://www.zazzle.com/space-cat-t-shirt-256325396025543708")
+          : Promise.resolve(null),
+    );
+
+    const html = await renderPage(design.slug as string);
+    expect(html).toContain("Buy on Zazzle");
+    const zazzle = (await renderBuyLinks(design.slug as string)).find(link => link.props.platform === "zazzle");
+    expect(zazzle?.props).toMatchObject({
+      href: "https://www.zazzle.com/space-cat-t-shirt-256325396025543708",
+      pageType: "landing",
+      position: "secondary",
+    });
+  });
+
+  it("omits the Zazzle button when the design has no zazzle listing", async () => {
+    const design = makeDesign();
+    getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
+    expect(await renderPage(design.slug as string)).not.toContain("Buy on Zazzle");
+  });
+
   it("fills the 3:4 image box with the mockup (cover, clipped, rounded)", async () => {
     const design = makeDesign();
     getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });

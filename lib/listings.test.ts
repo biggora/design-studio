@@ -204,3 +204,69 @@ describe("parseIngestInput tostadora", () => {
     expect(() => tostadoraListing({ ...tostadoraBody().listing, platform: "redbubblefr" })).toThrow(ListingsError);
   });
 });
+
+describe("parseIngestInput zazzle", () => {
+  const zazzleBody = () => ({
+    design: { sourceImageId: 523, sha256, title: "Bicycle Wheel Truing Stand Minimal Line Art" },
+    listing: {
+      platform: "zazzle",
+      account: "zazzle:main",
+      externalId: "256325396025543708",
+      url: "https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_t_shirt-256325396025543708",
+      extra: {
+        productUrls: [
+          { product: "woman_t-shirt", id: "256325396025543708", url: "https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_t_shirt-256325396025543708" },
+          { product: "man_hoodie", id: "256324385015989740", url: "https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_hoodie-256324385015989740" },
+          { product: "mug", id: "256071015375456920", url: "https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_coffee_mug-256071015375456920" },
+        ],
+      },
+    },
+  });
+  const zazzleListing = (listing: Record<string, unknown>) =>
+    parseIngestInput({ ...zazzleBody(), listing });
+  const zazzleError = (url: string): ListingsError => {
+    try {
+      zazzleListing({ ...zazzleBody().listing, url });
+    } catch (error) {
+      if (error instanceof ListingsError) return error;
+      throw error;
+    }
+    throw new Error("Expected parseIngestInput to reject the value");
+  };
+
+  it("accepts the pod-uploader zazzle listing body with extra.productUrls", () => {
+    const { listing } = zazzleListing(zazzleBody().listing);
+    expect(listing.platform).toBe("zazzle");
+    expect(listing.account).toBe("zazzle:main");
+    expect(listing.externalId).toBe("256325396025543708");
+    expect(listing.url).toBe("https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_t_shirt-256325396025543708");
+    expect(listing.extra).toEqual(zazzleBody().listing.extra);
+  });
+
+  it("accepts the confirmation page URL Zazzle sometimes leaves as listing.url", () => {
+    const url = "https://www.zazzle.com/pub/done?pd=256325396025543708";
+    expect(zazzleListing({ ...zazzleBody().listing, url }).listing.url).toBe(url);
+  });
+
+  it.each([
+    ["https://www.zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_hoodie-256324385015989740", "another product page"],
+  ])("accepts a URL on %s (%s)", (url) => {
+    expect(zazzleListing({ ...zazzleBody().listing, url }).listing.url).toBe(url);
+  });
+
+  it.each([
+    ["https://zazzle.com/bicycle_wheel_truing_stand_minimal_line_art_t_shirt-256325396025543708", "the bare domain"],
+    ["https://api.zazzle.com/x", "another subdomain"],
+    ["https://evil.example/x", "a foreign host"],
+    ["https://www.zazzle.com.evil.example/x", "a spoofed host"],
+  ])("rejects %s (%s)", (url) => {
+    const error = zazzleError(url);
+    expect(error.status).toBe(400);
+    expect(error.field).toBe("listing.url");
+    expect(error.message).toContain("www.zazzle.com");
+  });
+
+  it("requires digits in the externalId, like the other digit platforms", () => {
+    expect(() => zazzleListing({ ...zazzleBody().listing, externalId: "p256325396025543708" })).toThrow(ListingsError);
+  });
+});

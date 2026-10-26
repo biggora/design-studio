@@ -154,6 +154,21 @@ describe("non-Redbubble design page", () => {
     expect(renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) })))
       .not.toContain("Buy on Tostadora");
   });
+  it("renders Buy on Zazzle from the stored listing only when there is one", async () => {
+    fetchDesignListingUrl.mockImplementation((_id: unknown, platform: unknown) =>
+      platform === "zazzle" ? Promise.resolve("https://www.zazzle.com/space-cat-t-shirt-256325396025543708") : Promise.resolve(null));
+    const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
+    const html = renderToStaticMarkup(page);
+    expect(html).toContain("Buy on Zazzle");
+    expect(html).toContain("https://www.zazzle.com/space-cat-t-shirt-256325396025543708");
+    const zazzle = findBuyLinks(page).find(link => link.props.platform === "zazzle");
+    expect(zazzle?.props).toMatchObject({ position: "secondary", pageType: "design" });
+    expect(fetchDesignListingUrl).toHaveBeenCalledWith(design.id, "zazzle");
+
+    fetchDesignListingUrl.mockResolvedValue(null);
+    expect(renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) })))
+      .not.toContain("Buy on Zazzle");
+  });
   it("fills the related row from random picks when the design has no related designs", async () => {
     fetchRandomDesigns.mockClear();
     fetchRandomDesigns.mockResolvedValue([{ ...design, id: "999", title: "Other print" }]);

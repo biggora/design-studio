@@ -158,9 +158,11 @@ export default async function DesignDetails(
     getTeepublicLink(design),
     config.affiliate.teepublicReferralId,
   );
-  // Tostadora's listing URL lives only in design_listings (no externalLink/props bridge);
-  // absent or on lookup failure the button just doesn't render.
+  // Tostadora's and Zazzle's listing URLs live only in design_listings (no
+  // externalLink/props bridge); absent or on lookup failure the button just
+  // doesn't render.
   const tostadoraUrl = await fetchDesignListingUrl(design.id, "tostadora");
+  const zazzleUrl = await fetchDesignListingUrl(design.id, "zazzle");
   // Share surfaces (Pinterest intent, JSON-LD) take the share image — the CDN's
   // pre-flattened JPEG when published, else the Redbubble display image.
   const shareImage = getShareImageUrl(design) || "/images/no_image_available.svg";
@@ -319,6 +321,19 @@ export default async function DesignDetails(
                   className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
                 >
                   Buy on Tostadora
+                  <span aria-hidden="true">&#8599;</span>
+                </BuyLink>
+              )}
+              {zazzleUrl && (
+                <BuyLink
+                  href={sanitizeUrl(zazzleUrl)}
+                  platform="zazzle"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="secondary"
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
+                >
+                  Buy on Zazzle
                   <span aria-hidden="true">&#8599;</span>
                 </BuyLink>
               )}

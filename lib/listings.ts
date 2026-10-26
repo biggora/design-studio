@@ -11,7 +11,7 @@ export const MOCKUP_EXTRA_PROPS = {
 } as const;
 const MOCKUP_EXTRA_KEYS = Object.keys(MOCKUP_EXTRA_PROPS) as (keyof typeof MOCKUP_EXTRA_PROPS)[];
 
-export type ListingPlatform = "redbubble" | "teepublic" | "spreadshirt" | "tostadora";
+export type ListingPlatform = "redbubble" | "teepublic" | "spreadshirt" | "tostadora" | "zazzle";
 export type ListingInput = {
   platform: ListingPlatform;
   account: string;
@@ -209,14 +209,16 @@ function cdnImage(value: unknown, field: string, sha16: string | null): CdnImage
 }
 
 // Tostadora runs one storefront per country domain (the Mexican shop on latostadora.com),
-// so a listing URL is accepted on any of those hosts; every other platform runs on
-// <platform>.com plus its subdomains.
+// so a listing URL is accepted on any of those hosts; Zazzle product pages live on
+// www.zazzle.com only (the bare domain and other subdomains are not listing pages);
+// every other platform runs on <platform>.com plus its subdomains.
 const TOSTADORA_DOMAINS = ["tostadora.com", "tostadora.co.uk", "tostadora.fr", "tostadora.de", "tostadora.it", "latostadora.com"];
 
 function listingUrlOnPlatformHost(platform: ListingPlatform, hostname: string): boolean {
   if (platform === "tostadora") {
     return TOSTADORA_DOMAINS.some(domain => hostname === domain || hostname.endsWith(`.${domain}`));
   }
+  if (platform === "zazzle") return hostname === "www.zazzle.com";
   const domain = `${platform}.com`;
   return hostname === domain || hostname.endsWith(`.${domain}`);
 }
@@ -224,7 +226,9 @@ function listingUrlOnPlatformHost(platform: ListingPlatform, hostname: string): 
 function listingUrlHostError(platform: ListingPlatform): never {
   invalid("listing.url", platform === "tostadora"
     ? `Expected a URL on one of ${TOSTADORA_DOMAINS.join(", ")}`
-    : `Expected a URL on ${platform}.com`);
+    : platform === "zazzle"
+      ? "Expected a URL on www.zazzle.com"
+      : `Expected a URL on ${platform}.com`);
 }
 
 export function parseIngestInput(value: unknown): IngestInput {
@@ -244,7 +248,7 @@ export function parseIngestInput(value: unknown): IngestInput {
     design.backgroundColor = d.backgroundColor;
   }
   if (d.cdnImage !== undefined) design.cdnImage = cdnImage(d.cdnImage, "design.cdnImage", design.sha256.slice(0, 16));
-  if (l.platform !== "redbubble" && l.platform !== "teepublic" && l.platform !== "spreadshirt" && l.platform !== "tostadora") invalid("listing.platform", "Unsupported platform");
+  if (l.platform !== "redbubble" && l.platform !== "teepublic" && l.platform !== "spreadshirt" && l.platform !== "tostadora" && l.platform !== "zazzle") invalid("listing.platform", "Unsupported platform");
   const listing: ListingInput = {
     platform: l.platform, account: text(l.account, "listing.account", 100),
     externalId: text(l.externalId, "listing.externalId", 200), url: httpUrl(l.url, "listing.url"),
