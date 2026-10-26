@@ -14,6 +14,10 @@ in the JSON defaults or the corresponding `studio` row. The route remains `/arti
    and grants only the server `service_role` access. MySQL uses its server connection.
 2. Set server-only `TUMBLR_API_KEY` to the existing Tumblr application's consumer key.
    No Tumblr OAuth token or secret is needed on the website.
+   This integration is optional: with an absent, empty or whitespace-only key, verification
+   and scheduled processing are disabled. No Tumblr requests or verification writes run.
+   Existing verified cards retain their normal status/time gates; new and scheduled cards
+   remain hidden. The build does not require this key.
 3. Set `NEXT_PUBLIC_IMAGES_CDN` to the existing public CDN base URL. Covers are restricted
    to its `/articles/` namespace and immutable hash-bearing paths.
 4. Apply `015_article_schedules_postgres.sql` or `015_article_schedules_mysql.sql` after
@@ -131,6 +135,9 @@ preserves the last verified cards and never opens a previously hidden card; anot
 is attempted at the next eligible check. A failure in any part of a verification batch
 preserves already released cards in that batch; scheduled records stay hidden. Error
 details/keys/remote URLs are never returned or stored as `lastError`.
+If saving a verification result fails, public pages and the sitemap read only the saved,
+verified snapshots with the same status/time gates. The private processor still reports
+database errors so the scheduler can retry them.
 
 ## Running without visitors
 
@@ -163,7 +170,9 @@ curl --fail-with-body --max-time 65 -X POST \
 
 The processor handles up to `limit` eligible rows, oldest checked first, without social
 publishing or paid queue services. The response reports `processed`, `published` (verified
-cards), `waiting`, `failed`, `superseded` and `changed`; remaining eligible rows are handled
+cards), `waiting`, `failed`, `superseded`, `changed` and `disabled`. With no `TUMBLR_API_KEY`,
+`disabled` is true and every counter is zero; no records are processed or changed.
+Otherwise `disabled` is false; remaining eligible rows are handled
 on subsequent calls. Running it every minute means release is at or after showAt,
 usually within one minute plus the Tumblr request time. API outages, paused schedulers
 or backlogs delay release; they never move it earlier. Visitors do not release scheduled

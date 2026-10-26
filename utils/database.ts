@@ -137,17 +137,20 @@ export async function saveArticlePublication(article: ArticleRecord, publication
 }
 
 export async function processArticleAnnouncements(options: {target?: ArticleTarget; limit?: number; includeScheduled?: boolean} = {}) {
+    const apiKey = process.env.TUMBLR_API_KEY?.trim();
+    const result = {processed: 0, published: 0, waiting: 0, failed: 0, superseded: 0, changed: 0, disabled: !apiKey};
+    // An optional integration must not attempt verification or write checks when unconfigured.
+    if (!apiKey) return result;
     const rows = await fetchArticleAnnouncements(options.target);
     const now = Date.now();
     const due = rows.filter(row => articleIsDue(row, now, options.includeScheduled ?? true))
         .sort((a, b) => (a.checkedAt ?? "").localeCompare(b.checkedAt ?? ""))
         .slice(0, options.limit ?? 25);
-    const result = {processed: due.length, published: 0, waiting: 0, failed: 0, superseded: 0, changed: 0};
+    result.processed = due.length;
     if (due.length) {
         let verified: Map<string, PublishedArticle | null> | undefined;
         try {
-            if (!process.env.TUMBLR_API_KEY) throw new Error("TUMBLR_API_KEY is not configured");
-            verified = await resolveArticlePublications(due, process.env.TUMBLR_API_KEY);
+            verified = await resolveArticlePublications(due, apiKey);
         } catch {
             // Never log request URLs: they carry the Tumblr API key.
             console.error("Article publication verification unavailable; keeping the last verified articles");
@@ -171,7 +174,12 @@ export async function processArticleAnnouncements(options: {target?: ArticleTarg
 
 /** Legacy reads retain their behavior; scheduled releases require the independent processor. */
 export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]> => {
-    await processArticleAnnouncements({includeScheduled: false});
+    try {
+        await processArticleAnnouncements({includeScheduled: false});
+    } catch {
+        // Verification persistence is optional for public rendering; never expose an unsaved result.
+        console.error("Article publication refresh unavailable; keeping the last verified articles");
+    }
     // Read again so a concurrent cancellation/reschedule wins over a check that was in flight.
     return (await fetchArticleAnnouncements()).filter(row => articleIsVisible(row))
         .flatMap(row => row.publication ? [row.publication] : [])

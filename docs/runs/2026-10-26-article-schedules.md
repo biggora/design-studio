@@ -61,3 +61,29 @@ docs/ARTICLES.md for complete endpoints, request examples and setup instructions
   public state after concurrent schedule changes, schedule-token guarded writes,
   timezone-normalized database responses, and invalidation after partial processing
   failures. No schema, announcement or scheduler changes were applied to production.
+
+## Follow-up: optional Tumblr key and resilient public rendering
+
+The reported deployment failed while prerendering sitemap: a failed Tumblr verification
+was followed by a failed database write, whose exception reached public rendering.
+An absent key previously took that same verification-error/write path.
+
+At the owner's request, an absent/empty/whitespace-only TUMBLR_API_KEY now disables
+verification and processing before any verification reads/writes or Tumblr requests.
+The processor returns disabled=true and zero counters. Saved public snapshots still use
+the existing status/time gates; pending, scheduled, future and cancelled cards stay hidden.
+With a configured key, public readers tolerate refresh/persistence failures and re-read
+only persisted snapshots. Private processing still propagates database failures for retry.
+
+Verification: 1064 ordinary tests passed, including ten new regression cases across
+Supabase and MySQL. TypeScript and scoped ESLint passed. Production build with an empty
+Tumblr key passed all 38 static pages, including sitemap, without article-verification
+warnings. Full repository lint reported 89 errors outside the changed files.
+No real posts, schedules or database records were changed; no deployment was performed.
+The pre-existing .env.example edits were preserved.
+
+Self-check: ran all 11 code dimensions against this follow-up diff. Fixed before
+reporting: optional-key processing and public refresh failure handling described above.
+n/a: infrastructure contract (no infrastructure files changed by this fix), UI accessibility
+(no UI changes). Context: AGENTS.md project rules; docs/ARTICLES.md publication gate and
+outages; utils/database.ts processing, persistence and public reader.

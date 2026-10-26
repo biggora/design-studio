@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   saved: [] as Record<string, unknown>[],
   sql: vi.fn(),
   resolve: vi.fn(),
+  writeError: false,
 }));
 vi.mock("react", () => ({ cache: (fn: unknown) => fn }));
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
@@ -66,6 +67,11 @@ vi.mock("@supabase/supabase-js", () => ({
           return chain;
         },
         then: (resolve: (value: unknown) => unknown) => {
+          if (update && state.writeError)
+            return Promise.resolve({
+              data: null,
+              error: { code: "42501" },
+            }).then(resolve);
           return Promise.resolve({
             data: apply().map((row) => ({ ...row })),
             error: null,
@@ -97,6 +103,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.rows = [];
   state.saved = [];
+  state.writeError = false;
   vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service");
   vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://db.test");
   vi.stubEnv("TUMBLR_API_KEY", "key");
@@ -111,6 +118,8 @@ describe.each(["supabase", "mysql"])("article database (%s)", (provider) => {
     vi.stubEnv("DATABASE_PROVIDER", provider);
     state.sql.mockImplementation(
       async (sql: string, values: unknown[] = []) => {
+        if (sql.startsWith("UPDATE") && state.writeError)
+          throw new Error("Database write unavailable");
         if (sql.startsWith("SELECT"))
           return [
             state.rows
@@ -224,6 +233,131 @@ describe.each(["supabase", "mysql"])("article database (%s)", (provider) => {
         state.sql.mock.calls.find((call) => call[0].startsWith("UPDATE"))?.[0],
       ).toContain("AND revision = ?");
   });
+
+  it.each([undefined, "", "   "])(
+    "disables verification without a Tumblr key (%s), preserving saved visibility",
+    async (key) => {
+      vi.stubEnv("TUMBLR_API_KEY", key);
+      state.rows = [
+        { ...article, revision: "r", checkedAt: null, publication },
+        {
+          ...article,
+          sourceArticleId: "pending",
+          revision: "p",
+          checkedAt: null,
+          publication: null,
+        },
+        {
+          ...article,
+          sourceArticleId: "due",
+          revision: "s",
+          status: "scheduled",
+          showAt: new Date(Date.now() - 1000).toISOString(),
+          checkedAt: null,
+          publication,
+        },
+        {
+          ...article,
+          sourceArticleId: "future",
+          revision: "f",
+          status: "published",
+          showAt: new Date(Date.now() + 3_600_000).toISOString(),
+          checkedAt: null,
+          publication,
+        },
+        {
+          ...article,
+          sourceArticleId: "cancelled",
+          revision: "c",
+          status: "cancelled",
+          checkedAt: null,
+          publication,
+        },
+      ];
+      const before = structuredClone(state.rows);
+      state.writeError = true;
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const db = await import("./database");
+      expect(await db.processArticleAnnouncements()).toMatchObject({
+        disabled: true,
+        processed: 0,
+        failed: 0,
+      });
+      expect(await db.fetchPublishedArticles()).toEqual([publication]);
+      expect(state.resolve).not.toHaveBeenCalled();
+      expect(state.saved).toEqual([]);
+      expect(
+        state.sql.mock.calls.some(([sql]) => sql.startsWith("UPDATE")),
+      ).toBe(false);
+      expect(state.rows).toEqual(before);
+      expect(error).not.toHaveBeenCalled();
+      error.mockRestore();
+    },
+  );
+
+  it.each([false, true])(
+    "serves only saved public snapshots when verification persistence fails (Tumblr failure: %s)",
+    async (tumblrFails) => {
+      state.rows = [
+        { ...article, revision: "r", checkedAt: null, publication },
+        {
+          ...article,
+          sourceArticleId: "pending",
+          revision: "p",
+          checkedAt: null,
+          publication: null,
+        },
+        {
+          ...article,
+          sourceArticleId: "future",
+          revision: "f",
+          status: "published",
+          showAt: new Date(Date.now() + 3_600_000).toISOString(),
+          checkedAt: null,
+          publication,
+        },
+        {
+          ...article,
+          sourceArticleId: "due",
+          revision: "s",
+          status: "scheduled",
+          showAt: new Date(Date.now() - 1000).toISOString(),
+          checkedAt: null,
+          publication,
+        },
+        {
+          ...article,
+          sourceArticleId: "cancelled",
+          revision: "c",
+          status: "cancelled",
+          checkedAt: null,
+          publication,
+        },
+      ];
+      if (tumblrFails)
+        state.resolve.mockRejectedValue(new Error("private provider URL"));
+      else
+        state.resolve.mockResolvedValue(
+          new Map([
+            ["shop.tumblr.com:blg_test", publication],
+            [
+              "shop.tumblr.com:pending",
+              { ...publication, sourceArticleId: "pending" },
+            ],
+          ]),
+        );
+      state.writeError = true;
+      const error = vi.spyOn(console, "error").mockImplementation(() => {});
+      const db = await import("./database");
+      expect(await db.fetchPublishedArticles()).toEqual([publication]);
+      // Operational callers must still see a database failure and retry it.
+      await expect(db.processArticleAnnouncements()).rejects.toThrow();
+      expect(JSON.stringify(error.mock.calls)).not.toContain(
+        "private provider URL",
+      );
+      error.mockRestore();
+    },
+  );
 
   it("does not expose a future/cancelled schedule or even a due but unprocessed schedule", async () => {
     state.rows = [
