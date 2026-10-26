@@ -17,8 +17,8 @@ import {designSlugBase} from "@/lib/slug";
 import {IngestInput, IngestResult, IngestDesign, DesignListing, ListingLookup, ListingsError, ListingPlatform, CdnImage, CdnImageItem, CdnImageLookup, CdnImageResult} from "@/lib/listings";
 import {getDesignCdnImageMySQL, setDesignCdnImageMySQL} from "@/utils/cdn-image-database";
 import {ingestListingMySQL, ingestDesignResponse, mysqlListingResponse} from "@/utils/listings-database";
-import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
-import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL} from "@/utils/social-posts-database";
+import {SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialPostTarget, SocialSummaryFilters, SocialSummaryRow} from "@/lib/social-posts";
+import {upsertSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL, deleteSocialPostMySQL} from "@/utils/social-posts-database";
 import {hasMarketplaceLink} from "@/lib/utils";
 import {hasPinImage, normalizeCdnArtworkOptions, normalizeCdnImageMockups} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
@@ -1553,6 +1553,13 @@ export async function listSocialPosts(filters: SocialPostFilters): Promise<Socia
         data: result.data.map(item => ({...item, post: normalizeSocialPost(item.post)})),
         pagination: {page: filters.page, limit: filters.limit, total: Number(result.total)},
     };
+}
+
+// Hard-deletes a mark recorded by mistake; null when nothing matched.
+export async function deleteSocialPost(target: SocialPostTarget): Promise<SocialPost | null> {
+    if (getProvider() === "mysql") return deleteSocialPostMySQL(getMySQLPool(), target);
+    const result = await socialRpc<{post: SocialPost | null}>("delete_design_social_post", {identity: target});
+    return result.post && normalizeSocialPost(result.post);
 }
 
 export async function summarizeSocialPosts(filters: SocialSummaryFilters): Promise<SocialSummaryRow[]> {

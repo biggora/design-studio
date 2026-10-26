@@ -105,7 +105,7 @@ CREATE POLICY "Public Read Listing Links" ON public.design_listings FOR SELECT T
 CREATE TABLE IF NOT EXISTS public.design_social_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
-  channel TEXT NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  channel TEXT NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin', 'facebook', 'tumblr')),
   account TEXT NOT NULL CHECK (char_length(account) <= 100),
   variant TEXT NOT NULL CHECK (char_length(variant) <= 50),
   "externalId" TEXT NOT NULL CHECK (char_length("externalId") <= 200),
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS public.design_social_posts (
   hashtags JSONB,
   "imageUrl" TEXT,
   board TEXT CHECK (char_length(board) <= 200),
-  status TEXT NOT NULL CHECK (status IN ('published', 'removed')),
+  status TEXT NOT NULL CHECK (status IN ('scheduled', 'published', 'removed')),
   "publishedAt" TIMESTAMPTZ NOT NULL,
   "removedAt" TIMESTAMPTZ,
   extra JSONB,

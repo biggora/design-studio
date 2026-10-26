@@ -78,7 +78,7 @@ CREATE TABLE design_listings (
 CREATE TABLE design_social_posts (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   `designId` CHAR(36) NOT NULL,
-  channel VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  channel VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin', 'facebook', 'tumblr')),
   account VARCHAR(100) COLLATE utf8mb4_bin NOT NULL,
   variant VARCHAR(50) COLLATE utf8mb4_bin NOT NULL,
   `externalId` VARCHAR(200) COLLATE utf8mb4_bin NOT NULL,
@@ -89,7 +89,7 @@ CREATE TABLE design_social_posts (
   hashtags JSON,
   `imageUrl` TEXT,
   board VARCHAR(200),
-  status VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (status IN ('published', 'removed')),
+  status VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (status IN ('scheduled', 'published', 'removed')),
   `publishedAt` DATETIME(3) NOT NULL,
   `removedAt` DATETIME(3),
   extra JSON,

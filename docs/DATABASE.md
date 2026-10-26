@@ -275,6 +275,7 @@ For deployments that already have `studio` and `designs` provisioned, apply the 
 - `init/migrations/007_design_active_postgres.sql` / `007_design_active_mysql.sql` — add the NOT NULL `designs.active` flag (default `true`), the manual publish switch behind every public surface (§ 2.2). The PostgreSQL migration also reinstalls the `get_random_design` / `get_random_designs` helpers with the active filter; MySQL procedure bodies cannot run through the migration runner, so fresh installs get them from `init/mysql_functions.sql` and existing MySQL installs keep the (unused by the app) unfiltered procedures. Existing rows become active through the column default — no backfill. Rerunnable; apply BEFORE deploying the code that filters on the flag, since the new queries error against a database without the column.
 - `init/migrations/008_design_cdn_image_api_postgres.sql` — PostgreSQL only: installs `public.set_design_cdn_image(items JSONB) RETURNS JSONB` (SECURITY INVOKER, EXECUTE revoked from PUBLIC/anon/authenticated, granted to `service_role`), the batch writer behind `PUT /api/v1/designs/cdn-image` (§ 3.1 and [PUBLIC_API.md](PUBLIC_API.md)). Per item `{sha256?, sourceImageId?, redbubbleId?, cdnImage}` it resolves the design by `sha256`, then `sourceImageId`, then `designs."externalId"`; sets only `designs."cdnImage"` (overwrite), fills a NULL `sha256`/`sourceImageId` from the item, and bumps `"updatedAt"`; and returns one `{index, status: updated|not_found|conflict, designId?, cdnImage?, message?}` per item in one transaction (per-item failures never abort the batch). The MySQL twin is application code (`utils/cdn-image-database.ts`) and needs no migration. Rerunnable; apply BEFORE deploying the route, after 005 (the column) and any of 006/007 not yet on the database. `init/postgres_functions.sql` carries the same function body for fresh installs.
 - `init/migrations/011_design_listings_tostadora_postgres.sql` / `011_design_listings_tostadora_mysql.sql` — widen the `design_listings.platform` CHECK with `tostadora` (§ 2.4). The old check has an auto-generated name (both providers), so PostgreSQL replaces `design_listings_platform_check` only when it does not already accept `tostadora`, and MySQL finds the old check by its clause and replaces it with the named `design_listings_platform_check` constraint. Apply BEFORE deploying the code that accepts `tostadora` listings (the ingest would insert a row the check rejects). Rerunnable; no backfill (existing rows are untouched).
+- `init/migrations/014_design_social_posts_channels_postgres.sql` / `014_design_social_posts_channels_mysql.sql` — widen the `design_social_posts.channel` CHECK with `facebook` and `tumblr` and the `status` CHECK with `scheduled` (the auto-named column checks from 004 are found by definition, dropped, and replaced by `design_social_posts_channel_check` / `design_social_posts_status_check`). The PostgreSQL migration also reinstalls `upsert_design_social_post` with the status-transition rules and installs `delete_design_social_post` (§ 3.1). Both scripts are rerunnable; apply after 013 and BEFORE deploying the code that accepts the new channel and status, since the old checks reject them. `init/postgres_functions.sql` carries the same function bodies for fresh installs.
 - `init/migrations/013_design_listings_zazzle_postgres.sql` / `013_design_listings_zazzle_mysql.sql` — widen the `design_listings.platform` CHECK with `zazzle` (§ 2.4). Both providers find the named `design_listings_platform_check` from migration 011 by its clause, drop and re-create it with `zazzle` added. Apply BEFORE deploying the code that accepts `zazzle` listings (the ingest would insert a row the check rejects). Rerunnable; no backfill (existing rows are untouched).
 
 Run `npm run db:migrate` to apply all pending migrations using `.env` and `DATABASE_PROVIDER`. The command discovers numbered `*_postgres.sql` or `*_mysql.sql` files in `init/migrations/`, applies them in numeric order, and records each successful file and its checksum in the database (`design_studio_migrations.history` for PostgreSQL, `schema_migrations` for MySQL). Subsequent runs skip recorded files; editing an already recorded file is rejected. Add a new numbered migration for further changes. Concurrent migration runners are blocked by a database session lock.
@@ -291,14 +292,14 @@ The full `init/postgres_tables.sql` / `init/mysql_tables.sql` scripts remain the
 
 ### 2.7 Table `design_social_posts` (Social Posts)
 
-Records social-media posts that promote a design. Only final facts are stored: a post is either `published` or `removed`. Each post has a global identity `(channel, externalId)` and there is at most one post per design, channel, account, and variant. Rows are private (service role only, § 2.5).
+Records social-media posts that promote a design. A post is `scheduled` (placed in the platform's native scheduler; `publishedAt` is the planned time), `published`, or `removed`; status only moves forward (§ 3.1). Each post has a global identity `(channel, externalId)` and there is at most one post per design, channel, account, and variant. Rows are private (service role only, § 2.5).
 
 #### PostgreSQL schema (`init/postgres_tables.sql`)
 ```sql
 CREATE TABLE IF NOT EXISTS public.design_social_posts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   "designId" UUID NOT NULL REFERENCES public.designs(id) ON DELETE CASCADE,
-  channel TEXT NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  channel TEXT NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin', 'facebook', 'tumblr')),
   account TEXT NOT NULL CHECK (char_length(account) <= 100),
   variant TEXT NOT NULL CHECK (char_length(variant) <= 50),
   "externalId" TEXT NOT NULL CHECK (char_length("externalId") <= 200),
@@ -309,7 +310,7 @@ CREATE TABLE IF NOT EXISTS public.design_social_posts (
   hashtags JSONB,
   "imageUrl" TEXT,
   board TEXT CHECK (char_length(board) <= 200),
-  status TEXT NOT NULL CHECK (status IN ('published', 'removed')),
+  status TEXT NOT NULL CHECK (status IN ('scheduled', 'published', 'removed')),
   "publishedAt" TIMESTAMPTZ NOT NULL,
   "removedAt" TIMESTAMPTZ,
   extra JSONB,
@@ -330,7 +331,7 @@ CREATE INDEX IF NOT EXISTS design_social_posts_status_idx ON public.design_socia
 CREATE TABLE design_social_posts (
   id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
   `designId` CHAR(36) NOT NULL,
-  channel VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin')),
+  channel VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (channel IN ('pinterest', 'bluesky', 'mastodon', 'instagram', 'threads', 'reddit', 'tiktok', 'youtube', 'x', 'linkedin', 'facebook', 'tumblr')),
   account VARCHAR(100) COLLATE utf8mb4_bin NOT NULL,
   variant VARCHAR(50) COLLATE utf8mb4_bin NOT NULL,
   `externalId` VARCHAR(200) COLLATE utf8mb4_bin NOT NULL,
@@ -341,7 +342,7 @@ CREATE TABLE design_social_posts (
   hashtags JSON,
   `imageUrl` TEXT,
   board VARCHAR(200),
-  status VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (status IN ('published', 'removed')),
+  status VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL CHECK (status IN ('scheduled', 'published', 'removed')),
   `publishedAt` DATETIME(3) NOT NULL,
   `removedAt` DATETIME(3),
   extra JSON,
@@ -363,7 +364,7 @@ CREATE TABLE design_social_posts (
 |---|---|---|---|---|
 | `id` | `UUID` | `CHAR(36)` | PRIMARY KEY, DEFAULT UUID | Internal post record identifier. |
 | `designId` | `UUID` | `CHAR(36)` | NOT NULL, FK → `designs.id`, ON DELETE CASCADE | The promoted design. Never relinked once set. |
-| `channel` | `TEXT` | `VARCHAR(20)` ascii | NOT NULL, CHECK: pinterest, bluesky, mastodon, instagram, threads, reddit, tiktok, youtube, x, linkedin | Social network. |
+| `channel` | `TEXT` | `VARCHAR(20)` ascii | NOT NULL, CHECK: pinterest, bluesky, mastodon, instagram, threads, reddit, tiktok, youtube, x, linkedin, facebook, tumblr | Social network. |
 | `account` | `TEXT` | `VARCHAR(100)` | NOT NULL, ≤ 100 chars, case-sensitive in MySQL | Posting account (e.g. `pinterest:main`). |
 | `variant` | `TEXT` | `VARCHAR(50)` | NOT NULL, ≤ 50 chars, case-sensitive in MySQL | Post variant for the same design/account (e.g. `main`). |
 | `externalId` | `TEXT` | `VARCHAR(200)` | NOT NULL, ≤ 200 chars, UNIQUE with `channel` | Post ID on the network. |
@@ -374,13 +375,13 @@ CREATE TABLE design_social_posts (
 | `hashtags` | `JSONB` | `JSON` | NULL | Hashtag array. |
 | `imageUrl` | `TEXT` | `TEXT` | NULL | Image used in the post. |
 | `board` | `TEXT` | `VARCHAR(200)` | NULL, ≤ 200 chars | Board/collection on the network (Pinterest). |
-| `status` | `TEXT` | `VARCHAR(20)` ascii | NOT NULL, CHECK: published, removed | Final state of the post. |
-| `publishedAt` | `TIMESTAMPTZ` | `DATETIME(3)` (UTC) | NOT NULL | When the post was published. |
+| `status` | `TEXT` | `VARCHAR(20)` ascii | NOT NULL, CHECK: scheduled, published, removed | State of the post; it only moves forward (§ 3.1). |
+| `publishedAt` | `TIMESTAMPTZ` | `DATETIME(3)` (UTC) | NOT NULL | When the post was published; the planned publish time while `scheduled`. |
 | `removedAt` | `TIMESTAMPTZ` | `DATETIME(3)` (UTC) | NULL; required when `status = 'removed'` | When the post was removed. |
 | `extra` | `JSONB` | `JSON` | NULL | Channel-specific data object. |
 | `createdAt`, `updatedAt` | `TIMESTAMPTZ` | `DATETIME(3)` | NOT NULL, DEFAULT NOW | Record timestamps. |
 
-Unique constraints: `(channel, externalId)` and `(designId, channel, account, variant)`. Indexes: `(designId)`, `(channel, publishedAt)`, `(account, publishedAt)`, `(status)`. A published post may have a NULL `removedAt`; a removed post must have one.
+Unique constraints: `(channel, externalId)` and `(designId, channel, account, variant)`. Indexes: `(designId)`, `(channel, publishedAt)`, `(account, publishedAt)`, `(status)`. A scheduled or published post has a NULL `removedAt`; a removed post must have one.
 
 ---
 
@@ -446,18 +447,20 @@ Installed by `init/postgres_functions.sql` and migration 008 (identical bodies);
 
 #### Social post functions (`design_social_posts`)
 
-Installed by `init/postgres_functions.sql` and migration 004 (identical bodies). All three are `SECURITY INVOKER` with `SET search_path = public`; EXECUTE is revoked from `PUBLIC`/`anon`/`authenticated` and granted to `service_role` only. There are no MySQL equivalents.
+Installed by `init/postgres_functions.sql` and migrations 004 and 014 (identical bodies; 014 replaces the upsert and adds the delete). All four are `SECURITY INVOKER` with `SET search_path = public`; EXECUTE is revoked from `PUBLIC`/`anon`/`authenticated` and granted to `service_role` only. There are no MySQL equivalents.
 
-- `upsert_design_social_post(payload JSONB) RETURNS JSONB` — payload `{ "design": {"sha256"?, "sourceImageId"?}, "post": {channel, account, variant, externalId, url, status, publishedAt, linkUrl?, title?, caption?, hashtags?, imageUrl?, board?, removedAt?, extra?} }`. Serializes on `pg_advisory_xact_lock(hashtextextended(channel || ':' || externalId, 0))`, resolves the design by `sha256`, falling back to `sourceImageId`, and locks that `designs` row (`FOR UPDATE`). Inserts a new post or updates the existing `(channel, externalId)` row: `account`, `variant`, `url`, `status`, and `publishedAt` are always written, other fields only when their key is present. `removedAt` is forced to NULL when `status` is `published`. Returns `{ "design": {id, slug, title, sha256, sourceImageId}, "post": <full row>, "created": boolean }`. Errors (the whole call rolls back):
+- `upsert_design_social_post(payload JSONB) RETURNS JSONB` — payload `{ "design": {"sha256"?, "sourceImageId"?}, "post": {channel, account, variant, externalId, url, status, publishedAt, linkUrl?, title?, caption?, hashtags?, imageUrl?, board?, removedAt?, extra?} }`. Serializes on `pg_advisory_xact_lock(hashtextextended(channel || ':' || externalId, 0))`, resolves the design by `sha256`, falling back to `sourceImageId`, and locks that `designs` row (`FOR UPDATE`). Inserts a new post or updates the existing `(channel, externalId)` row: `account`, `variant`, `url`, `status`, and `publishedAt` are always written, other fields only when their key is present. `removedAt` is forced to NULL unless `status` is `removed`. Returns `{ "design": {id, slug, title, sha256, sourceImageId}, "post": <full row>, "created": boolean }`. Errors (the whole call rolls back):
   - `P0002` `Design not found` — neither identity matches a design.
   - `P0001` `sha256 and sourceImageId identify different designs` (DETAIL `{sha256DesignId, sourceImageIdDesignId}`).
   - `P0001` `Post belongs to another design` (DETAIL `{designId, postDesignId, postId}`) — posts are never relinked.
   - `P0001` `A removed post cannot be published again` (DETAIL `{postId}`).
+  - `P0001` `Post cannot be scheduled again once it is published|removed` (DETAIL `{postId}`). Allowed moves are `scheduled` -> `published` | `removed` and `published` -> `removed`; keeping the same status is always allowed.
   - `P0001` `Account already has a different post for this design and variant` (DETAIL `{designId, postId}`).
   - `P0001` `Social post identity conflict` (DETAIL `{constraint}`) — any other unique violation.
   - `23514` check violation (e.g. `status: "removed"` without `removedAt`) is not remapped.
 - `list_design_social_posts(filters JSONB) RETURNS JSONB` — optional filters `sha256`, `sourceImageId`, `channel`, `account`, `status`, `since`/`until` (inclusive bounds on `publishedAt`), `q` (case-insensitive literal substring of post `title`, `caption`, or design `title`; `%`, `_`, `\` are escaped), `page` (≥ 1, default 1), `limit` (default 50, max 200). An unknown `sha256`/`sourceImageId` yields an empty result. Ordered by `publishedAt DESC, id DESC`; returns `{ "data": [{ "post": <full row>, "design": {id, slug, title} }], "total": <count before paging> }`.
 - `summarize_design_social_posts(filters JSONB) RETURNS JSONB` — optional `since`/`until` on `publishedAt`; returns `{ "data": [{channel, account, status, count}] }` ordered by channel, account, status.
+- `delete_design_social_post(identity JSONB) RETURNS JSONB` — `identity` is `{"id"}` or `{"channel", "externalId"}`. Hard-deletes that one row (for marks recorded by mistake; a post taken down on the platform is kept with status `removed`) and returns `{ "post": <deleted row> }`, or `{ "post": null }` when nothing matched.
 
 ### 3.2 MySQL (`init/mysql_functions.sql`)
 

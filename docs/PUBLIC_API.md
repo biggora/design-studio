@@ -492,14 +492,15 @@ Deploy order on Supabase: migrations 005–007 where not yet applied → **008**
 
 ### Social posts ingest
 
-`/api/v1/social-posts` is a private API, not part of the public embed API. pod-uploader calls it to record the final facts about a social post for a design: the post is `published`, or later `removed`. The design must already exist (create it first with `POST /api/v1/listings`); this API never creates or changes designs.
+`/api/v1/social-posts` is a private API, not part of the public embed API. pod-uploader calls it to record the final facts about a social post for a design: the post is `scheduled` in the platform's own scheduler, `published`, or later `removed`. A mark recorded by mistake can be deleted. The design must already exist (create it first with `POST /api/v1/listings`); this API never creates or changes designs.
 
-Authentication and caching match the listings API: `Authorization: Bearer $LISTINGS_API_TOKEN` only, `401 UNAUTHORIZED` for a missing or wrong token, `503 NOT_CONFIGURED` when `LISTINGS_API_TOKEN` is unset, and `Cache-Control: no-store` on every response. Apply migration 004 (after 003) before deployment; see [DATABASE.md](DATABASE.md) §2.7. Supabase deployments also need `SUPABASE_SERVICE_ROLE_KEY`, otherwise requests fail with `503 NOT_CONFIGURED`.
+Authentication and caching match the listings API: `Authorization: Bearer $LISTINGS_API_TOKEN` only, `401 UNAUTHORIZED` for a missing or wrong token, `503 NOT_CONFIGURED` when `LISTINGS_API_TOKEN` is unset, and `Cache-Control: no-store` on every response. Apply migration 004 (after 003), and 014 for the `facebook` / `tumblr` channels, the `scheduled` status and delete, before deployment; see [DATABASE.md](DATABASE.md) §2.7. Supabase deployments also need `SUPABASE_SERVICE_ROLE_KEY`, otherwise requests fail with `503 NOT_CONFIGURED`.
 
 Endpoints:
 
 - `POST /api/v1/social-posts` creates or updates a post.
 - `GET /api/v1/social-posts` lists posts.
+- `DELETE /api/v1/social-posts` deletes one post by `id`, or by `channel` and `externalId`.
 - `GET /api/v1/social-posts/summary` counts posts per channel, account and status.
 
 #### POST /api/v1/social-posts
@@ -510,14 +511,14 @@ The JSON body has exactly two objects, `design` and `post`. Unknown fields at an
 |---|---|---|
 | `design.sha256` | one of the two | 64 hex characters, case-insensitive, saved lowercase |
 | `design.sourceImageId` | one of the two | Positive safe integer |
-| `post.channel` | yes | `pinterest`, `bluesky`, `mastodon`, `instagram`, `threads`, `reddit`, `tiktok`, `youtube`, `x`, `linkedin` |
+| `post.channel` | yes | `pinterest`, `bluesky`, `mastodon`, `instagram`, `threads`, `reddit`, `tiktok`, `youtube`, `x`, `linkedin`, `facebook`, `tumblr` |
 | `post.account` | yes | Non-empty, ≤ 100 characters |
 | `post.variant` | yes | Non-empty, ≤ 50 characters. Tells apart several posts of one design on the same account, e.g. different images |
 | `post.externalId` | yes | Non-empty, ≤ 200 characters. The channel's own post ID |
 | `post.url` | yes | http(s), ≤ 2000 characters, no credentials; host must match the channel (table below) |
-| `post.status` | yes | `published` or `removed` |
-| `post.publishedAt` | yes | ISO-8601 timestamp with timezone. The API returns it as UTC with milliseconds (`...000Z`) |
-| `post.removedAt` | required if `removed`; rejected if `published` | ISO-8601 timestamp with timezone |
+| `post.status` | yes | `scheduled`, `published` or `removed` |
+| `post.publishedAt` | yes | ISO-8601 timestamp with timezone. The API returns it as UTC with milliseconds (`...000Z`). For a `scheduled` post it is the planned publish time |
+| `post.removedAt` | required if `removed`; rejected if `scheduled` or `published` | ISO-8601 timestamp with timezone |
 | `post.linkUrl` | no | http(s) URL, ≤ 2000 characters, no credentials. Where the post points, e.g. the shop page. No domain check |
 | `post.title` | no | Non-empty, ≤ 500 characters |
 | `post.caption` | no | Non-empty, ≤ 5000 characters |
@@ -542,6 +543,8 @@ Provide `design.sha256`, `design.sourceImageId`, or both.
 | `youtube` | `youtube.com`, `youtu.be` |
 | `x` | `x.com`, `twitter.com` |
 | `linkedin` | `linkedin.com` |
+| `facebook` | `facebook.com`, `fb.com`, `fb.me` |
+| `tumblr` | `tumblr.com` (blogs are subdomains, e.g. `threadquirk.tumblr.com`) |
 
 Design lookup: `sha256` first, then `sourceImageId`. If neither matches a design, the API returns `404`. If both are given and identify different designs, it returns `409`.
 
@@ -549,9 +552,10 @@ Upsert rules. A post is identified by `(channel, externalId)`.
 
 - A new post returns **201** with `created: true`. A repeat of the same `(channel, externalId)` returns **200** with `created: false`.
 - On a repeat, the required fields (`account`, `variant`, `url`, `status`, `publishedAt`) are overwritten. Optional fields that are omitted keep their stored values; supplied ones replace them.
-- Sending `status: "published"` clears `removedAt`.
+- Sending `status: "scheduled"` or `"published"` clears `removedAt`.
+- Status only moves forward: `scheduled` to `published` or `removed`, and `published` to `removed`. Repeating the current status is fine (for example, to change a scheduled post's planned `publishedAt`).
 - A `removed` post can be updated again (for example, to correct `removedAt`) as long as it stays `removed`.
-- `removed` to `published` returns `409`. Publish a new post instead.
+- `removed` to `published`, and `published` or `removed` back to `scheduled`, return `409`. Record a new post instead.
 - A post that already belongs to another design returns `409`. Posts are never relinked.
 - A design can have only one post per `(channel, account, variant)`. A different `externalId` for the same design, channel, account and variant returns `409`.
 - The whole request runs in one transaction. Nothing is written on an error, and the site is not revalidated.
@@ -602,6 +606,24 @@ Response, **201**:
 
 Omitted optional fields come back as `null`. `design.slug`, `design.sha256` and `design.sourceImageId` are `null` when the design has none.
 
+Example: a Facebook Page post placed in Facebook's scheduler. `publishedAt` is the planned time; send the same `externalId` again with `status: "published"` once it went out.
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/social-posts \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sourceImageId":1193},"post":{"channel":"facebook","account":"threadquirk","variant":"default","externalId":"1387320321131024_122096613885526563","url":"https://www.facebook.com/122096466255526563/posts/122096557161526563","status":"scheduled","publishedAt":"2026-10-24T18:41:00Z"}}'
+```
+
+This returns **201** with `post.status: "scheduled"` and `post.publishedAt: "2026-10-24T18:41:00.000Z"`.
+
+Example: a published Tumblr post.
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/social-posts \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"design":{"sourceImageId":1193},"post":{"channel":"tumblr","account":"threadquirk","variant":"default","externalId":"831388572107063296","url":"https://threadquirk.tumblr.com/post/831388572107063296","status":"published","publishedAt":"2026-10-24T19:00:00Z"}}'
+```
+
 Example: the pin was taken down. Send the required fields again with `status: "removed"` and `removedAt`. Omitted optional fields (board, title, hashtags) are kept.
 
 ```bash
@@ -622,7 +644,7 @@ Lists posts, newest `publishedAt` first (ties broken by post `id`, descending). 
 | `sourceImageId` | integer | none | Positive integer. Not combinable with `sha256` |
 | `channel` | string | none | One of the channels above |
 | `account` | string | none | ≤ 100 characters; exact match |
-| `status` | string | none | `published` or `removed` |
+| `status` | string | none | `scheduled`, `published` or `removed` |
 | `since` | timestamp | none | ISO-8601 with timezone; `publishedAt >= since` |
 | `until` | timestamp | none | ISO-8601 with timezone; `publishedAt <= until`. `since` must not be after `until` |
 | `q` | string | none | Trimmed, 1-200 characters. Case-insensitive substring match on post title, post caption or design title |
@@ -658,6 +680,19 @@ Response, **200**:
 
 `total` counts all matching posts, not only the current page. Request the next page with `page=2` until `page * limit >= total`.
 
+#### DELETE /api/v1/social-posts
+
+Hard-deletes one post, for a mark recorded by mistake. A post that was taken down on the platform is not deleted: record it with `status: "removed"` instead. Address the post by either its record `id` (the `post.id` of the POST and GET responses) or its identity `channel` plus `externalId`. Any other combination, an invalid `id`, or an unknown or repeated parameter returns `400`. Same bearer auth as the other methods.
+
+```bash
+curl -s -X DELETE -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/social-posts?channel=facebook&externalId=1387320321131024_122096613885526563'
+curl -s -X DELETE -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
+  'http://localhost:3000/api/v1/social-posts?id=5d1f6f0e-3c0a-4a52-9b0b-8f7f0f3e2c11'
+```
+
+Response, **200**: `{ "deleted": true, "post": { ... } }`, where `post` is the deleted record in the same shape as in the POST response. **404** `NOT_FOUND` when nothing matched, so repeating a delete returns `404`. The design is never touched, and the same post can be recorded again afterwards.
+
 #### GET /api/v1/social-posts/summary
 
 Counts posts per channel, account and status. Accepts only `since` and `until` (same rules as above, applied to `publishedAt`). Combinations with no posts are omitted. Rows are sorted by channel, account, status.
@@ -683,16 +718,16 @@ Response, **200**:
 Errors use the same envelope as the listings API: a string `error` plus `code`, and `field` or `details` when they apply.
 
 ```json
-{"error":"Expected one of: pinterest, bluesky, mastodon, instagram, threads, reddit, tiktok, youtube, x, linkedin","code":"VALIDATION","field":"post.channel"}
+{"error":"Expected one of: pinterest, bluesky, mastodon, instagram, threads, reddit, tiktok, youtube, x, linkedin, facebook, tumblr","code":"VALIDATION","field":"post.channel"}
 {"error":"Removed post cannot be published again","code":"CONFLICT","details":{"postId":"5d1f6f0e-3c0a-4a52-9b0b-8f7f0f3e2c11"}}
 ```
 
 | Status | code | Meaning |
 |---|---|---|
-| 400 | VALIDATION | Invalid JSON; unknown field or query parameter; duplicate query parameter; a malformed, oversized or `null` value; `url` host not on the channel's domain; `removedAt` missing for `removed` or sent with `published`; both `sha256` and `sourceImageId` in a GET |
+| 400 | VALIDATION | Invalid JSON; unknown field or query parameter; duplicate query parameter; a malformed, oversized or `null` value; `url` host not on the channel's domain; `removedAt` missing for `removed` or sent with `scheduled` / `published`; both `sha256` and `sourceImageId` in a GET; a DELETE without `id` or `channel` + `externalId`, or with both |
 | 401 | UNAUTHORIZED | Missing or wrong bearer token |
-| 404 | NOT_FOUND | POST: no design matches `sha256` / `sourceImageId` (`field: "design"`) |
-| 409 | CONFLICT | `sha256` and `sourceImageId` identify different designs; post belongs to another design; `removed` to `published`; different `externalId` for the same design, channel, account and variant; concurrent ingest collision (retry) |
+| 404 | NOT_FOUND | POST: no design matches `sha256` / `sourceImageId` (`field: "design"`). DELETE: no post matches |
+| 409 | CONFLICT | `sha256` and `sourceImageId` identify different designs; post belongs to another design; `removed` to `published`; `published` or `removed` back to `scheduled`; different `externalId` for the same design, channel, account and variant; concurrent ingest collision (retry) |
 | 503 | NOT_CONFIGURED | `LISTINGS_API_TOKEN` unset; or `SUPABASE_SERVICE_ROLE_KEY` missing on Supabase |
 | 500 | INTERNAL | Database or runtime failure; details are not returned |
 

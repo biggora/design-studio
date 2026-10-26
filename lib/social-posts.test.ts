@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseSocialPostInput, parseSocialPostQuery, parseSummaryQuery } from "@/lib/social-posts";
+import { parseSocialPostInput, parseSocialPostQuery, parseSocialPostTarget, parseSummaryQuery } from "@/lib/social-posts";
 import { ListingsError } from "@/lib/listings";
 
 const sha256 = "f45e5bc7a5342c2caa038c57d9e8c368255701b801efc734f67f06d82e3f1971";
@@ -54,6 +54,10 @@ describe("parseSocialPostInput", () => {
     ["bluesky", "https://bsky.app.evil.example/x"], ["instagram", "https://notinstagram.com/p/1"],
     ["x", "https://nottwitter.com/a/status/1"], ["youtube", "https://youtube.com.evil.example/watch"],
     ["reddit", "https://evilreddit.com/r/x"], ["linkedin", "https://linkedin.evil.com/x"],
+    ["facebook", "https://facebook.com.evil.io/122096466255526563/posts/1"], ["facebook", "https://notfacebook.com/p/1"],
+    ["facebook", "https://fb.com.evil.io/p/1"], ["facebook", "https://evilfb.me/p/1"],
+    ["tumblr", "https://nottumblr.com/post/1"], ["tumblr", "https://tumblr.com.evil.io/post/1"],
+    ["tumblr", "https://threadquirk.tumblr.evil.io/post/1"],
   ])("rejects look-alike host for %s: %s", (channel, url) => {
     expect(fieldOf(() => parseSocialPostInput(body({ channel, url })))).toBe("post.url");
   });
@@ -66,12 +70,26 @@ describe("parseSocialPostInput", () => {
     ["youtube", "https://youtu.be/abc"], ["youtube", "https://www.youtube.com/watch?v=1"],
     ["x", "https://x.com/a/status/1"], ["x", "https://twitter.com/a/status/1"],
     ["linkedin", "https://www.linkedin.com/posts/1"], ["mastodon", "https://any.instance.example/@a/1"],
+    ["facebook", "https://www.facebook.com/122096466255526563/posts/122096557161526563"], ["facebook", "https://facebook.com/p/1"],
+    ["facebook", "https://m.facebook.com/p/1"], ["facebook", "https://fb.com/p/1"], ["facebook", "https://fb.me/abc"],
+    ["tumblr", "https://threadquirk.tumblr.com/post/831388572107063296"], ["tumblr", "https://www.tumblr.com/threadquirk/831388572107063296"],
   ])("accepts %s host %s", (channel, url) => {
     expect(parseSocialPostInput(body({ channel, url })).post.url).toBe(url);
   });
   it("accepts removed with removedAt, and removedAt before publishedAt", () => {
     const out = parseSocialPostInput(body({ status: "removed", removedAt: "2020-01-01T00:00:00Z" }));
     expect(out.post.removedAt).toBe("2020-01-01T00:00:00.000Z");
+  });
+  it("accepts a scheduled post, whose publishedAt is the planned time", () => {
+    const out = parseSocialPostInput(body({
+      channel: "facebook", account: "threadquirk", variant: "default", externalId: "1387320321131024_122096613885526563",
+      url: "https://www.facebook.com/122096466255526563/posts/122096557161526563", status: "scheduled", publishedAt: "2026-10-24T18:41:00Z",
+    }, { sourceImageId: 1193 }));
+    expect(out.post).toMatchObject({ channel: "facebook", status: "scheduled", publishedAt: "2026-10-24T18:41:00.000Z" });
+    expect(out.post.removedAt).toBeUndefined();
+  });
+  it("rejects removedAt on a scheduled post", () => {
+    expect(fieldOf(() => parseSocialPostInput(body({ status: "scheduled", removedAt: "2026-10-11T00:00:00Z" })))).toBe("post.removedAt");
   });
   it("accepts exactly 50 hashtags and a design with only sourceImageId", () => {
     expect(parseSocialPostInput(body({ hashtags: Array(50).fill("a") }, { sourceImageId: 5 })).design).toEqual({ sourceImageId: 5 });
@@ -88,11 +106,29 @@ describe("parseSocialPostQuery", () => {
     });
     expect(q("sourceImageId=299").sourceImageId).toBe(299);
   });
+  it("accepts the facebook and tumblr channels and the scheduled status", () => {
+    expect(q("channel=facebook&status=scheduled")).toEqual({ channel: "facebook", status: "scheduled", page: 1, limit: 50 });
+    expect(q("channel=tumblr").channel).toBe("tumblr");
+  });
   it.each([
     "unknown=1", `sha256=${sha256}&sourceImageId=1`, "sha256=bad", "sourceImageId=0", "channel=nope", "status=x",
     "page=0", "page=1.5", "limit=0", "limit=201", "limit=abc", "q=", "q=%20", `q=${"x".repeat(201)}`,
     "since=2026-02-01T00:00:00Z&until=2026-01-01T00:00:00Z", "since=yesterday", "page=1&page=2",
   ])("rejects %s", s => expect(() => q(s)).toThrow(ListingsError));
+});
+
+describe("parseSocialPostTarget", () => {
+  const t = (s: string) => parseSocialPostTarget(new URLSearchParams(s));
+  const id = "5D1F6F0E-3C0A-4A52-9B0B-8F7F0F3E2C11";
+  it("parses an id (lowercased) or a channel and externalId", () => {
+    expect(t(`id=${id}`)).toEqual({ id: id.toLowerCase() });
+    expect(t("channel=facebook&externalId=1387320321131024_122096613885526563")).toEqual({ channel: "facebook", externalId: "1387320321131024_122096613885526563" });
+  });
+  it.each([
+    "", "id=not-a-uuid", `id=${id}&channel=facebook`, `id=${id}&externalId=1`, "channel=facebook", "externalId=1",
+    "channel=myspace&externalId=1", "channel=facebook&externalId=", `channel=facebook&externalId=${"x".repeat(201)}`,
+    "channel=facebook&externalId=1&account=a", `id=${id}&id=${id}`,
+  ])("rejects %s", s => expect(() => t(s)).toThrow(ListingsError));
 });
 
 describe("parseSummaryQuery", () => {

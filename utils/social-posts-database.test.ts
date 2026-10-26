@@ -6,10 +6,10 @@ import { readFileSync } from "node:fs";
 import mysql from "mysql2/promise";
 import { ListingsError } from "@/lib/listings";
 import {
-  SocialPost, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialSummaryRow,
+  SocialPost, SocialPostIngestInput, SocialPostIngestResult, SocialPostList, SocialPostTarget, SocialSummaryRow,
   parseSocialPostInput, parseSocialPostQuery, parseSummaryQuery,
 } from "@/lib/social-posts";
-import { listSocialPostsMySQL, summarizeSocialPostsMySQL, upsertSocialPostMySQL } from "@/utils/social-posts-database";
+import { deleteSocialPostMySQL, listSocialPostsMySQL, summarizeSocialPostsMySQL, upsertSocialPostMySQL } from "@/utils/social-posts-database";
 
 vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
 const exec = promisify(execFile);
@@ -101,6 +101,11 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
     }
     return { externalIds: data.map(item => item.post.externalId), total, data };
   };
+  // The deleted post, or null when nothing matched.
+  const remove = async (target: SocialPostTarget): Promise<SocialPost | null> => {
+    if (!pg) return deleteSocialPostMySQL(pool, target);
+    return (JSON.parse(await rpc("delete_design_social_post", target)) as { post: SocialPost | null }).post;
+  };
   const summary = async (params: Record<string, string> = {}): Promise<SocialSummaryRow[]> => {
     const filters = parseSummaryQuery(new URLSearchParams(params));
     if (!pg) return summarizeSocialPostsMySQL(pool, filters);
@@ -111,7 +116,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
     if (pg) {
       await pgSql(`CREATE DATABASE ${database}`, "postgres").catch((error: Error) => { if (!/already exists/.test(error.message)) throw error; });
       await pgSql("DO $$ BEGIN CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$; DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;");
-      // Upgrade a pre-ingest install, then apply 003 and 004 twice to prove rerunnability.
+      // Upgrade a pre-ingest install, then apply 003, 004 and 014 twice to prove rerunnability.
       const schema = readFileSync("init/postgres_tables.sql", "utf8").split("CREATE TABLE IF NOT EXISTS public.design_listings")[0]
         .replace('"externalId" bigint null,', '"externalId" bigint not null,')
         .replace(/^.*(?:"sourceImageId" bigint|sha256 text|source text).*\r?\n/gm, "");
@@ -119,6 +124,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
       for (let run = 0; run < 2; run++) {
         await pgSql(readFileSync("init/migrations/003_design_listings_postgres.sql", "utf8"));
         await pgSql(readFileSync("init/migrations/004_design_social_posts_postgres.sql", "utf8"));
+        await pgSql(readFileSync("init/migrations/014_design_social_posts_channels_postgres.sql", "utf8"));
       }
       await pgSql("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;");
     } else {
@@ -136,6 +142,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
       for (let run = 0; run < 2; run++) {
         await pool.query(readFileSync("init/migrations/003_design_listings_mysql.sql", "utf8"));
         await pool.query(readFileSync("init/migrations/004_design_social_posts_mysql.sql", "utf8"));
+        await pool.query(readFileSync("init/migrations/014_design_social_posts_channels_mysql.sql", "utf8"));
       }
     }
   }, 60000);
@@ -283,6 +290,107 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
     }, 60000);
   });
 
+  describe("facebook, tumblr and scheduled", () => {
+    const facebook = {
+      channel: "facebook", account: "threadquirk", variant: "default", externalId: "1387320321131024_122096613885526563",
+      url: "https://www.facebook.com/122096466255526563/posts/122096557161526563", publishedAt: "2026-10-24T18:41:00.000Z",
+    };
+    const tumblr = {
+      channel: "tumblr", account: "threadquirk", variant: "default", externalId: "831388572107063296",
+      url: "https://threadquirk.tumblr.com/post/831388572107063296", publishedAt: "2026-10-24T19:00:00.000Z",
+    };
+    const removedAt = "2026-10-26T08:00:00.000Z";
+
+    it("stores facebook and tumblr posts, and the table still rejects unknown channels and statuses", async () => {
+      expect((await ok(body({ ...facebook, status: "published" }))).post).toMatchObject({ channel: "facebook", externalId: facebook.externalId });
+      expect((await ok(body({ ...tumblr, status: "published" }))).post).toMatchObject({ channel: "tumblr", externalId: tumblr.externalId });
+      const insert = (channel: string, status: string) => execute(
+        `INSERT INTO design_social_posts (${["designId", "channel", "account", "variant", "externalId", "url", "status", "publishedAt"].map(name => pg ? `"${name}"` : `\`${name}\``).join(", ")}) VALUES ('${designIds.a}', '${channel}', 'a', 'v', 'raw-${channel}-${status}', 'https://x.example/1', '${status}', '2026-10-01 10:00:00')`);
+      await expect(insert("myspace", "published")).rejects.toThrow();
+      await expect(insert("facebook", "draft")).rejects.toThrow();
+      await insert("facebook", "scheduled");
+    });
+    it("creates a scheduled post without removedAt, and lets the planned time move", async () => {
+      const created = await upsert(body({ ...facebook, status: "scheduled" }));
+      expect(created.status).toBe(201);
+      expect(created.result!.post).toMatchObject({ status: "scheduled", removedAt: null });
+      expect(ms(created.result!.post.publishedAt)).toBe(Date.parse(facebook.publishedAt));
+      const moved = await upsert(body({ ...facebook, status: "scheduled", publishedAt: "2026-10-25T09:00:00.000Z" }));
+      expect(moved.status).toBe(200);
+      expect(ms(moved.result!.post.publishedAt)).toBe(Date.parse("2026-10-25T09:00:00.000Z"));
+      expect(await posts()).toHaveLength(1);
+    });
+    it("allows scheduled -> published and published -> removed, keeping one row", async () => {
+      await ok(body({ ...facebook, status: "scheduled" }));
+      const published = (await ok(body({ ...facebook, status: "published" }))).post;
+      expect(published).toMatchObject({ status: "published", removedAt: null });
+      const gone = (await ok(body({ ...facebook, status: "removed", removedAt }))).post;
+      expect(gone.status).toBe("removed");
+      expect(ms(gone.removedAt)).toBe(Date.parse(removedAt));
+      expect(await posts()).toHaveLength(1);
+    });
+    it("allows scheduled -> removed", async () => {
+      await ok(body({ ...tumblr, status: "scheduled" }));
+      const gone = (await ok(body({ ...tumblr, status: "removed", removedAt }))).post;
+      expect(gone.status).toBe("removed");
+      expect(ms(gone.removedAt)).toBe(Date.parse(removedAt));
+    });
+    it.each(["published", "removed"] as const)("rejects %s -> scheduled with 409 and leaves the row untouched", async from => {
+      await ok(body({ ...facebook, status: "published" }));
+      if (from === "removed") await ok(body({ ...facebook, status: "removed", removedAt }));
+      const [before] = await posts();
+      const outcome = await upsert(body({ ...facebook, status: "scheduled", caption: "changed" }));
+      expect(outcome.status).toBe(409);
+      expect(outcome.message).toMatch(/scheduled again/i);
+      expect(await posts()).toEqual([before]);
+    });
+    it("still rejects removed -> published", async () => {
+      await ok(body({ ...facebook, status: "scheduled" }));
+      await ok(body({ ...facebook, status: "removed", removedAt }));
+      expect((await upsert(body({ ...facebook, status: "published" }))).status).toBe(409);
+    });
+    it("filters, lists and summarizes scheduled posts", async () => {
+      await ok(body({ ...facebook, status: "scheduled" }));
+      await ok(body({ ...tumblr, status: "published" }));
+      expect((await list({ status: "scheduled" })).externalIds).toEqual([facebook.externalId]);
+      expect((await list({ channel: "tumblr" })).externalIds).toEqual([tumblr.externalId]);
+      expect(await summary()).toEqual([
+        { channel: "facebook", account: "threadquirk", status: "scheduled", count: 1 },
+        { channel: "tumblr", account: "threadquirk", status: "published", count: 1 },
+      ]);
+    });
+  });
+
+  describe("delete", () => {
+    const facebook = { channel: "facebook", account: "threadquirk", variant: "default", externalId: "1387320321131024_122096613885526563", url: "https://www.facebook.com/p/1" };
+    it("deletes by id, returns the row, and leaves other posts alone", async () => {
+      const mistake = (await ok(body(facebook))).post;
+      await ok(body({ externalId: "keep" }, { sha256: SHA_B }));
+      expect(await remove({ id: mistake.id })).toEqual(mistake);
+      expect((await posts()).map(row => row.externalId)).toEqual(["keep"]);
+    });
+    it("deletes by channel and externalId only on that channel", async () => {
+      const mistake = (await ok(body(facebook))).post;
+      await ok(body({ externalId: facebook.externalId }));
+      expect(await remove({ channel: "facebook", externalId: facebook.externalId })).toEqual(mistake);
+      expect((await posts()).map(row => row.channel)).toEqual(["pinterest"]);
+    });
+    it("returns null when nothing matches, deleting nothing", async () => {
+      await ok(body());
+      expect(await remove({ id: randomUUID() })).toBeNull();
+      expect(await remove({ channel: "facebook", externalId: "p1" })).toBeNull();
+      expect(await remove({ channel: "pinterest", externalId: "nope" })).toBeNull();
+      expect(await posts()).toHaveLength(1);
+    });
+    it("lets the same post be recorded again after the mark was deleted", async () => {
+      const first = (await ok(body({ status: "removed", removedAt: "2026-10-03T09:00:00.000Z" }))).post;
+      await remove({ id: first.id });
+      const again = await upsert(body());
+      expect(again.status).toBe(201);
+      expect(again.result!.post.status).toBe("published");
+    });
+  });
+
   describe("list and summary", () => {
     const seedPosts = async () => {
       const at = (day: number) => `2026-10-0${day}T10:00:00.000Z`;
@@ -395,6 +503,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("social posts 
       await expect(pgSql(`SET ROLE ${role}; SELECT upsert_design_social_post('{}')`)).rejects.toThrow(/permission denied/i);
       await expect(pgSql(`SET ROLE ${role}; SELECT list_design_social_posts('{}')`)).rejects.toThrow(/permission denied/i);
       await expect(pgSql(`SET ROLE ${role}; SELECT summarize_design_social_posts('{}')`)).rejects.toThrow(/permission denied/i);
+      await expect(pgSql(`SET ROLE ${role}; SELECT delete_design_social_post('{}')`)).rejects.toThrow(/permission denied/i);
     }
     expect(await pgSql("SET ROLE service_role; SELECT count(*) FROM design_social_posts")).toBe("1");
     expect((await list()).total).toBe(1);

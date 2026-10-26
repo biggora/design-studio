@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { upsertSocialPost, listSocialPosts } from "@/utils/database";
+import { upsertSocialPost, listSocialPosts, deleteSocialPost } from "@/utils/database";
 import { authorizeListingsRequest, ListingsError, listingsErrorResponse } from "@/lib/listings";
-import { parseSocialPostInput, parseSocialPostQuery } from "@/lib/social-posts";
+import { parseSocialPostInput, parseSocialPostQuery, parseSocialPostTarget } from "@/lib/social-posts";
 
 export const runtime = "nodejs";
 
@@ -21,6 +21,16 @@ export async function POST(request: Request) {
   try {
     const result = await upsertSocialPost(parseSocialPostInput(body));
     return NextResponse.json(result, { status: result.created ? 201 : 200, headers: { "Cache-Control": "no-store" } });
+  } catch (error) { return failure(error); }
+}
+
+export async function DELETE(request: Request) {
+  const denied = authorizeListingsRequest(request);
+  if (denied) return denied;
+  try {
+    const post = await deleteSocialPost(parseSocialPostTarget(new URL(request.url).searchParams));
+    if (!post) throw new ListingsError(404, "NOT_FOUND", "Social post not found");
+    return NextResponse.json({ deleted: true, post }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) { return failure(error); }
 }
 

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { ListingsError } from "@/lib/listings";
 import {
   SocialPost, SocialPostFilters, SocialPostIngestInput, SocialPostIngestResult, SocialPostList,
-  SocialSummaryFilters, SocialSummaryRow,
+  SocialPostTarget, SocialSummaryFilters, SocialSummaryRow,
 } from "@/lib/social-posts";
 
 const sqlTime = (iso: string) => new Date(iso).toISOString().slice(0, 23).replace("T", " ");
@@ -43,6 +43,9 @@ export async function upsertSocialPostMySQL(pool: mysql.Pool, input: SocialPostI
     const [existing] = await query("SELECT * FROM design_social_posts WHERE channel = ? AND externalId = ? FOR UPDATE", [p.channel, p.externalId]);
     if (existing && existing.designId !== design.id) conflict("Post belongs to another design", { designId: design.id, postDesignId: existing.designId });
     if (existing?.status === "removed" && p.status === "published") conflict("Removed post cannot be published again", { postId: existing.id });
+    if ((existing?.status === "published" || existing?.status === "removed") && p.status === "scheduled") {
+      conflict(`Post cannot be scheduled again once it is ${existing.status}`, { postId: existing.id });
+    }
     const slots = await query(
       "SELECT id FROM design_social_posts WHERE designId = ? AND channel = ? AND account = ? AND variant = ? AND externalId <> ? FOR UPDATE",
       [design.id, p.channel, p.account, p.variant, p.externalId]);
@@ -55,7 +58,7 @@ export async function upsertSocialPostMySQL(pool: mysql.Pool, input: SocialPostI
     }
     const fields = ["account = ?", "variant = ?", "url = ?", "status = ?", "`publishedAt` = ?", "updatedAt = UTC_TIMESTAMP(3)"];
     const values: unknown[] = [p.account, p.variant, p.url, p.status, sqlTime(p.publishedAt)];
-    if (p.status === "published") fields.push("`removedAt` = NULL");
+    if (p.status !== "removed") fields.push("`removedAt` = NULL");
     for (const key of ["linkUrl", "title", "caption", "hashtags", "imageUrl", "board", "removedAt", "extra"] as const) {
       const value = p[key];
       if (value === undefined) continue;
@@ -73,6 +76,22 @@ export async function upsertSocialPostMySQL(pool: mysql.Pool, input: SocialPostI
     await connection.rollback();
     const dbError = error as { code?: string };
     if (dbError.code === "ER_DUP_ENTRY" || dbError.code === "ER_LOCK_DEADLOCK") conflict("Unique post conflict; retry if another ingest is in progress");
+    throw error;
+  } finally { connection.release(); }
+}
+
+export async function deleteSocialPostMySQL(pool: mysql.Pool, target: SocialPostTarget): Promise<SocialPost | null> {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [rows] = "id" in target
+      ? await connection.query<mysql.RowDataPacket[]>("SELECT * FROM design_social_posts WHERE id = ? FOR UPDATE", [target.id])
+      : await connection.query<mysql.RowDataPacket[]>("SELECT * FROM design_social_posts WHERE channel = ? AND externalId = ? FOR UPDATE", [target.channel, target.externalId]);
+    if (rows.length) await connection.query("DELETE FROM design_social_posts WHERE id = ?", [rows[0].id]);
+    await connection.commit();
+    return rows.length ? mysqlSocialPostResponse(rows[0]) : null;
+  } catch (error) {
+    await connection.rollback();
     throw error;
   } finally { connection.release(); }
 }

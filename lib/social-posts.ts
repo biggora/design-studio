@@ -1,8 +1,9 @@
 import { httpUrl, invalid, isoTimestamp, strictObject, text } from "@/lib/listings";
 
-export const SOCIAL_CHANNELS = ["pinterest", "bluesky", "mastodon", "instagram", "threads", "reddit", "tiktok", "youtube", "x", "linkedin"] as const;
+export const SOCIAL_CHANNELS = ["pinterest", "bluesky", "mastodon", "instagram", "threads", "reddit", "tiktok", "youtube", "x", "linkedin", "facebook", "tumblr"] as const;
 export type SocialChannel = typeof SOCIAL_CHANNELS[number];
-export type SocialPostStatus = "published" | "removed";
+export const SOCIAL_STATUSES = ["scheduled", "published", "removed"] as const;
+export type SocialPostStatus = typeof SOCIAL_STATUSES[number];
 export type SocialPostInput = {
   channel: SocialChannel;
   account: string;
@@ -66,6 +67,7 @@ export type SocialPostList = {
   data: { post: SocialPost; design: { id: string; slug: string | null; title: string } }[];
   pagination: { page: number; limit: number; total: number };
 };
+export type SocialPostTarget = { id: string } | { channel: SocialChannel; externalId: string };
 export type SocialSummaryFilters = { since?: string; until?: string };
 export type SocialSummaryRow = { channel: SocialChannel; account: string; status: SocialPostStatus; count: number };
 
@@ -82,6 +84,8 @@ const CHANNEL_HOSTS: Record<SocialChannel, ((host: string) => boolean) | null> =
   youtube: onDomains("youtube.com", "youtu.be"),
   x: onDomains("x.com", "twitter.com"),
   linkedin: onDomains("linkedin.com"),
+  facebook: onDomains("facebook.com", "fb.com", "fb.me"),
+  tumblr: onDomains("tumblr.com"), // blogs live on <name>.tumblr.com
 };
 
 function oneOf<T extends string>(value: unknown, field: string, allowed: readonly T[]): T {
@@ -113,7 +117,7 @@ export function parseSocialPostInput(value: unknown): SocialPostIngestInput {
     variant: text(p.variant, "post.variant", 50),
     externalId: text(p.externalId, "post.externalId", 200),
     url: httpUrl(p.url, "post.url"),
-    status: oneOf(p.status, "post.status", ["published", "removed"] as const),
+    status: oneOf(p.status, "post.status", SOCIAL_STATUSES),
     publishedAt: isoTimestamp(p.publishedAt, "post.publishedAt"),
   };
   const matches = CHANNEL_HOSTS[post.channel];
@@ -128,7 +132,7 @@ export function parseSocialPostInput(value: unknown): SocialPostIngestInput {
   if (p.imageUrl !== undefined) post.imageUrl = httpUrl(p.imageUrl, "post.imageUrl");
   if (p.board !== undefined) post.board = text(p.board, "post.board", 200);
   if (p.removedAt !== undefined) {
-    if (post.status === "published") invalid("post.removedAt", "removedAt is not allowed while status is published");
+    if (post.status !== "removed") invalid("post.removedAt", "removedAt is only allowed when status is removed");
     post.removedAt = isoTimestamp(p.removedAt, "post.removedAt");
   } else if (post.status === "removed") invalid("post.removedAt", "removedAt is required when status is removed");
   if (p.extra !== undefined) {
@@ -168,7 +172,7 @@ export function parseSocialPostQuery(params: URLSearchParams): SocialPostFilters
   }
   if (params.has("channel")) filters.channel = oneOf(params.get("channel"), "channel", SOCIAL_CHANNELS);
   if (params.has("account")) filters.account = text(params.get("account"), "account", 100);
-  if (params.has("status")) filters.status = oneOf(params.get("status"), "status", ["published", "removed"] as const);
+  if (params.has("status")) filters.status = oneOf(params.get("status"), "status", SOCIAL_STATUSES);
   if (params.has("q")) {
     const q = params.get("q")!.trim();
     if (!q || q.length > 200) invalid("q", "Expected a non-empty string of at most 200 characters");
@@ -185,6 +189,18 @@ export function parseSocialPostQuery(params: URLSearchParams): SocialPostFilters
     filters.limit = Number(raw);
   }
   return filters;
+}
+
+export function parseSocialPostTarget(params: URLSearchParams): SocialPostTarget {
+  checkedQuery(params, ["id", "channel", "externalId"]);
+  if (params.has("id")) {
+    if (params.has("channel") || params.has("externalId")) invalid("query", "Provide either id or channel and externalId");
+    const id = params.get("id")!;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) invalid("id", "Expected a UUID");
+    return { id: id.toLowerCase() };
+  }
+  if (!params.has("channel") || !params.has("externalId")) invalid("query", "Provide id, or channel and externalId");
+  return { channel: oneOf(params.get("channel"), "channel", SOCIAL_CHANNELS), externalId: text(params.get("externalId"), "externalId", 200) };
 }
 
 export function parseSummaryQuery(params: URLSearchParams): SocialSummaryFilters {

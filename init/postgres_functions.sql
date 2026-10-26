@@ -225,8 +225,9 @@ $;
 REVOKE ALL ON FUNCTION public.set_design_cdn_image(JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.set_design_cdn_image(JSONB) TO service_role;
 
--- Invoker privileges, callable only by the service role. Records one published or
--- removed post per (channel, externalId); never relinks a post to another design.
+-- Invoker privileges, callable only by the service role. Records one scheduled,
+-- published or removed post per (channel, externalId); never relinks a post to another
+-- design. Status moves forward only: scheduled -> published | removed, published -> removed.
 CREATE OR REPLACE FUNCTION public.upsert_design_social_post(payload JSONB)
 RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
 AS $$
@@ -266,6 +267,10 @@ BEGIN
     RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'A removed post cannot be published again',
       DETAIL = jsonb_build_object('postId', entry.id)::TEXT;
   END IF;
+  IF entry.status IN ('published', 'removed') AND p->>'status' = 'scheduled' THEN
+    RAISE EXCEPTION USING ERRCODE = 'P0001', MESSAGE = 'Post cannot be scheduled again once it is ' || entry.status,
+      DETAIL = jsonb_build_object('postId', entry.id)::TEXT;
+  END IF;
   SELECT id INTO other_id FROM public.design_social_posts WHERE "designId" = target.id AND channel = channel_name
     AND account = p->>'account' AND variant = p->>'variant' AND "externalId" <> post_id;
   IF other_id IS NOT NULL THEN
@@ -279,7 +284,7 @@ BEGIN
     VALUES (target.id, channel_name, p->>'account', p->>'variant', post_id, p->>'url', p->>'linkUrl', p->>'title',
       p->>'caption', nullif(p->'hashtags', 'null'::JSONB), p->>'imageUrl', p->>'board', p->>'status',
       (p->>'publishedAt')::TIMESTAMPTZ,
-      CASE WHEN p->>'status' = 'published' THEN NULL ELSE (p->>'removedAt')::TIMESTAMPTZ END,
+      CASE WHEN p->>'status' = 'removed' THEN (p->>'removedAt')::TIMESTAMPTZ ELSE NULL END,
       nullif(p->'extra', 'null'::JSONB))
     RETURNING * INTO entry;
   ELSE
@@ -292,7 +297,7 @@ BEGIN
       hashtags = CASE WHEN p ? 'hashtags' THEN nullif(p->'hashtags', 'null'::JSONB) ELSE hashtags END,
       "imageUrl" = CASE WHEN p ? 'imageUrl' THEN p->>'imageUrl' ELSE "imageUrl" END,
       board = CASE WHEN p ? 'board' THEN p->>'board' ELSE board END,
-      "removedAt" = CASE WHEN p->>'status' = 'published' THEN NULL
+      "removedAt" = CASE WHEN p->>'status' <> 'removed' THEN NULL
         WHEN p ? 'removedAt' THEN (p->>'removedAt')::TIMESTAMPTZ ELSE "removedAt" END,
       extra = CASE WHEN p ? 'extra' THEN nullif(p->'extra', 'null'::JSONB) ELSE extra END,
       "updatedAt" = now()
@@ -313,6 +318,25 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.upsert_design_social_post(JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.upsert_design_social_post(JSONB) TO service_role;
+
+-- Hard-deletes one mark, addressed by {"id"} or by {"channel", "externalId"}; for marks
+-- recorded by mistake (a post taken down on the platform is status 'removed' instead).
+-- Returns {"post": <deleted row>}, or {"post": null} when nothing matched.
+CREATE OR REPLACE FUNCTION public.delete_design_social_post(identity JSONB)
+RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
+AS $$
+DECLARE
+  entry public.design_social_posts%ROWTYPE;
+BEGIN
+  DELETE FROM public.design_social_posts
+  WHERE CASE WHEN identity ? 'id' THEN id = (identity->>'id')::UUID
+    ELSE channel = identity->>'channel' AND "externalId" = identity->>'externalId' END
+  RETURNING * INTO entry;
+  RETURN jsonb_build_object('post', CASE WHEN entry.id IS NULL THEN NULL ELSE to_jsonb(entry) END);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.delete_design_social_post(JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.delete_design_social_post(JSONB) TO service_role;
 
 -- Filters: sha256, sourceImageId, channel, account, status, since/until (on publishedAt),
 -- q (case-insensitive substring of post title/caption or design title), page, limit.
