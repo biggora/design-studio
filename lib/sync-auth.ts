@@ -41,3 +41,25 @@ export function authorizeSyncRequest(request: Request): NextResponse | null {
 
   return null;
 }
+
+/** Article announcements are also managed by the existing listings client. */
+export function authorizeArticleRequest(request: Request): NextResponse | null {
+  const expected = [process.env.LISTINGS_API_TOKEN, process.env.SYNC_SECRET]
+    .filter((value): value is string => Boolean(value?.trim()));
+  if (expected.length === 0) {
+    return NextResponse.json(
+      { error: "Article API is not configured" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  const provided = getSecretFromRequest(request);
+  if (!provided || !expected.some((secret) => constantTimeCompare(provided, secret))) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  return null;
+}

@@ -1,4 +1,4 @@
-import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { authorizeArticleRequest } from "@/lib/sync-auth";
 import { ArticleScheduleError } from "@/lib/article-scheduling";
 import {
   articleScheduleFailure,
@@ -10,7 +10,7 @@ import { processArticleAnnouncements } from "@/utils/database";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   try {
     const limit = Number(new URL(request.url).searchParams.get("limit") ?? 25);
@@ -27,5 +27,5 @@ export async function POST(request: Request) {
   }
 }
 
-// Vercel Cron invokes GET. Authorization is still the existing SYNC_SECRET.
+// Vercel Cron invokes GET. Authorization uses the existing article API credentials.
 export const GET = POST;

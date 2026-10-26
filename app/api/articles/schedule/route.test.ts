@@ -35,6 +35,7 @@ const request = (
   });
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.stubEnv("LISTINGS_API_TOKEN", "");
   vi.stubEnv("SYNC_SECRET", "secret");
   read.mockResolvedValue([scheduled]);
   set.mockResolvedValue(scheduled);
@@ -43,7 +44,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 describe("private announcement scheduling APIs", () => {
   it.each([GET, PUT, DELETE, publish, cron, tick])(
-    "requires SYNC_SECRET before reading or writing",
+    "requires an existing API token before reading or writing",
     async (handler) => {
       expect((await handler(request({}, "wrong"))).status).toBe(401);
       expect(read).not.toHaveBeenCalled();
@@ -51,10 +52,24 @@ describe("private announcement scheduling APIs", () => {
       expect(process).not.toHaveBeenCalled();
     },
   );
-  it("fails closed when SYNC_SECRET is not configured", async () => {
+  it("fails closed when no article API token is configured", async () => {
     vi.stubEnv("SYNC_SECRET", "");
-    expect((await cron(request())).status).toBe(500);
+    vi.stubEnv("LISTINGS_API_TOKEN", "");
+    expect((await cron(request())).status).toBe(503);
     expect(process).not.toHaveBeenCalled();
+  });
+  it("accepts the existing listings API token", async () => {
+    vi.stubEnv("SYNC_SECRET", "");
+    vi.stubEnv("LISTINGS_API_TOKEN", "listings-secret");
+    const response = await GET(
+      request(
+        {},
+        "listings-secret",
+        "?blog=shop.tumblr.com&sourceArticleId=blg_test",
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(read).toHaveBeenCalledWith(target);
   });
   it("creates or moves a schedule in UTC and invalidates public discovery", async () => {
     const response = await PUT(request());

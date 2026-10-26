@@ -1,4 +1,4 @@
-import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { authorizeArticleRequest } from "@/lib/sync-auth";
 import {
   ArticleScheduleError,
   articleScheduleView,
@@ -16,7 +16,7 @@ import {
 } from "@/utils/database";
 
 export async function POST(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   try {
     const target = parseArticleTarget(await request.json());

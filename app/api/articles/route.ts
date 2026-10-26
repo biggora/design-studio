@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
-import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { authorizeArticleRequest } from "@/lib/sync-auth";
 import { parseArticleAnnouncement } from "@/lib/articles";
 import { upsertArticleAnnouncement } from "@/utils/database";
 import { parseArticleShowAt } from "@/lib/article-scheduling";
 
 export async function PUT(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   let article;
   let showAt: string | undefined;

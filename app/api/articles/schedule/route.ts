@@ -1,4 +1,4 @@
-import { authorizeSyncRequest } from "@/lib/sync-auth";
+import { authorizeArticleRequest } from "@/lib/sync-auth";
 import {
   articleScheduleView,
   ArticleScheduleError,
@@ -17,7 +17,7 @@ import {
 } from "@/utils/database";
 
 export async function GET(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   try {
     const params = new URL(request.url).searchParams;
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   try {
     const input = await request.json();
@@ -77,7 +77,7 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const denied = authorizeSyncRequest(request);
+  const denied = authorizeArticleRequest(request);
   if (denied) return denied;
   try {
     const row = await setArticleSchedule(

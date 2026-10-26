@@ -43,7 +43,8 @@ Authenticated `PUT /api/articles` accepts one JSON object:
 }
 ```
 
-Use `Authorization: Bearer <SYNC_SECRET>` or `x-sync-secret`. Success is
+Use `Authorization: Bearer <LISTINGS_API_TOKEN>` or `x-sync-secret`. The existing
+`SYNC_SECRET` is also accepted for compatibility. Success is
 `{"sourceArticleId":"blg_stable_id","saved":true}`. Unauthenticated requests return
 401; invalid input returns 400. No unauthenticated source-data GET endpoint exists.
 Identity is `(blog, sourceArticleId)`, independent of Tumblr ID changes. Repeated PUTs
@@ -56,8 +57,9 @@ The schedule controls **when the announcement appears on this website**. It does
 schedule, publish, edit or move the Tumblr article, Facebook announcement or X post.
 Keep the article's usual Tumblr workflow separate.
 
-All endpoints below require the existing `SYNC_SECRET`, using either
-`Authorization: Bearer <SYNC_SECRET>` or `x-sync-secret`. Schedule reads return
+All endpoints below accept the existing `LISTINGS_API_TOKEN`; the existing
+`SYNC_SECRET` is also accepted for compatibility. Send either as
+`Authorization: Bearer <token>` or `x-sync-secret`. Schedule reads return
 `Cache-Control: no-store`. There is no public schedule or draft-data API.
 
 | Endpoint | Action |
@@ -152,7 +154,7 @@ Use the existing self-hosted n8n scheduler for a simple no-new-subscription solu
 
 1. Schedule Trigger: every minute.
 2. HTTP Request: POST `https://<your-domain>/api/articles/process?limit=25`, no request body.
-3. Use an n8n Header Auth credential: `Authorization` = `Bearer <SYNC_SECRET>`.
+3. Use an n8n Header Auth credential: `Authorization` = `Bearer <LISTINGS_API_TOKEN>`.
    Store the secret in the credential, never in a public workflow export or URL.
 4. Add an IF node checking `failed > 0`, leading to Stop And Error, so Tumblr failures
    trigger the existing n8n error reporting even when the HTTP request succeeded. Also
@@ -164,7 +166,7 @@ securely on that server):
 
 ```sh
 curl --fail-with-body --max-time 65 -X POST \
-  -H "Authorization: Bearer $SYNC_SECRET" \
+  -H "Authorization: Bearer $LISTINGS_API_TOKEN" \
   "$SITE_URL/api/articles/process?limit=25"
 ```
 
@@ -180,8 +182,8 @@ records, so configuring the scheduler is required for unattended operation.
 
 If the existing Vercel account already supports minute cron, an optional alternative is
 `{"crons":[{"path":"/api/articles/process","schedule":"* * * * *"}]}` in vercel.json.
-Configure Vercel `CRON_SECRET` to exactly the same value as `SYNC_SECRET`; Vercel sends it
-as a Bearer header, and the existing authorization helper checks SYNC_SECRET. A cron User-Agent
+Configure Vercel `CRON_SECRET` to exactly the same value as `LISTINGS_API_TOKEN`; Vercel sends it
+as a Bearer header, and the article API accepts the existing listings token. A cron User-Agent
 or header alone is never authorization. See [Vercel Cron security](https://vercel.com/docs/cron-jobs/manage-cron-jobs#securing-cron-jobs).
 No Vercel cron file, external live workflow, account plan change or deployment is created here.
 
