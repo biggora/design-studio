@@ -150,8 +150,15 @@ CREATE TABLE IF NOT EXISTS public.article_announcements (
   revision CHAR(64) NOT NULL,
   "checkedAt" TIMESTAMPTZ,
   publication JSONB,
+  "showAt" TIMESTAMPTZ,
+  status VARCHAR(16) NOT NULL DEFAULT 'automatic',
+  "shownAt" TIMESTAMPTZ,
+  "scheduleRevision" VARCHAR(36) NOT NULL DEFAULT '',
+  "lastError" TEXT,
+  CONSTRAINT article_schedule_state_check CHECK (status IN ('automatic','scheduled','published','cancelled') AND (status <> 'scheduled' OR "showAt" IS NOT NULL)),
   PRIMARY KEY (blog, "sourceArticleId")
 );
+CREATE INDEX IF NOT EXISTS article_schedule_due ON public.article_announcements (status, "showAt");
 ALTER TABLE public.article_announcements ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.article_announcements FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE ON public.article_announcements TO service_role;

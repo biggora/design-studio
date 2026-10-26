@@ -50,6 +50,9 @@ describe.skipIf(!enabled)("article migrations on real PostgreSQL/MySQL", () => {
     pg(
       "DO $$ BEGIN CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role BYPASSRLS; EXCEPTION WHEN duplicate_object THEN NULL; END $$;",
     );
+    // These fixed disposable targets never use the project's .env or production database.
+    pg("DROP TABLE IF EXISTS public.article_announcements");
+    await pool.query("DROP TABLE IF EXISTS article_announcements");
   });
   afterAll(async () => {
     await pool?.end();
@@ -62,6 +65,52 @@ describe.skipIf(!enabled)("article migrations on real PostgreSQL/MySQL", () => {
         readFileSync("init/migrations/012_articles_mysql.sql", "utf8"),
       );
     }
+    pg(`INSERT INTO article_announcements ("sourceArticleId",blog,"tumblrPostId","tumblrUrl",title,excerpt,"imageUrl","imageSha256","imageAlt",revision,publication)
+      VALUES ('legacy','legacy.tumblr.com','1','https://legacy.tumblr.com/post/1/old','Old','Intro','https://images.test/old','${"a".repeat(64)}','Cover','${"b".repeat(64)}','{"title":"legacy"}')`);
+    await pool.query(
+      "INSERT INTO article_announcements (sourceArticleId,blog,tumblrPostId,tumblrUrl,title,excerpt,imageUrl,imageSha256,imageAlt,revision,publication) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+      [
+        "legacy",
+        "legacy.tumblr.com",
+        "1",
+        "https://legacy.tumblr.com/post/1/old",
+        "Old",
+        "Intro",
+        "https://images.test/old",
+        "a".repeat(64),
+        "Cover",
+        "b".repeat(64),
+        JSON.stringify({ title: "legacy" }),
+      ],
+    );
+    for (let n = 0; n < 2; n++) {
+      pg(
+        readFileSync(
+          "init/migrations/015_article_schedules_postgres.sql",
+          "utf8",
+        ),
+      );
+      await pool.query(
+        readFileSync("init/migrations/015_article_schedules_mysql.sql", "utf8"),
+      );
+    }
+    expect(
+      pg(
+        `SELECT status || ':' || ("showAt" IS NULL)::text || ':' || (publication->>'title') FROM article_announcements WHERE blog='legacy.tumblr.com'`,
+      ),
+    ).toBe("automatic:true:legacy");
+    const [legacy] = await pool.query<mysql.RowDataPacket[]>(
+      "SELECT status, showAt, publication FROM article_announcements WHERE blog='legacy.tumblr.com'",
+    );
+    expect(legacy[0]).toMatchObject({
+      status: "automatic",
+      showAt: null,
+      publication: { title: "legacy" },
+    });
+    pg("DELETE FROM article_announcements WHERE blog='legacy.tumblr.com'");
+    await pool.query(
+      "DELETE FROM article_announcements WHERE blog='legacy.tumblr.com'",
+    );
     expect(
       pg(
         "SELECT relrowsecurity FROM pg_class WHERE oid='public.article_announcements'::regclass",
@@ -95,7 +144,7 @@ describe.skipIf(!enabled)("article migrations on real PostgreSQL/MySQL", () => {
     for (const [key, value] of Object.entries({
       DATABASE_PROVIDER: "mysql",
       MYSQL_HOST: "127.0.0.1",
-        MYSQL_PORT: String(mysqlPort),
+      MYSQL_PORT: String(mysqlPort),
       MYSQL_USER: "root",
       MYSQL_PASSWORD: "articles-test",
       MYSQL_DATABASE: "articles_test",
@@ -134,6 +183,102 @@ describe.skipIf(!enabled)("article migrations on real PostgreSQL/MySQL", () => {
       expect(rows[0].title).toBe("Updated");
       expect(rows[0].checkedAt).toBeNull();
       expect(rows[0].publication).toEqual(publication);
+    } finally {
+      await db.closeDatabaseConnections();
+    }
+  });
+
+  it("uses PostgreSQL UTC timestamps and rejects stale/cancelled schedule releases", () => {
+    pg(
+      `UPDATE article_announcements SET status='scheduled', "showAt"='2099-10-26T12:30:00+02:00', "scheduleRevision"='one', publication=NULL WHERE blog='shop.tumblr.com';`,
+    );
+    expect(
+      pg(
+        `SELECT to_char("showAt" AT TIME ZONE 'UTC','YYYY-MM-DD HH24:MI:SS') FROM article_announcements WHERE blog='shop.tumblr.com'`,
+      ),
+    ).toBe("2099-10-26 10:30:00");
+    const guard = `WHERE blog='shop.tumblr.com' AND "sourceArticleId"='blg_test' AND "scheduleRevision"='one' AND status='scheduled' AND ("showAt" IS NULL OR "showAt"<=now())`;
+    expect(
+      pg(
+        `WITH changed AS (UPDATE article_announcements SET status='published' ${guard} RETURNING 1) SELECT count(*) FROM changed`,
+      ),
+    ).toBe("0");
+    pg(
+      `UPDATE article_announcements SET status='cancelled', "scheduleRevision"='two' WHERE blog='shop.tumblr.com'`,
+    );
+    expect(
+      pg(
+        `WITH changed AS (UPDATE article_announcements SET status='published' ${guard} RETURNING 1) SELECT count(*) FROM changed`,
+      ),
+    ).toBe("0");
+    pg(
+      `UPDATE article_announcements SET status='scheduled', "showAt"='2000-01-01T00:00:00Z', "scheduleRevision"='three' WHERE blog='shop.tumblr.com'`,
+    );
+    expect(
+      pg(
+        `WITH changed AS (UPDATE article_announcements SET status='published', "shownAt"=now(), publication='{"title":"released"}' ${guard.replace("'one'", "'three'")} RETURNING 1) SELECT count(*) FROM changed`,
+      ),
+    ).toBe("1");
+  });
+
+  it("controls a real MySQL schedule, preserves it on ingestion, and invalidates an in-flight check", async () => {
+    const db = await import("./database");
+    try {
+      const future = "2099-10-26T10:30:00.000Z";
+      const scheduled = await db.setArticleSchedule(
+        article,
+        "schedule",
+        future,
+      );
+      expect(scheduled).toMatchObject({
+        status: "scheduled",
+        showAt: future,
+        publication: null,
+      });
+      await db.upsertArticleAnnouncement({
+        ...article,
+        title: "Changed content",
+      });
+      expect((await db.fetchArticleAnnouncements(article))[0]).toMatchObject({
+        status: "scheduled",
+        showAt: future,
+      });
+      const captured = await db.setArticleSchedule(article, "now");
+      await db.setArticleSchedule(article, "cancel");
+      expect(
+        await db.saveArticlePublication(
+          captured,
+          {
+            ...article,
+            url: article.tumblrUrl,
+            publishedAt: new Date().toISOString(),
+          },
+          new Date().toISOString(),
+        ),
+      ).toBe(false);
+      expect((await db.fetchArticleAnnouncements(article))[0]).toMatchObject({
+        status: "cancelled",
+        publication: null,
+      });
+      const due = await db.setArticleSchedule(article, "now");
+      const now = new Date().toISOString();
+      expect(
+        await db.saveArticlePublication(
+          due,
+          { ...article, url: article.tumblrUrl, publishedAt: now },
+          now,
+        ),
+      ).toBe(true);
+      expect((await db.fetchArticleAnnouncements(article))[0]).toMatchObject({
+        status: "published",
+        shownAt: now,
+      });
+      await db.upsertArticleAnnouncement(article, future);
+      expect((await db.fetchArticleAnnouncements(article))[0]).toMatchObject({
+        status: "scheduled",
+        showAt: future,
+        publication: null,
+      });
     } finally {
       await db.closeDatabaseConnections();
     }

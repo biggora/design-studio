@@ -59,4 +59,21 @@ describe("PUT /api/articles", () => {
     expect(result.status).toBe(500);
     expect(await result.text()).not.toContain("private");
   });
+  it("atomically registers a future announcement with an explicit timezone", async () => {
+    expect(
+      (
+        await PUT(
+          request("secret", { ...body, showAt: "2099-10-26T12:00:00+02:00" }),
+        )
+      ).status,
+    ).toBe(200);
+    expect(save).toHaveBeenCalledWith(body, "2099-10-26T10:00:00.000Z");
+  });
+  it("rejects timezone-free scheduling without saving", async () => {
+    expect(
+      (await PUT(request("secret", { ...body, showAt: "2099-10-26T12:00:00" })))
+        .status,
+    ).toBe(400);
+    expect(save).not.toHaveBeenCalled();
+  });
 });

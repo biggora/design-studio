@@ -3,13 +3,18 @@ import { revalidatePath } from "next/cache";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 import { parseArticleAnnouncement } from "@/lib/articles";
 import { upsertArticleAnnouncement } from "@/utils/database";
+import { parseArticleShowAt } from "@/lib/article-scheduling";
 
 export async function PUT(request: Request) {
   const denied = authorizeSyncRequest(request);
   if (denied) return denied;
   let article;
+  let showAt: string | undefined;
   try {
-    article = parseArticleAnnouncement(await request.json());
+    const input = await request.json();
+    article = parseArticleAnnouncement(input);
+    if (Object.hasOwn(input, "showAt"))
+      showAt = parseArticleShowAt(input.showAt);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid article" },
@@ -17,7 +22,8 @@ export async function PUT(request: Request) {
     );
   }
   try {
-    await upsertArticleAnnouncement(article);
+    if (showAt === undefined) await upsertArticleAnnouncement(article);
+    else await upsertArticleAnnouncement(article, showAt);
     revalidatePath("/articles");
     revalidatePath("/sitemap.xml");
     return NextResponse.json(

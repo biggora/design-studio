@@ -22,7 +22,16 @@ export type ArticleRecord = ArticleAnnouncement & {
   revision: string;
   checkedAt: string | null;
   publication: PublishedArticle | null;
+  status?: ArticleStatus;
+  showAt?: string | null;
+  shownAt?: string | null;
+  scheduleRevision?: string;
+  lastError?: string | null;
 };
+
+export const ARTICLE_STATUSES = ["automatic", "scheduled", "published", "cancelled"] as const;
+export type ArticleStatus = (typeof ARTICLE_STATUSES)[number];
+export type ArticleTarget = Pick<ArticleAnnouncement, "blog" | "sourceArticleId">;
 
 export function articleSlug(value: string): string {
   return new URL(value).pathname.match(/^\/post\/\d+\/([^/]+)\/?$/)?.[1] ?? "";

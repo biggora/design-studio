@@ -25,9 +25,10 @@ import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
 import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
-import {createHash} from "node:crypto";
-import type {ArticleAnnouncement, ArticleRecord, PublishedArticle} from "@/lib/articles";
+import {createHash, randomUUID} from "node:crypto";
+import type {ArticleAnnouncement, ArticleRecord, ArticleTarget, PublishedArticle} from "@/lib/articles";
 import {resolveArticlePublications} from "@/lib/article-publication";
+import {articleIsDue, articleIsVisible, ArticleScheduleError, parseArticleShowAt} from "@/lib/article-scheduling";
 
 function requireArticleAccess() {
     if (getProvider() === "supabase" && !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -35,16 +36,22 @@ function requireArticleAccess() {
     }
 }
 
-export async function upsertArticleAnnouncement(article: ArticleAnnouncement): Promise<void> {
+export async function upsertArticleAnnouncement(article: ArticleAnnouncement, showAt?: string): Promise<void> {
     requireArticleAccess();
     const revision = createHash("sha256").update(JSON.stringify(article)).digest("hex");
+    const schedule = showAt !== undefined ? {
+        showAt: parseArticleShowAt(showAt), status: "scheduled", shownAt: null,
+        scheduleRevision: randomUUID(), publication: null, lastError: null,
+    } : {};
     if (getProvider() === "mysql") {
-        const fields = Object.keys(article);
+        const input = {...article, ...schedule, revision};
+        if (input.showAt) input.showAt = input.showAt.slice(0, 23).replace("T", " ");
+        const fields = Object.keys(input);
         await getMySQLPool().query(
-            `INSERT INTO article_announcements (${fields.map(f => `\`${f}\``).join(",")}, revision) VALUES (${fields.map(() => "?").join(",")}, ?)
-             ON DUPLICATE KEY UPDATE checkedAt = IF(revision = VALUES(revision), checkedAt, NULL),
-             ${fields.filter(f => f !== "blog" && f !== "sourceArticleId").map(f => `\`${f}\` = VALUES(\`${f}\`)`).join(",")}, revision = VALUES(revision)`,
-            [...Object.values(article), revision],
+            `INSERT INTO article_announcements (${fields.map(f => `\`${f}\``).join(",")}) VALUES (${fields.map(() => "?").join(",")})
+             ON DUPLICATE KEY UPDATE checkedAt = ${showAt !== undefined ? "NULL" : "IF(revision = VALUES(revision), checkedAt, NULL)"},
+             ${fields.filter(f => f !== "blog" && f !== "sourceArticleId" && f !== "revision").map(f => `\`${f}\` = VALUES(\`${f}\`)`).join(",")}, revision = VALUES(revision)`,
+            Object.values(input),
         );
         return;
     }
@@ -53,48 +60,90 @@ export async function upsertArticleAnnouncement(article: ArticleAnnouncement): P
         .select("revision,checkedAt").eq("blog", article.blog).eq("sourceArticleId", article.sourceArticleId).maybeSingle();
     if (readError) throw new Error("Failed to read article revision");
     const {error} = await getSupabase().from("article_announcements").upsert({
-        ...article, revision, checkedAt: existing?.revision === revision ? existing.checkedAt : null,
+        ...article, revision, checkedAt: showAt === undefined && existing?.revision === revision ? existing.checkedAt : null, ...schedule,
     }, {onConflict: "blog,sourceArticleId"});
     if (error) throw new Error("Failed to save article announcement");
 }
 
-export async function fetchArticleAnnouncements(): Promise<ArticleRecord[]> {
+function normalizeArticleRecord(row: Record<string, unknown>): ArticleRecord {
+    const iso = (value: unknown) => {
+        if (!value) return null;
+        const timestamp = String(value).replace(" ", "T");
+        return new Date(/(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp) ? timestamp : `${timestamp}Z`).toISOString();
+    };
+    return {...row, checkedAt: iso(row.checkedAt), showAt: iso(row.showAt), shownAt: iso(row.shownAt),
+        publication: typeof row.publication === "string" ? JSON.parse(row.publication) : row.publication,
+    } as ArticleRecord;
+}
+
+export async function fetchArticleAnnouncements(target?: ArticleTarget): Promise<ArticleRecord[]> {
     requireArticleAccess();
     if (getProvider() === "mysql") {
-        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>("SELECT * FROM article_announcements ORDER BY blog, sourceArticleId");
-        return rows.map(row => ({...row,
-            checkedAt: row.checkedAt ? new Date(`${String(row.checkedAt).replace(" ", "T")}Z`).toISOString() : null,
-            publication: typeof row.publication === "string" ? JSON.parse(row.publication) : row.publication,
-        })) as ArticleRecord[];
+        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(`SELECT * FROM article_announcements${target ? " WHERE blog = ? AND sourceArticleId = ?" : ""} ORDER BY blog, sourceArticleId`, target ? [target.blog, target.sourceArticleId] : []);
+        return rows.map(normalizeArticleRecord);
     }
     const rows: ArticleRecord[] = [];
     for (let offset = 0; ; offset += 1000) {
-        const {data, error} = await getSupabase().from("article_announcements").select("*")
-            .order("blog").order("sourceArticleId").range(offset, offset + 999);
+        let query = getSupabase().from("article_announcements").select("*");
+        if (target) query = query.eq("blog", target.blog).eq("sourceArticleId", target.sourceArticleId);
+        const {data, error} = await query.order("blog").order("sourceArticleId").range(offset, offset + 999);
         if (error) throw new Error("Failed to read article announcements");
-        rows.push(...data as ArticleRecord[]);
+        rows.push(...data.map(row => normalizeArticleRecord(row)));
         if (data.length < 1000) return rows;
     }
 }
 
-export async function saveArticlePublication(article: ArticleRecord, publication: PublishedArticle | null, checkedAt: string): Promise<void> {
+export async function setArticleSchedule(target: ArticleTarget, action: "schedule" | "cancel" | "now", showAt?: string): Promise<ArticleRecord> {
     requireArticleAccess();
+    const values = {
+        status: action === "cancel" ? "cancelled" : "scheduled",
+        showAt: action === "cancel" ? null : action === "now" ? new Date().toISOString() : parseArticleShowAt(showAt),
+        shownAt: null, publication: null, checkedAt: null, lastError: null, scheduleRevision: randomUUID(),
+    };
     if (getProvider() === "mysql") {
-        await getMySQLPool().query("UPDATE article_announcements SET publication = ?, checkedAt = ? WHERE blog = ? AND sourceArticleId = ? AND revision = ?",
-            [publication ? JSON.stringify(publication) : null, checkedAt.slice(0, 23).replace("T", " "), article.blog, article.sourceArticleId, article.revision]);
-        return;
+        const [result] = await getMySQLPool().query<mysql.ResultSetHeader>(
+            "UPDATE article_announcements SET status = ?, showAt = ?, shownAt = NULL, publication = NULL, checkedAt = NULL, lastError = NULL, scheduleRevision = ? WHERE blog = ? AND sourceArticleId = ?",
+            [values.status, values.showAt?.slice(0, 23).replace("T", " ") ?? null, values.scheduleRevision, target.blog, target.sourceArticleId]);
+        if (!result.affectedRows) throw new ArticleScheduleError("Article announcement not found", 404);
+        return (await fetchArticleAnnouncements(target))[0];
     }
-    const {error} = await getSupabase().from("article_announcements").update({publication, checkedAt})
-        .eq("blog", article.blog).eq("sourceArticleId", article.sourceArticleId).eq("revision", article.revision);
-    if (error) throw new Error("Failed to save article publication check");
+    const {data, error} = await getSupabase().from("article_announcements").update(values)
+        .eq("blog", target.blog).eq("sourceArticleId", target.sourceArticleId).select("*").maybeSingle();
+    if (error) throw new Error("Failed to change article schedule");
+    if (!data) throw new ArticleScheduleError("Article announcement not found", 404);
+    return normalizeArticleRecord(data);
 }
 
-/** Persistent verification TTL and last-good snapshots survive serverless restarts. */
-export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]> => {
-    const rows = await fetchArticleAnnouncements();
-    const due = rows.filter(row => !row.checkedAt || Date.now() - Date.parse(row.checkedAt) >= 300_000);
+/** Compare content AND scheduling revisions: a cancelled/moved check cannot release its stale snapshot. */
+export async function saveArticlePublication(article: ArticleRecord, publication: PublishedArticle | null, checkedAt: string, lastError: string | null = null): Promise<boolean> {
+    requireArticleAccess();
+    const status = article.status ?? "automatic";
+    const releasing = status === "scheduled" && publication !== null && lastError === null;
+    const nextStatus = releasing ? "published" : status;
+    const shownAt = releasing ? checkedAt : article.shownAt ?? null;
+    if (getProvider() === "mysql") {
+        const [result] = await getMySQLPool().query<mysql.ResultSetHeader>(
+            "UPDATE article_announcements SET publication = ?, checkedAt = ?, status = ?, shownAt = ?, lastError = ? WHERE blog = ? AND sourceArticleId = ? AND revision = ? AND scheduleRevision = ? AND status = ? AND (showAt IS NULL OR showAt <= ?)",
+            [publication ? JSON.stringify(publication) : null, checkedAt.slice(0, 23).replace("T", " "), nextStatus,
+                shownAt?.slice(0, 23).replace("T", " ") ?? null, lastError, article.blog, article.sourceArticleId, article.revision, article.scheduleRevision ?? "", status, checkedAt.slice(0, 23).replace("T", " ")]);
+        return result.affectedRows > 0;
+    }
+    const {data, error} = await getSupabase().from("article_announcements").update({publication, checkedAt, status: nextStatus, shownAt, lastError})
+        .eq("blog", article.blog).eq("sourceArticleId", article.sourceArticleId).eq("revision", article.revision)
+        .eq("scheduleRevision", article.scheduleRevision ?? "").eq("status", status)
+        .or(`showAt.is.null,showAt.lte.${checkedAt}`).select("sourceArticleId");
+    if (error) throw new Error("Failed to save article publication check");
+    return Boolean(data?.length);
+}
+
+export async function processArticleAnnouncements(options: {target?: ArticleTarget; limit?: number; includeScheduled?: boolean} = {}) {
+    const rows = await fetchArticleAnnouncements(options.target);
+    const now = Date.now();
+    const due = rows.filter(row => articleIsDue(row, now, options.includeScheduled ?? true))
+        .sort((a, b) => (a.checkedAt ?? "").localeCompare(b.checkedAt ?? ""))
+        .slice(0, options.limit ?? 25);
+    const result = {processed: due.length, published: 0, waiting: 0, failed: 0, superseded: 0, changed: 0};
     if (due.length) {
-        const checkedAt = new Date().toISOString();
         let verified: Map<string, PublishedArticle | null> | undefined;
         try {
             if (!process.env.TUMBLR_API_KEY) throw new Error("TUMBLR_API_KEY is not configured");
@@ -103,13 +152,29 @@ export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]
             // Never log request URLs: they carry the Tumblr API key.
             console.error("Article publication verification unavailable; keeping the last verified articles");
         }
+        const checkedAt = new Date().toISOString();
         for (const row of due) {
-            const publication = verified ? verified.get(`${row.blog}:${row.sourceArticleId}`) ?? null : row.publication;
-            await saveArticlePublication(row, publication, checkedAt);
-            row.publication = publication;
+            let publication = verified ? verified.get(`${row.blog}:${row.sourceArticleId}`) ?? null : row.status === "scheduled" ? null : row.publication;
+            if (publication && (row.status === "scheduled" || row.shownAt)) {
+                publication = {...publication, publishedAt: row.shownAt ?? checkedAt};
+            }
+            const saved = await saveArticlePublication(row, publication, checkedAt, verified ? null : "tumblr_verification_unavailable");
+            if (!saved) { result.superseded++; continue; }
+            if (!verified) result.failed++;
+            else if (!publication) result.waiting++;
+            else result.published++;
+            if (JSON.stringify(publication) !== JSON.stringify(row.publication)) result.changed++;
         }
     }
-    return rows.flatMap(row => row.publication ? [row.publication] : [])
+    return result;
+}
+
+/** Legacy reads retain their behavior; scheduled releases require the independent processor. */
+export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]> => {
+    await processArticleAnnouncements({includeScheduled: false});
+    // Read again so a concurrent cancellation/reschedule wins over a check that was in flight.
+    return (await fetchArticleAnnouncements()).filter(row => articleIsVisible(row))
+        .flatMap(row => row.publication ? [row.publication] : [])
         .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.sourceArticleId.localeCompare(b.sourceArticleId));
 });
 

@@ -118,5 +118,12 @@ CREATE TABLE IF NOT EXISTS article_announcements (
   revision CHAR(64) NOT NULL,
   checkedAt DATETIME(3) NULL,
   publication JSON NULL,
+  showAt DATETIME(3) NULL,
+  status VARCHAR(16) NOT NULL DEFAULT 'automatic',
+  shownAt DATETIME(3) NULL,
+  scheduleRevision VARCHAR(36) NOT NULL DEFAULT '',
+  lastError TEXT NULL,
+  CONSTRAINT article_schedule_state_check CHECK (status IN ('automatic','scheduled','published','cancelled') AND (status <> 'scheduled' OR showAt IS NOT NULL)),
+  INDEX article_schedule_due (status, showAt),
   PRIMARY KEY (blog, sourceArticleId)
 );
