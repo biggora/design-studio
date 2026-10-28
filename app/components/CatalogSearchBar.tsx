@@ -86,6 +86,7 @@ export function CatalogSearchBar({
       </form>
       <Select
         name="collection"
+        aria-label="Filter by collection"
         value={collection}
         onChange={handleCollectionChange}
         className="w-full md:w-auto"

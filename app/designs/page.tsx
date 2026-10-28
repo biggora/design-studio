@@ -164,11 +164,12 @@ export default async function DesignFolio(
             {/* 2-up on phones: ~4 prints per screen instead of one; the compact
                 card drops description/CTA there so the title carries the tile. */}
             <CardGrid className="mb-8 grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {designs.map((design: Design) => (
+              {designs.map((design: Design, index: number) => (
                 <DesignCard
                   key={design.id}
                   design={design}
                   compactOnMobile
+                  priority={index < 4}
                   showCollection={!selectedCollection}
                   collectionLabels={collectionNames}
                 />

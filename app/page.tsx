@@ -79,16 +79,14 @@ function ArtCard({ design, caption, priority }: { design: Design; caption?: stri
       <AccentLink
         href={designPath(design)}
         className={cn("relative block overflow-hidden rounded-lg", focusRingClasses)}
-        tabIndex={-1}
-        aria-hidden="true"
       >
         {/* No fixed aspect box: the frame hugs the picture's own ratio — the landscape CDN
             mockup, or a taller marketplace fallback — so nothing ever letterboxes. */}
         <DesignImage
           design={design}
-          alt=""
+          alt={design.title}
           priority={priority}
-          sizes="(max-width: 1024px) 100vw, 40vw"
+          sizes="(min-width: 1280px) 422px, (min-width: 1024px) 381px, (min-width: 480px) 422px, calc(100vw - 58px)"
           className="block w-full h-auto"
           orientation="landscape"
         />
@@ -241,7 +239,12 @@ export default async function Home() {
           </div>
           <CardGrid columns={3}>
             {featured.map((design) => (
-              <DesignCard key={design.id} design={design} collectionLabels={collectionNames} />
+              <DesignCard
+                key={design.id}
+                design={design}
+                collectionLabels={collectionNames}
+                sizes="(min-width: 1536px) 441px, (min-width: 1280px) 356px, (min-width: 1024px) 270px, (min-width: 768px) 314px, (min-width: 640px) 250px, calc(100vw - 66px)"
+              />
             ))}
           </CardGrid>
         </Band>

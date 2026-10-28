@@ -14,11 +14,15 @@ type DesignCardProps = {
   /** Hide the collection caption (e.g. inside a section already titled by that collection). */
   showCollection?: boolean;
   compactOnMobile?: boolean;
+  /** Start first-screen artwork immediately; later cards stay lazy. */
+  priority?: boolean;
+  /** Override the default five-column catalog ladder (e.g. home's three-column grid). */
+  sizes?: string;
   /** Raw collection name → canonical display name (curated heading). */
   collectionLabels?: Map<string, string>;
 };
 
-export function DesignCard({ design, showCollection = true, compactOnMobile = false, collectionLabels }: DesignCardProps) {
+export function DesignCard({ design, showCollection = true, compactOnMobile = false, priority, sizes, collectionLabels }: DesignCardProps) {
   const collectionLabel =
     (design.collection && collectionLabels?.get(design.collection)) || design.collection;
 
@@ -29,7 +33,6 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
           href={designPath(design)}
           className={cn("block overflow-hidden rounded-md", focusRingClasses)}
           tabIndex={-1}
-          aria-hidden="true"
         >
           <div
             className="relative w-full aspect-[3/4]"
@@ -37,9 +40,11 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
           >
             <DesignImage
               design={design}
-              alt=""
+              alt={design.title}
               fill
-              sizes={`(max-width: 640px) ${compactOnMobile ? "50vw" : "100vw"}, (max-width: 768px) 50vw, (max-width: 1280px) 33vw, 30vw`}
+              priority={priority}
+              // Container caps, gutters, grid gaps and card padding from PageShell/CardGrid.
+              sizes={sizes ?? `(min-width: 1536px) 242px, (min-width: 1280px) 190px, (min-width: 1024px) 188px, (min-width: 768px) 190px, (min-width: 640px) 250px, ${compactOnMobile ? "calc(50vw - 48px)" : "calc(100vw - 66px)"}`}
               className="object-cover object-center transition-transform duration-300 ease-out group-hover:scale-[1.4]"
             />
           </div>

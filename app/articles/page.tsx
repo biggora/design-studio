@@ -61,7 +61,7 @@ export default async function ArticlesPage({ searchParams }: Props) {
               <article className="flex h-full flex-col overflow-hidden rounded-xl border border-border bg-surface">
                 <Image
                   src={article.imageUrl}
-                  alt={article.imageAlt}
+                  alt={article.imageAlt || article.title}
                   width={1200}
                   height={630}
                   loading={index < 3 ? "eager" : "lazy"}

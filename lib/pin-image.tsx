@@ -89,7 +89,7 @@ export async function renderPinImage({ image, title, backgroundColor }: PinImage
           {/* Satori renders this element itself — next/image does not apply inside ImageResponse. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            alt=""
+            alt={title}
             src={`data:image/png;base64,${source.toString("base64")}`}
             style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
           />

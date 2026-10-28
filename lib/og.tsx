@@ -99,7 +99,7 @@ function Wordmark({ siteName, logoDataUrl }: { siteName: string; logoDataUrl: st
     <div style={{ display: "flex", alignItems: "center", fontSize: 28, fontWeight: 700, color: BONE, letterSpacing: -0.5, fontFamily: "Poppins" }}>
       {logoDataUrl && (
         // eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>; next/image does not apply
-        <img src={logoDataUrl} alt="" width={48} height={48} style={{ borderRadius: 10, marginRight: 14 }} />
+        <img src={logoDataUrl} alt={`${siteName} logo`} width={48} height={48} style={{ borderRadius: 10, marginRight: 14 }} />
       )}
       {siteName}
     </div>
@@ -204,7 +204,7 @@ function InitialPanel({ siteName, logoDataUrl }: { siteName: string; logoDataUrl
     <VisualPanel>
       {logoDataUrl ? (
         // eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>; next/image does not apply
-        <img src={logoDataUrl} alt="" width={300} height={300} style={{ borderRadius: 16 }} />
+        <img src={logoDataUrl} alt={`${siteName} logo`} width={300} height={300} style={{ borderRadius: 16 }} />
       ) : (
         <div style={{ display: "flex", fontSize: 180, fontWeight: 700, color: EMBER, fontFamily: "Poppins" }}>{initial}</div>
       )}
@@ -326,7 +326,7 @@ export function DesignCard({ title, description, siteName, domain, label, imageD
           {/* eslint-disable-next-line @next/next/no-img-element -- satori renders plain <img>; next/image does not apply */}
           <img
             src={imageDataUrl}
-            alt=""
+            alt={title}
             width={300}
             height={412}
             style={{ objectFit: "contain" }}

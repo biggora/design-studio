@@ -32,7 +32,7 @@ describe("DesignThumbs", () => {
     const $ = load(renderToStaticMarkup(
       <DesignThumbs designs={[cdnDesign("a", 1024, 1536), cdnDesign("b", 1122, 1402), remoteDesign("c")]} />,
     ));
-    const tiles = $("[aria-hidden='true'] > div");
+    const tiles = $("img").parent();
     expect(tiles).toHaveLength(3);
     tiles.each((_, tile) => {
       const tileClasses = ($(tile).attr("class") ?? "").split(/\s+/);

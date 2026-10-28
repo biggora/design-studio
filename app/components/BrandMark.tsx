@@ -30,7 +30,7 @@ export function BrandMark({ siteLogo, name, className }: BrandMarkProps) {
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
-        alt=""
+        alt={`${name} logo`}
         onError={() => setFailed(true)}
         className={cn("h-8 w-8 shrink-0 rounded-lg object-cover", className)}
       />

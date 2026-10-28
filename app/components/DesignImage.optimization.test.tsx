@@ -13,6 +13,14 @@ const design = {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("product mockups with the real Next.js Image component", () => {
+  it("loads priority remote artwork eagerly with high fetch priority", () => {
+    vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
+    const html = renderToStaticMarkup(<DesignImage design={design} alt="Artwork" priority />);
+    expect(html).toContain('loading="eager"');
+    expect(html).toMatch(/fetchPriority="high"/i);
+    expect(html).toContain("/_next/image?");
+  });
+
   it.each(["hat", "mug", "mousepad"])(
     "loads %s directly without optimizer URLs",
     (product) => {

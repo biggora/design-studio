@@ -69,6 +69,7 @@ export function DesignImage({ design, alt, className, sizes, priority, fill = fa
           height={source.height}
           alt={alt}
           loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
           decoding="async"
           className={cn(fill && "absolute inset-0 h-full w-full", className)}
         />
@@ -86,7 +87,8 @@ export function DesignImage({ design, alt, className, sizes, priority, fill = fa
         sizes={sizes}
         width={fill ? undefined : width ?? designCardWidth}
         height={fill ? undefined : height ?? designCardHeight}
-        priority={priority}
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         placeholder="blur"
         blurDataURL={imageBlurPlaceholder}
         className={className}

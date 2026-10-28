@@ -31,7 +31,7 @@ export function CookieBanner() {
             href="/privacy-policy"
             className="underline hover:text-primary-foreground/70"
           >
-            Learn more
+            Privacy policy
           </Link>
         </p>
         <div className="flex items-center gap-2 shrink-0">
