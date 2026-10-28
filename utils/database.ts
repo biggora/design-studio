@@ -24,6 +24,7 @@ import {hasPinImage, normalizeCdnArtworkOptions, normalizeCdnImageMockups} from 
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
+import {matchesGiftPage, giftPageTopic, normalizeGiftTopics, selectGiftSections, isGiftTopic, type GiftTopic, type GiftCandidate, type GiftDesignSection} from "@/lib/gift-selection";
 import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
 import {createHash, randomUUID} from "node:crypto";
 import type {ArticleAnnouncement, ArticleRecord, ArticleTarget, PublishedArticle} from "@/lib/articles";
@@ -453,6 +454,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         cdnImage: normalizeCdnArtworkOptions(row.cdnImage),
         pinterestImage: normalizePinterestImage(row.pinterestImage),
         ogImage: normalizeOgImage(row.ogImage),
+        giftTopics: normalizeGiftTopics(row.giftTopics),
         props: row.props as object | undefined,
     };
 }
@@ -839,6 +841,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         cdnImage: normalizeCdnArtworkOptions(item.cdnImage),
         pinterestImage: normalizePinterestImage(item.pinterestImage),
         ogImage: normalizeOgImage(item.ogImage),
+        giftTopics: normalizeGiftTopics(item.giftTopics),
         props: item.props as object | undefined,
     };
 }
@@ -1146,13 +1149,89 @@ export async function fetchFeaturedCollections(value: SiteConfig["collectionPage
     return results.filter(page => page.total > 0);
 }
 
-/** Gift pages with at least one nonempty section collection; counts are looked up once per collection. */
+/** Per-request snapshot shared by gift pages, thumbnails and discovery. No fixed recent-item window:
+ * an older relevant print must survive an arbitrary number of unrelated new uploads. */
+const loadGiftDesigns = cache(async (): Promise<GiftCandidate[]> => {
+    // Do not pull large frozen OG/Pinterest specs, descriptions or image URLs just to
+    // decide which pages are live. Load complete rows only for the selected cards.
+    const fields = "id,title,keywords,giftTopics,active,collection,createdAt";
+    const designs = new Map<string, GiftCandidate>();
+    for (let offset = 0; ; offset += 250) {
+        let rows: Record<string, unknown>[];
+        if (getProvider() === "supabase") {
+            const {data, error} = await getSupabase().from("designs").select(fields).eq("active", true)
+                .order("id").range(offset, offset + 249);
+            if (error) throw new Error("Failed to read gift selection metadata", {cause: error});
+            rows = data ?? [];
+        } else {
+            [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
+                "SELECT id,title,keywords,giftTopics,active,collection,createdAt FROM designs WHERE active = TRUE ORDER BY id LIMIT 250 OFFSET ?", [offset]);
+        }
+        for (const row of rows) designs.set(row.id as string, {
+            id: row.id as string, title: row.title as string, keywords: (row.keywords as string) ?? "",
+            collection: normalizeCollection(row.collection), active: normalizeActive(row.active),
+            giftTopics: normalizeGiftTopics(row.giftTopics),
+            createdAt: row.createdAt instanceof Date ? row.createdAt.toISOString() : String(row.createdAt ?? ""),
+        });
+        if (rows.length < 250) break;
+    }
+    return [...designs.values()].filter(design => design.active !== false)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id));
+});
+
+async function loadSelectedGiftDesigns(ids: string[]): Promise<Design[]> {
+    const designs: Design[] = [];
+    for (let offset = 0; offset < ids.length; offset += 100) {
+        const chunk = ids.slice(offset, offset + 100);
+        if (getProvider() === "supabase") {
+            const {data, error} = await getSupabase().from("designs").select("*").eq("active", true).in("id", chunk);
+            if (error) throw new Error("Failed to read selected gift designs", {cause: error});
+            designs.push(...(data ?? []).map(mapSupabaseRowToDesign));
+        } else {
+            const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>("SELECT * FROM designs WHERE active = TRUE AND id IN (?)", [chunk]);
+            designs.push(...rows.map(mapRowToDesign));
+        }
+    }
+    const order = new Map(ids.map((id, index) => [id, index]));
+    return designs.filter(design => design.active !== false).sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+}
+
+export async function fetchGiftPageSections(page: GiftPage, limit = 8): Promise<GiftDesignSection[]> {
+    if (!giftPageTopic(page)) return [];
+    const designs = (await loadGiftDesigns()).filter(design => matchesGiftPage(design, page));
+    // Bound URL/IN-list size and PostgREST result size for membership lookups.
+    const memberships = new Map<string, string[]>();
+    for (let offset = 0; offset < designs.length; offset += 100) {
+        for (const [id, titles] of await fetchDesignMemberships(designs.slice(offset, offset + 100))) memberships.set(id, titles);
+    }
+    const sections = selectGiftSections(page, designs, memberships, Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 8)));
+    const full = new Map((await loadSelectedGiftDesigns(sections.flatMap(section => section.designs.map(design => design.id))))
+        .filter(design => matchesGiftPage(design, page)).map(design => [design.id, design]));
+    return sections.map(section => ({...section, designs: section.designs.flatMap(design => full.get(design.id) ? [full.get(design.id)!] : [])}))
+        .filter(section => section.designs.length);
+}
+
+/** A page is live only when it has a subject match, not merely a nonempty collection. */
 export async function fetchLiveGiftPages(value: SiteConfig["giftPages"]): Promise<GiftPage[]> {
-    const pages = getGiftPages(value);
-    const collections = [...new Set(pages.flatMap(page => page.sections.map(section => section.collection)))];
-    const totals = new Map(await Promise.all(collections.map(async collection =>
-        [collection, (await fetchDesigns(1, "", collection, 1)).total] as const)));
-    return pages.filter(page => page.sections.some(section => (totals.get(section.collection) ?? 0) > 0));
+    const pages = getGiftPages(value).filter(page => giftPageTopic(page));
+    if (!pages.length) return [];
+    const designs = await loadGiftDesigns();
+    return pages.filter(page => designs.some(design => matchesGiftPage(design, page)));
+}
+
+/** Manual gift markers are independent of marketplace metadata and image assignments. */
+export async function setDesignGiftTopics(id: string, topics: GiftTopic[] | null): Promise<void> {
+    if (topics !== null && (!Array.isArray(topics) || !topics.every(isGiftTopic))) throw new Error("Invalid gift topics");
+    const giftTopics = topics === null ? null : [...new Set(topics)];
+    if (getProvider() === "mysql") {
+        const [result] = await getMySQLPool().query<mysql.ResultSetHeader>(
+            "UPDATE designs SET giftTopics = ? WHERE id = ?", [giftTopics === null ? null : JSON.stringify(giftTopics), id]);
+        if (!result.affectedRows) throw new Error("Design not found");
+    } else {
+        const {data, error} = await getSupabase().from("designs").update({giftTopics}).eq("id", id).select("id");
+        if (error) throw new Error("Failed to save gift topics", {cause: error});
+        if (!data?.length) throw new Error("Design not found or write denied");
+    }
 }
 
 /** Add reviewed themes without changing marketplace memberships or other props. */
@@ -1411,64 +1490,23 @@ export async function fetchCollectionFeedDesigns(
     return finalize(designs);
 }
 
-/** Designs of any of the given collections for a gift RSS feed: deduplicated by id, newest first,
- * with the same eligibility as the collection feeds (marketplace link, mockup or CDN image).
+/** Subject-matched designs for a gift RSS feed, newest first,
+ * with the same image/link eligibility as the collection feeds.
  * Deliberately skips the one-feed-per-design assignment: gift feeds overlap collection feeds. */
-export async function fetchGiftFeedDesigns(collectionTitles: readonly string[], limit: number): Promise<FeedDesigns> {
-    const titles = [...new Set(collectionTitles)];
-    if (!titles.length) return {designs: [], earliestListingAt: {}};
+export async function fetchGiftFeedDesigns(page: GiftPage, limit: number): Promise<FeedDesigns> {
+    if (!giftPageTopic(page)) return {designs: [], earliestListingAt: {}};
     const safeLimit = Math.max(1, Math.min(100, Number.isInteger(limit) ? limit : 100));
-    const fetchLimit = Math.min(safeLimit * 3, 300);
-
-    const finalize = async (rows: Design[]): Promise<FeedDesigns> => {
-        const designs = [...new Map(rows.map(design => [design.id, design])).values()]
-            .filter(design => hasMarketplaceLink(design) && hasPinImage(design))
-            .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || b.id.localeCompare(a.id))
-            .slice(0, safeLimit);
-        return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
-    };
-
-    if (getProvider() === "supabase") {
-        const client = getSupabase();
-        const run = async (legacy: boolean) => {
-            const base = legacy
-                ? client.from("designs").select("*").eq("active", true).in("collection", titles)
-                : client.from("designs").select("*, design_collections!inner(collections!inner(title))")
-                    .eq("active", true)
-                    .in("design_collections.collections.title", titles);
-            return base.or("props->>mockup_tshirt.not.is.null,cdnImage.not.is.null,pinterestImage.not.is.null")
-                .order("createdAt", {ascending: false}).order("id", {ascending: false}).range(0, fetchLimit - 1);
-        };
-        const joined = await run(false);
-        const response = joined.error || !joined.data?.length ? await run(true) : joined;
-        if (response.error) {
-            console.error("Error fetching gift feed designs:", response.error);
-            return {designs: [], earliestListingAt: {}};
-        }
-        return finalize((response.data ?? []).map(row => mapSupabaseRowToDesign(row as Record<string, unknown>)));
-    }
-
-    try {
-        const [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
-            `SELECT d.* FROM designs d
-             WHERE d.active = TRUE
-               AND EXISTS (SELECT 1 FROM design_collections dc JOIN collections c ON c.id = dc.collectionId
-                           WHERE dc.designId = d.id AND c.title IN (?))
-               AND (JSON_EXTRACT(d.props, '$.mockup_tshirt') IS NOT NULL OR d.cdnImage IS NOT NULL OR d.pinterestImage IS NOT NULL)
-             ORDER BY d.createdAt DESC, d.id DESC LIMIT ?`,
-            [titles, fetchLimit],
-        );
-        return finalize(rows.map(mapRowToDesign));
-    } catch (err) {
-        console.error("Error fetching gift feed designs:", err);
-        return {designs: [], earliestListingAt: {}};
-    }
+    const candidates = (await loadGiftDesigns()).filter(design => matchesGiftPage(design, page));
+    const designs = (await loadSelectedGiftDesigns(candidates.map(design => design.id)))
+        .filter(design => matchesGiftPage(design, page) && hasMarketplaceLink(design) && hasPinImage(design))
+        .slice(0, safeLimit);
+    return {designs, earliestListingAt: await fetchEarliestListingAt(designs)};
 }
 
 // Collection titles per design, for the one-feed-per-design rule. Fail-safe: when the
 // lookup fails, or a design has no join rows (legacy installs), its membership is just
 // its primary `collection` label — a design is never placed in more feeds than it was.
-async function fetchDesignMemberships(designs: Design[]): Promise<Map<string, string[]>> {
+async function fetchDesignMemberships(designs: Pick<Design, "id" | "collection">[]): Promise<Map<string, string[]>> {
     const memberships = new Map<string, string[]>();
     if (!designs.length) return memberships;
     const ids = designs.map(design => design.id);

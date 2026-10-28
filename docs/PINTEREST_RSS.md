@@ -206,8 +206,9 @@ eligible designs.
 ### 1.5 Gift page feeds (not for Pinterest boards)
 
 - `GET /feeds/gifts/{gift-slug}.xml` — same item format as the collection
-  feeds, for each page in `studio.giftPages`: the union of the designs of all
-  its section collections, deduplicated, newest first, at most 100.
+  feeds, for each page in `studio.giftPages`: active designs matching its
+  occasion/recipient rule, independently of collections, newest first, at most 100.
+  Selection matches the gift page and index thumbnails; see [GIFT_SELECTION.md](GIFT_SELECTION.md).
 - `GET /feeds/gifts.xml` — index of the gift page feeds. They are not listed in
   `/feeds/pinterest.xml`.
 

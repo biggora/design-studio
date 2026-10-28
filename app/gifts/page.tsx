@@ -1,5 +1,5 @@
 import { Metadata } from "next";
-import { getSiteConfig, fetchLiveGiftPages, fetchDesigns } from "@/utils/database";
+import { getSiteConfig, fetchLiveGiftPages, fetchGiftPageSections } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
@@ -26,13 +26,10 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function GiftsIndex() {
   const config = await getSiteConfig();
   const ordered = orderGiftPages(await fetchLiveGiftPages(config.giftPages));
-  // Thumbs come from each page's first section — the primary interest — so the
-  // index card previews the artwork instead of listing text alone.
+  // Use the same eligible prints as the destination, including when its first section is empty.
   const pages = await Promise.all(ordered.map(async (page) => ({
     ...page,
-    thumbs: page.sections[0]
-      ? (await fetchDesigns(1, "", page.sections[0].collection, 3)).designs
-      : [],
+    thumbs: (await fetchGiftPageSections(page, 3)).flatMap(section => section.designs).slice(0, 3),
   })));
   const siteUrl = `https://${config.domain}`;
 

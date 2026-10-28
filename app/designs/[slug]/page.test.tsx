@@ -89,20 +89,20 @@ describe("non-Redbubble design page", () => {
       position: "secondary",
     });
   });
-  it("uses the collection in breadcrumbs and alt text, and links matching gift pages", async () => {
+  it("uses the collection in breadcrumbs and alt text, and links only subject-matched gift pages", async () => {
     const original = { collection: design.collection, props: design.props };
     design.collection = "Cat lovers";
     design.props = { curatedCollections: ["Programming"] };
     Object.assign(config, {
       giftPages: [
-        { slug: "devs", title: "Gifts for Devs", description: "D", intro: "I", sections: [{ collection: "Programming", heading: "H" }] },
-        { slug: "other", title: "Other", description: "D", intro: "I", sections: [{ collection: "Plants", heading: "H" }] },
+        { slug: "pets", topic: "pet-lovers", title: "Pet Gifts", description: "D", intro: "I", sections: [{ collection: "Pets", heading: "H" }] },
+        { slug: "other", topic: "developers", title: "Other", description: "D", intro: "I", sections: [{ collection: "Programming", heading: "H" }] },
       ],
     });
     try {
       const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
       expect(html).toContain('alt="Space cat – Cat lovers design"');
-      expect(html).toContain('href="/gifts/devs"');
+      expect(html).toContain('href="/gifts/pets"');
       expect(html).toContain("Gift ideas:");
       expect(html).not.toContain("/gifts/other");
       const ld = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);

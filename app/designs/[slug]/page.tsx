@@ -27,8 +27,9 @@ import { MobileBuyBar } from "@/app/components/MobileBuyBar";
 import { AccentLink } from "@/app/components/AccentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { buttonVariants } from "@/components/ui/button";
-import { collectionPath, curatedCollectionTitles, collectionDisplayNames } from "@/lib/collections";
+import { collectionPath, collectionDisplayNames } from "@/lib/collections";
 import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
+import { matchesGiftPage } from "@/lib/gift-selection";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -133,9 +134,8 @@ export default async function DesignDetails(
   const collectionQuery = collectionParams.toString();
   const collectionUrl = collectionQuery ? `/designs?${collectionQuery}` : "/designs";
 
-  const designCollections = [design.collection, ...curatedCollectionTitles(design.props)].filter(Boolean);
   const giftLinks = orderGiftPages(getGiftPages(config.giftPages)).filter((page) =>
-    page.sections.some((section) => designCollections.includes(section.collection)),
+    matchesGiftPage(design, page),
   );
 
   // Only the products the marketplace actually lists for this design — the sync

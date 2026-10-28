@@ -1,3 +1,5 @@
+import {isGiftTopic, type GiftTopic} from "@/lib/gift-selection";
+
 export type GiftSection = {
     collection: string;
     heading: string;
@@ -11,6 +13,8 @@ export type GiftFaq = {
 
 export type GiftPage = {
     slug: string;
+    /** Explicit selection topic; built-in slugs have defaults. Unknown slugs must set one. */
+    topic?: GiftTopic;
     title: string;
     heading?: string;
     description: string;
@@ -54,6 +58,7 @@ export function getGiftPages(value: unknown): GiftPage[] {
     return value.filter((page): page is GiftPage => {
         if (!isRecord(page) || typeof page.slug !== "string" || !/^[a-z0-9-]+$/.test(page.slug) || seen.has(page.slug)
             || !filled(page.title) || !filled(page.description) || !filled(page.intro) || !optionalFilled(page.heading)
+            || (page.topic !== undefined && !isGiftTopic(page.topic))
             || !Array.isArray(page.sections) || !page.sections.length || !page.sections.every(validSection)
             || !validSeason(page.season) || (page.faq !== undefined && (!Array.isArray(page.faq) || !page.faq.every(validFaq)))) return false;
         seen.add(page.slug);

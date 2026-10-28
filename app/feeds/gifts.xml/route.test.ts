@@ -9,13 +9,13 @@ const giftPages = [
 ];
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => ({ name: "ThreadQuirk", domain: "threadquirk.test", giftPages }),
-  fetchGiftFeedDesigns: (titles: string[], limit: number) => fetchGiftFeedDesigns(titles, limit),
+  fetchGiftFeedDesigns: (...args: unknown[]) => fetchGiftFeedDesigns(...args),
 }));
 
 describe("/feeds/gifts.xml", () => {
   it("lists every gift page feed with its item count and no Pinterest wording", async () => {
-    fetchGiftFeedDesigns.mockImplementation(async (titles: string[]) => ({
-      designs: titles[0] === "Cats" ? [{}, {}, {}] : [], earliestListingAt: {},
+    fetchGiftFeedDesigns.mockImplementation(async (page: {slug: string}) => ({
+      designs: page.slug === "cat-lovers" ? [{}, {}, {}] : [], earliestListingAt: {},
     }));
     const { GET } = await import("@/app/feeds/gifts.xml/route");
     const response = await GET();

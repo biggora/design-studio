@@ -30,6 +30,7 @@ create table
                        "cdnImage" jsonb null,
                        "pinterestImage" jsonb null,
                        "ogImage" jsonb null,
+                       "giftTopics" jsonb null,
                        props json null,
                        "createdAt" timestamp with time zone not null default now(),
                        "updatedAt" timestamp without time zone null,

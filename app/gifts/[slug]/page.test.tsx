@@ -4,7 +4,7 @@ import {load} from "cheerio";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Design} from "@/types/design";
 
-const fetchDesigns = vi.fn();
+const fetchGiftPageSections = vi.fn();
 const config = {
   name: "Example Studio", domain: "example.test",
   giftPages: [{
@@ -19,7 +19,7 @@ const config = {
 };
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
-  fetchDesigns: (...args: unknown[]) => fetchDesigns(...args),
+  fetchGiftPageSections: (...args: unknown[]) => fetchGiftPageSections(...args),
 }));
 vi.mock("next/navigation", () => ({notFound: () => {throw new Error("NEXT_NOT_FOUND");}}));
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));
@@ -32,10 +32,9 @@ const design = (id: string, slug: string): Design => ({
 });
 
 beforeEach(() => {
-  fetchDesigns.mockReset().mockImplementation(async (_page: number, _q: string, collection: string) =>
-    collection === "Programming"
-      ? {designs: [design("1", "one"), design("2", "two")], total: 2}
-      : {designs: [], total: 0});
+  fetchGiftPageSections.mockReset().mockResolvedValue([
+    {...config.giftPages[0].sections[0], designs: [design("1", "one"), design("2", "two")]},
+  ]);
 });
 
 describe("/gifts/[slug]", () => {
@@ -49,10 +48,9 @@ describe("/gifts/[slug]", () => {
     expect($("h2").map((_, el) => $(el).text()).get()).toEqual(["Coding jokes", "Questions"]);
     expect(html).not.toContain("Nothing here");
     expect($("article")).toHaveLength(2);
-    expect($('a[href="/designs?collection=Programming"]').text()).toBe("See all Programming designs");
+    expect($('a[href="/designs?collection=Programming"]').text()).toBe("Browse the Programming collection");
     expect($("h3").text()).toBe("Do they ship?");
-    expect(fetchDesigns).toHaveBeenCalledWith(1, "", "Programming", 8);
-    expect(fetchDesigns).toHaveBeenCalledWith(1, "", "Empty", 8);
+    expect(fetchGiftPageSections).toHaveBeenCalledWith(config.giftPages[0], 8);
 
     const ld = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get().flat();
     const itemList = ld.find(item => item["@type"] === "ItemList");
@@ -69,7 +67,7 @@ describe("/gifts/[slug]", () => {
   it("returns notFound for unknown slugs and for pages without designs", async () => {
     const {default: Page} = await import("./page");
     await expect(Page({params: Promise.resolve({slug: "nope"})})).rejects.toThrow("NEXT_NOT_FOUND");
-    fetchDesigns.mockResolvedValue({designs: [], total: 0});
+    fetchGiftPageSections.mockResolvedValue([]);
     await expect(Page({params: Promise.resolve({slug: "programmers"})})).rejects.toThrow("NEXT_NOT_FOUND");
   });
 

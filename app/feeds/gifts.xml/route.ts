@@ -15,7 +15,7 @@ export async function GET() {
   const feeds = await Promise.all(
     getGiftPages(config.giftPages).map(async page => {
       const { designs } = await fetchGiftFeedDesigns(
-        page.sections.map(section => section.collection),
+        page,
         FEED_MAX_ITEMS,
       );
       return { title: page.heading || page.title, description: page.description, slug: page.slug, itemCount: designs.length };

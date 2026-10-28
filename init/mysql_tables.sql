@@ -27,6 +27,7 @@ CREATE TABLE designs (
   `cdnImage` JSON,
   `pinterestImage` JSON,
   `ogImage` JSON,
+  `giftTopics` JSON,
   props JSON,
   `createdAt` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updatedAt` TIMESTAMP NULL,

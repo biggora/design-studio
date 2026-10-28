@@ -6,7 +6,7 @@ const fetchGiftFeedDesigns = vi.fn();
 
 vi.mock("@/utils/database", () => ({
   getSiteConfig: () => getSiteConfig(),
-  fetchGiftFeedDesigns: (titles: string[], limit: number) => fetchGiftFeedDesigns(titles, limit),
+  fetchGiftFeedDesigns: (...args: unknown[]) => fetchGiftFeedDesigns(...args),
 }));
 
 function makeDesign(id: string): Design {
@@ -43,7 +43,7 @@ describe("/feeds/gifts/[giftSlug].xml", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
     expect(response.headers.get("Cache-Control")).toContain("s-maxage=3600");
-    expect(fetchGiftFeedDesigns).toHaveBeenCalledWith(["Cats", "Pets"], 100);
+    expect(fetchGiftFeedDesigns).toHaveBeenCalledWith(gift, 100);
     const xml = await response.text();
     expect(xml).toContain("<title>ThreadQuirk – Gifts for Cat Lovers</title>");
     expect(xml).toContain("<link>https://threadquirk.test/gifts/cat-lovers</link>");

@@ -27,7 +27,7 @@ export async function GET(
   }
 
   const { designs, earliestListingAt } = await fetchGiftFeedDesigns(
-    page.sections.map(section => section.collection),
+    page,
     FEED_MAX_ITEMS,
   );
   const xml = buildCollectionFeedXml({

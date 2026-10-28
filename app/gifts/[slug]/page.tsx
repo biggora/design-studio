@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { getSiteConfig, fetchDesigns } from "@/utils/database";
+import { getSiteConfig, fetchGiftPageSections } from "@/utils/database";
 import { Design } from "@/types/design";
 import { DesignCard } from "@/app/components/DesignCard";
 import { JsonLd } from "@/app/components/JsonLd";
@@ -26,12 +26,7 @@ const loadGiftPage = cache(async (slug: string) => {
   const config = await getSiteConfig();
   const page = getGiftPages(config.giftPages).find((item) => item.slug === slug);
   if (!page) return { config, page: null, sections: [] };
-  const results = await Promise.all(
-    page.sections.map((section) => fetchDesigns(1, "", section.collection, DESIGNS_PER_SECTION)),
-  );
-  const sections = page.sections
-    .map((section, index) => ({ ...section, designs: results[index].designs }))
-    .filter((section) => section.designs.length > 0);
+  const sections = await fetchGiftPageSections(page, DESIGNS_PER_SECTION);
   return { config, page, sections };
 });
 
@@ -96,7 +91,7 @@ export default async function GiftPage(props: Props) {
       <PageHeader title={page.heading || page.title} intro={page.intro} />
 
       {sections.map((section) => (
-        <section key={section.collection} className="mb-10">
+        <section key={section.collection || "other"} className="mb-10">
           <SectionHeading className="mb-2">{section.heading}</SectionHeading>
           {section.blurb && <p className="text-muted-foreground max-w-3xl mb-4">{section.blurb}</p>}
           <CardGrid className="mb-4">
@@ -104,12 +99,12 @@ export default async function GiftPage(props: Props) {
               <DesignCard key={design.id} design={design} />
             ))}
           </CardGrid>
-          <AccentLink
+          {section.collection && <AccentLink
             href={collectionPath(section.collection)}
             className="inline-flex items-center min-h-11"
           >
-            See all {section.collection} designs
-          </AccentLink>
+            Browse the {section.collection} collection
+          </AccentLink>}
         </section>
       ))}
 

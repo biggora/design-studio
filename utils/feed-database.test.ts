@@ -186,42 +186,44 @@ describe("fetchFeedCollections", () => {
 });
 
 describe("fetchGiftFeedDesigns", () => {
-    it("unions section collections without duplicates, newest first, and caps at the limit", async () => {
+    const gift = {slug: "halloween-gift-ideas", title: "Halloween", description: "D", intro: "I",
+        sections: [{collection: "Space", heading: "H"}, {collection: "Cats", heading: "H"}]};
+
+    it("matches the occasion before limiting, independently of section collections", async () => {
         vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");
         responses = {
             designs: {data: [
-                supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
-                supabaseRow({id: "a", createdAt: "2026-10-09T00:00:00.000Z"}),
-                supabaseRow({id: "b", createdAt: "2026-10-08T00:00:00.000Z"}),
-                supabaseRow({id: "c", createdAt: "2026-10-07T00:00:00.000Z"}),
-                supabaseRow({id: "no-mockup", createdAt: "2026-10-10T00:00:00.000Z", props: {}}),
-                supabaseRow({id: "cdn-only", createdAt: "2026-10-06T00:00:00.000Z", props: {}, cdnImage: {key: "designs/a1", version: 1, width: 1600, height: 1920}}),
+                supabaseRow({id: "b", title: "Halloween Ghost", createdAt: "2026-10-08T00:00:00.000Z"}),
+                supabaseRow({id: "a", title: "Halloween Science", collection: "Science", createdAt: "2026-10-09T00:00:00.000Z"}),
+                supabaseRow({id: "c", title: "Halloween Cat", createdAt: "2026-10-07T00:00:00.000Z"}),
+                supabaseRow({id: "wrong-holiday", title: "Christmas", createdAt: "2026-10-11T00:00:00.000Z"}),
+                supabaseRow({id: "no-mockup", title: "Halloween", createdAt: "2026-10-10T00:00:00.000Z", props: {}}),
+                supabaseRow({id: "cdn-only", title: "Halloween", createdAt: "2026-10-06T00:00:00.000Z", props: {}, cdnImage: {key: "designs/a1", version: 1, width: 1600, height: 1920}}),
             ], error: null},
             design_listings: {data: [], error: null},
         };
         const {fetchGiftFeedDesigns} = await importFacade();
-        expect((await fetchGiftFeedDesigns(["Space", "Cats", "Space"], 100)).designs.map(design => design.id)).toEqual(["a", "b", "c", "cdn-only"]);
-        expect((await fetchGiftFeedDesigns(["Space", "Cats"], 2)).designs.map(design => design.id)).toEqual(["a", "b"]);
-        const inStep = steps.designs.find(step => step.method === "in" && step.args[0] === "design_collections.collections.title");
-        expect(inStep?.args[1]).toEqual(["Space", "Cats"]);
+        expect((await fetchGiftFeedDesigns(gift, 100)).designs.map(design => design.id)).toEqual(["a", "b", "c", "cdn-only"]);
+        expect((await fetchGiftFeedDesigns(gift, 2)).designs.map(design => design.id)).toEqual(["a", "b"]);
+        expect(steps.designs.some(step => step.method === "eq" && step.args[0] === "active" && step.args[1] === true)).toBe(true);
     });
 
-    it("returns nothing without querying when there are no collections", async () => {
+    it("returns nothing for an unknown selection topic", async () => {
         const {fetchGiftFeedDesigns} = await importFacade();
-        expect(await fetchGiftFeedDesigns([], 100)).toEqual({designs: [], earliestListingAt: {}});
+        expect(await fetchGiftFeedDesigns({...gift, slug: "unknown"}, 100)).toEqual({designs: [], earliestListingAt: {}});
         expect(steps.designs).toBeUndefined();
     });
 
-    it("queries MySQL with an IN list over the section titles", async () => {
+    it("uses the same topic selection on MySQL", async () => {
         stubMySQLEnv();
         mysqlQuery.mockImplementation(async (sql: unknown) =>
-            String(sql).includes("FROM designs d") ? [[mysqlDesignRow("m1", "Space")]] : [[]]);
+            String(sql).includes("FROM designs ") ? [[{...mysqlDesignRow("m1", "Other"), title: "Halloween"}]] : [[]]);
         const {fetchGiftFeedDesigns} = await importFacade();
-        const {designs} = await fetchGiftFeedDesigns(["Space", "Cats"], 100);
+        const {designs} = await fetchGiftFeedDesigns(gift, 100);
         expect(designs.map(design => design.id)).toEqual(["m1"]);
-        const call = mysqlQuery.mock.calls.find(([sql]) => String(sql).includes("FROM designs d"));
-        expect(String(call?.[0])).toContain("c.title IN (?)");
-        expect(call?.[1]).toEqual([["Space", "Cats"], 300]);
+        const call = mysqlQuery.mock.calls.find(([sql]) => String(sql).startsWith("SELECT * FROM designs"));
+        expect(String(call?.[0])).toContain("active = TRUE AND id IN (?)");
+        expect(call?.[1]).toEqual([["m1"]]);
     });
 });
 

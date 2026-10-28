@@ -82,12 +82,12 @@ describe("collection database behavior", () => {
         await expect(saveStudioValue("giftPages", "[]")).rejects.toThrow("studio write affected no rows: giftPages");
     });
 
-    it("fetchLiveGiftPages keeps only pages with a nonempty section collection", async () => {
-        const gift = (slug: string, ...cols: string[]) => ({slug, title: "T", description: "D", intro: "I",
+    it("fetchLiveGiftPages checks subjects rather than collection sizes", async () => {
+        const gift = (slug: string, ...cols: string[]) => ({slug, topic: "pet-lovers" as const, title: "T", description: "D", intro: "I",
             sections: cols.map(collection => ({collection, heading: "H"}))});
         const {fetchLiveGiftPages} = await import("@/utils/database");
         const live = await fetchLiveGiftPages([gift("a", "Pets"), gift("b", "Empty"), gift("c", "Empty", "Pets")]);
-        expect(live.map(page => page.slug)).toEqual(["a", "c"]);
+        expect(live.map(page => page.slug)).toEqual(["a", "b", "c"]); // Cat matches even outside configured sections.
     });
 
     it("saveStudioValue updates an existing mysql row", async () => {

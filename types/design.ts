@@ -1,4 +1,5 @@
 import type { OgImage } from "@pod/og-renderer/contract";
+import type {GiftTopic} from "@/lib/gift-selection";
 import type { CdnImage } from "@/lib/listings";
 import type { PinterestImage } from "@pod/pinterest-renderer/contract";
 
@@ -37,5 +38,7 @@ export interface Design {
   cdnImage?: CdnImage | null;
   pinterestImage?: PinterestImage | null;
   ogImage?: OgImage | null;
+  /** null/missing: infer from subject metadata; []: exclude; array: reviewed gift subjects. */
+  giftTopics?: GiftTopic[] | null;
   props?: object;
 }

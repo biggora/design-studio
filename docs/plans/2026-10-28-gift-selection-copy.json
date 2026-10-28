@@ -1,0 +1,656 @@
+{
+  "giftPages": [
+    {
+      "slug": "halloween-gift-ideas",
+      "title": "Halloween Gift Ideas for Every Fan",
+      "heading": "Halloween Gift Ideas",
+      "season": {
+        "start": "09-01",
+        "end": "10-31"
+      },
+      "description": "Halloween gift ideas with spooky prints, playful ghosts, monsters and seasonal jokes for family, friends and fellow fans.",
+      "intro": "Choose a Halloween design that matches the kind of spooky the person enjoys: playful ghosts, monsters, family jokes or a haunted hobby. Every print in this selection has a Halloween theme. Open a design to compare the products available on the marketplace.",
+      "sections": [
+        {
+          "collection": "Monsters",
+          "heading": "Monster Prints"
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "Gamers and Geeks"
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Halloween gift?",
+          "answer": "Pick the kind of spooky the person enjoys: cute, funny or nerdy. Designs that read as playful rather than scary are easier to wear beyond October. This site does not offer costumes, so check the marketplace for the products available."
+        }
+      ],
+      "topic": "halloween"
+    },
+    {
+      "slug": "black-friday-gift-ideas",
+      "title": "Black Friday Gift Ideas for Shoppers",
+      "heading": "Black Friday Gift Ideas",
+      "season": {
+        "start": "10-15",
+        "end": "11-30"
+      },
+      "description": "Black Friday gift ideas for deal hunters and people who prefer to skip the crowds: shopping jokes and cosy alternatives.",
+      "intro": "For the person who loves a bargain, or would rather stay home, start with a design about Black Friday itself. These prints celebrate or poke fun at the shopping occasion. Prices and any discounts are set by the marketplaces; this page does not promise a sale.",
+      "sections": [
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "Pet Lover Prints"
+        },
+        {
+          "collection": "Programming",
+          "heading": "Programming Prints"
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "Hobby Club Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are there Black Friday discounts?",
+          "answer": "Any sale pricing, promotions and shipping cut-offs are set by the marketplaces, Redbubble and TeePublic, and shown on their product pages. This site does not set prices or run sales, so check the marketplace page for current offers."
+        },
+        {
+          "question": "When should I order for the holidays?",
+          "answer": "Check the delivery estimate on the marketplace product page before you order, since it depends on the product and where it ships. Ordering earlier gives you more room if you need to compare options."
+        },
+        {
+          "question": "Who are these Black Friday designs for?",
+          "answer": "These prints suit people who enjoy shopping jokes, deal hunting or the idea of skipping the crowds. If that is not their interest, browse another gift theme rather than choosing a shopping design for the occasion alone."
+        }
+      ],
+      "topic": "black-friday"
+    },
+    {
+      "slug": "thanksgiving-gift-ideas",
+      "title": "Thanksgiving Gift Ideas for Hosts & Guests",
+      "heading": "Thanksgiving Gift Ideas",
+      "season": {
+        "start": "10-01",
+        "end": "11-26"
+      },
+      "description": "Thanksgiving gift ideas for hosts, cooks and the people who show up with casseroles: harvest tables, feast illustrations and turkey humour.",
+      "intro": "Thanksgiving is about the table, so lean toward gifts that celebrate the people and the food. Think of the host who plans the menu, the guest who always brings a dish, or the relative who runs the turkey trot. Pick the tone, warm or funny, and open the design to see the options.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        },
+        {
+          "collection": "For gourmets and food lovers",
+          "heading": "Food Lover Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Thanksgiving gift?",
+          "answer": "Pick something about the gathering rather than a specific person, such as the shared table or the cook. Warm, simple designs suit hosts, guests and visiting relatives alike."
+        }
+      ],
+      "topic": "thanksgiving"
+    },
+    {
+      "slug": "christmas-gift-ideas",
+      "title": "Christmas Gift Ideas for Family & Friends",
+      "heading": "Christmas Gift Ideas",
+      "season": {
+        "start": "10-15",
+        "end": "12-25"
+      },
+      "description": "Christmas gift ideas for families, friends, pet owners and holiday travellers: cosy tables, gingerbread humour and festive pets.",
+      "intro": "A good Christmas gift matches the way the person celebrates. Some hosts feed a crowd, some travel to markets, and some share the season with a cat who has opinions about the tree. Choose the scene that sounds most like them, then compare the products on the marketplace page.",
+      "sections": [
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "Pet Lover Prints"
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "Travel and Trips Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Christmas gift?",
+          "answer": "Think about where and with whom they celebrate: at home, on the road or with a pet. A design that fits the occasion and the person feels more thoughtful than a general festive one."
+        }
+      ],
+      "topic": "christmas"
+    },
+    {
+      "slug": "gifts-for-developers",
+      "title": "Gifts for Developers & Programmers",
+      "heading": "Gifts for Developers",
+      "description": "Looking for something a programmer will really wear? Browse coding, debugging and side-project designs by theme.",
+      "intro": "Developers tend to wear what makes them feel understood, not what looks like a joke on them. Choose a language or workflow your recipient actually uses, and lean toward dry, quiet humour. If you are unsure what they code in, the broad Programming collection is the safest place to start.",
+      "sections": [
+        {
+          "collection": "Programming",
+          "heading": "Programming Prints"
+        },
+        {
+          "collection": "Bugs, Tests and Hallucinations",
+          "heading": "Bugs and Hallucinations"
+        },
+        {
+          "collection": "Everyday Dev Humor",
+          "heading": "Everyday Dev Humor"
+        },
+        {
+          "collection": "Open Source, Together",
+          "heading": "Open Source, Together"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I buy these designs?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the buy link on any design page to open it on the marketplace."
+        },
+        {
+          "question": "Can I choose the product, size and colour?",
+          "answer": "Yes. Product types, sizes, colours and prices are set on the marketplace page for each design, so check which options are offered there."
+        },
+        {
+          "question": "How do I pick a design if I do not know their language or stack?",
+          "answer": "Choose a theme rather than a language: debugging, open source or everyday humour. A general programming joke avoids naming a language they do not use."
+        }
+      ],
+      "topic": "developers"
+    },
+    {
+      "slug": "gifts-for-coworkers",
+      "title": "Gifts for Coworkers & Colleagues",
+      "heading": "Gifts for Coworkers",
+      "description": "Thoughtful office and remote-work designs for Secret Santa, farewells and birthdays, from tech humour to calm-down prints.",
+      "intro": "A good coworker gift is something light that the person would still choose to wear on a weekend. Match it to the work they do rather than a private joke, keep the tone friendly, and avoid anything that singles them out. Most of these suit tech teams, while wellness prints work at any desk.",
+      "sections": [
+        {
+          "collection": "Humans in the Loop",
+          "heading": "Humans in the Loop"
+        },
+        {
+          "collection": "AI Hype and Reality Check",
+          "heading": "AI Reality Check Prints"
+        },
+        {
+          "collection": "Small Builds, Calm Ops",
+          "heading": "Small Builds, Calm Ops"
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "Health and Wellness"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are these designs suitable for Secret Santa?",
+          "answer": "Many are, because they are friendly and understated. Check the product options on the marketplace first, since products and prices are set there."
+        },
+        {
+          "question": "Where do I order, and who handles shipping?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Shipping, delivery and returns are handled by the marketplace, so check them on the product page before ordering."
+        },
+        {
+          "question": "What if I do not know their taste?",
+          "answer": "Pick a theme that matches their job rather than a joke about them. Calm and kind designs are the safest choice when you only know a coworker a little."
+        }
+      ],
+      "topic": "coworkers"
+    },
+    {
+      "slug": "gifts-for-pet-lovers",
+      "title": "Gifts for Pet Lovers & Cute Fans",
+      "heading": "Gifts for Pet Lovers",
+      "description": "Cat and dog designs for pet owners who treat their animals like family, plus kawaii and monster characters for cute fans.",
+      "intro": "For a pet person, the best gift reflects their actual animal: a scheming cat, a snack-minded dog or a tiny bunny. Choose the animal they have, then the tone, funny or gentle. If the person simply loves cute characters, the kawaii and monster collections are a softer route.",
+      "sections": [
+        {
+          "collection": "Pet lovers",
+          "heading": "Pet Lover Prints"
+        },
+        {
+          "collection": "Kawaii",
+          "heading": "Kawaii Prints"
+        },
+        {
+          "collection": "Monsters",
+          "heading": "Monster Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Can I get a design with my own pet on it?",
+          "answer": "No. These are original designs, and personalisation is not offered through this site. Look for the animal that most resembles theirs."
+        },
+        {
+          "question": "Where are the designs sold?",
+          "answer": "Through Redbubble and TeePublic. Products, sizes, colours and prices are shown on the marketplace page."
+        },
+        {
+          "question": "What should I choose for a friend with several pets?",
+          "answer": "Go for a general pet theme with humour rather than a specific breed, so it fits whoever lives in the house."
+        }
+      ],
+      "topic": "pet-lovers"
+    },
+    {
+      "slug": "gifts-for-gamers-and-geeks",
+      "title": "Gifts for Gamers & Geeks",
+      "heading": "Gifts for Gamers and Geeks",
+      "description": "Designs for gamers, tinkerers and self-hosters, from controller art to home servers and prompt-driven building.",
+      "intro": "Gamers and geeks like designs that quietly signal their hobby. Think about whether the person plays, tinkers or builds, then choose something understated for daily wear. Browse the gaming set first, then the tech-leaning collections if they run servers or experiment with AI.",
+      "sections": [
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "Gamers and Geeks"
+        },
+        {
+          "collection": "Localhost and Local AI",
+          "heading": "Localhost and Local AI"
+        },
+        {
+          "collection": "Context, Prompts and Vibe",
+          "heading": "Prompts and Vibe Coding"
+        },
+        {
+          "collection": "Repo Explorers",
+          "heading": "Repo Explorers"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Which marketplace do I buy from?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the links on a design page to see the available products."
+        },
+        {
+          "question": "How do I check sizes and colours?",
+          "answer": "Sizes, colours and product types are chosen on the marketplace page, where you can compare the options available for each design."
+        },
+        {
+          "question": "What if I do not know which games they play?",
+          "answer": "Pick a general design such as a controller or a Game Over print, and avoid anything that assumes a specific title."
+        }
+      ],
+      "topic": "gamers-and-geeks"
+    },
+    {
+      "slug": "gifts-for-food-lovers",
+      "title": "Gifts for Food Lovers & Home Cooks",
+      "heading": "Gifts for Food Lovers",
+      "description": "Funny foodie designs featuring ramen, sourdough, chili and coffee, for home cooks, bakers and holiday hosts alike.",
+      "intro": "Foodies like a design that tastes like them. Choose what the person actually loves, whether ramen, bread, spice or a coffee habit, then decide how playful you want it. Cheerful characters suit casual gifts, and holiday baking prints suit the one who hosts.",
+      "sections": [
+        {
+          "collection": "For gourmets and food lovers",
+          "heading": "Food Lover Prints"
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "Health and Wellness"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I buy these?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Click a design's buy link to see products on the marketplace."
+        },
+        {
+          "question": "Is a mug or sticker available?",
+          "answer": "Product types vary by design and are listed on the marketplace page, so check there for what is offered."
+        },
+        {
+          "question": "How do I pick one for a friend who loves cooking?",
+          "answer": "Choose the dish they cook or order most often. A specific favourite, like ramen or sourdough, feels more personal than a general food print."
+        }
+      ],
+      "topic": "food-lovers"
+    },
+    {
+      "slug": "gifts-for-family-and-friends",
+      "title": "Gifts for Family, Friends & Couples",
+      "heading": "Gifts for Family and Friends",
+      "description": "Gift ideas for grandmothers, partners, friends and festive crowds, from heartfelt family designs to playful couple prints.",
+      "intro": "Family gifts work best when they say something warm in a way the person would wear. Start with who they are: a grandmother, a partner or a friend who hosts every holiday. Then choose a tone that suits them and a motif they will reach for more than once.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Love and Relationships",
+          "heading": "Love and Relationships"
+        },
+        {
+          "collection": "Holidays and Festivals",
+          "heading": "Holidays and Festivals"
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "Travel and Trips Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Where can I order?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Product types, sizes, colours and prices are shown on the marketplace page."
+        },
+        {
+          "question": "Can the design be changed or personalised?",
+          "answer": "No. They are original designs as shown, and personalisation is not offered on this site."
+        },
+        {
+          "question": "How do I choose for someone I do not see often?",
+          "answer": "Pick a warm, simple theme over a specific joke. A grandmother or friendship design rarely misses."
+        }
+      ],
+      "topic": "family-and-friends"
+    },
+    {
+      "slug": "gifts-for-hobbyists",
+      "title": "Gifts for Hobbyists & Crafters",
+      "heading": "Gifts for Hobbyists",
+      "description": "Club-style designs for crafters, climbers, bird watchers and tinkerers: find the exact hobby of the person you are shopping for.",
+      "intro": "The best hobby gift names the exact pastime, because hobbyists notice. Look for the craft or club they belong to, from candle pouring and knitting to ham radio, climbing and keeping chickens. If they prefer the outdoors, the nature and travel collections cover foraging, birding and trips.",
+      "sections": [
+        {
+          "collection": "Hobby Clubs",
+          "heading": "Hobby Club Prints"
+        },
+        {
+          "collection": "Outdoors and Nature",
+          "heading": "Outdoors and Nature Prints"
+        },
+        {
+          "collection": "Photo and Video lover",
+          "heading": "Photo and Video Prints"
+        },
+        {
+          "collection": "Travel and Trips",
+          "heading": "Travel and Trips Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Which hobbies are covered?",
+          "answer": "The Hobby Clubs collection spans crafts, games, sports and outdoor pastimes, and it keeps growing. Open the collection to see which hobbies are currently listed."
+        },
+        {
+          "question": "Where do I buy these designs?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Use the buy link on a design page to see products there."
+        },
+        {
+          "question": "What if I am not sure which hobby suits them?",
+          "answer": "Ask a friend or check what they talk about most, then pick the design that names it. A hobby they already love will feel more personal than a general one."
+        }
+      ],
+      "topic": "hobbyists"
+    },
+    {
+      "slug": "gifts-for-self-care-and-wellness",
+      "title": "Self-Care Gifts & Wellness Shirts",
+      "heading": "Self-Care and Wellness Gifts",
+      "description": "Gentle designs about rest, pace and kindness to yourself, for a friend, a coworker or you. Supportive, never preachy.",
+      "intro": "A self-care gift says you want the person to be okay, and it works best when it is gentle rather than pointed. Choose a soft message about rest or pace, and skip anything that sounds like advice. These designs offer encouragement and are not medical guidance.",
+      "sections": [
+        {
+          "collection": "Mental Health",
+          "heading": "Mental Health Prints"
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "Health and Wellness"
+        },
+        {
+          "collection": "Love and Relationships",
+          "heading": "Love and Relationships"
+        }
+      ],
+      "faq": [
+        {
+          "question": "Are these designs medical or therapeutic advice?",
+          "answer": "No. They are supportive messages and artwork only, not health advice. If someone is struggling, encourage them to talk to someone they trust or a qualified professional."
+        },
+        {
+          "question": "How do I choose without being awkward?",
+          "answer": "Pick a gentle, general message such as a softer voice or an easy pace, rather than one that names a specific struggle."
+        },
+        {
+          "question": "Where are these sold?",
+          "answer": "Designs are sold through Redbubble and TeePublic. Products, sizes and prices are set on the marketplace page."
+        }
+      ],
+      "topic": "self-care-and-wellness"
+    },
+    {
+      "slug": "valentines-day-gift-ideas",
+      "title": "Valentine's Day Gift Ideas for Anyone",
+      "heading": "Valentine's Day Gift Ideas",
+      "season": {
+        "start": "01-02",
+        "end": "02-14"
+      },
+      "description": "Valentine's Day gift ideas for partners, friends and Galentine's plans: playful love designs, in-jokes and warm messages.",
+      "intro": "Valentine's Day is not only for couples, so you can choose for a partner, a close friend or a family member. Start with how they like to show affection, whether that is playful, quiet or full of in-jokes. Pick a message they would be happy to wear all year.",
+      "sections": [
+        {
+          "collection": "Love and Relationships",
+          "heading": "Love and Relationships"
+        },
+        {
+          "collection": "Programming",
+          "heading": "Programming Prints"
+        },
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose for a friend or family member?",
+          "answer": "Pick a warm, humorous message about friendship, not romance. Galentine's gifts, a thank-you to a friend or a note for a relative all work with a light touch."
+        }
+      ],
+      "topic": "valentines"
+    },
+    {
+      "slug": "mothers-day-gift-ideas",
+      "title": "Mother's Day Gift Ideas for Every Mom",
+      "heading": "Mother's Day Gift Ideas",
+      "season": {
+        "start": "03-20",
+        "end": "05-12"
+      },
+      "description": "Mother's Day gift ideas that celebrate moms, grandmothers and mother figures, with warm messages and playful family designs.",
+      "intro": "Choose a print that celebrates the mom or grandmother you are buying for. Check that the words and family role fit her, then choose a style she would enjoy wearing. The selection focuses on motherhood and Mother's Day rather than assuming any hobby print suits the occasion.",
+      "sections": [
+        {
+          "collection": "Family and Friends",
+          "heading": "Family and Friends"
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "Hobby Club Prints"
+        },
+        {
+          "collection": "Pet lovers",
+          "heading": "Pet Lover Prints"
+        },
+        {
+          "collection": "Health and Wellness",
+          "heading": "Health and Wellness"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Mother's Day gift?",
+          "answer": "Choose a message that fits her family role and personality. Check the wording on the print, then choose between a warm message, playful humour or a grandmother design."
+        }
+      ],
+      "topic": "mothers-day"
+    },
+    {
+      "slug": "fathers-day-gift-ideas",
+      "title": "Father's Day Gift Ideas for Dads & Mentors",
+      "heading": "Father's Day Gift Ideas",
+      "season": {
+        "start": "05-01",
+        "end": "06-21"
+      },
+      "description": "Father's Day gift ideas that celebrate dads, grandfathers and father figures, from heartfelt messages to family humour.",
+      "intro": "Start with a message about fatherhood that sounds like him: warm, playful or full of dad jokes. Check who the words describe and choose a design he would enjoy wearing. Open the marketplace page to compare the products available.",
+      "sections": [
+        {
+          "collection": "Programming",
+          "heading": "Programming Prints"
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "Hobby Club Prints"
+        },
+        {
+          "collection": "Gamers and Geeks",
+          "heading": "Gamers and Geeks"
+        },
+        {
+          "collection": "Outdoors and Nature",
+          "heading": "Outdoors and Nature Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a Father's Day gift?",
+          "answer": "Choose a fatherhood message and a style that fit the person. Check that labels such as dad or grandpa are right for him, and pick a joke or sentiment he would enjoy wearing."
+        }
+      ],
+      "topic": "fathers-day"
+    },
+    {
+      "slug": "back-to-school-gift-ideas",
+      "title": "Back to School Gift Ideas for Students",
+      "heading": "Back to School Gift Ideas",
+      "season": {
+        "start": "07-01",
+        "end": "09-15"
+      },
+      "description": "Back-to-school gift ideas with school-life jokes, classroom themes and student messages for the start of a new term.",
+      "intro": "Choose a school-themed print for the student or teacher you know. Classroom jokes, homework mishaps and new-term messages offer different ways to mark the return to school. Match the tone to the person and check the marketplace page for product options.",
+      "sections": [
+        {
+          "collection": "Back to School",
+          "heading": "Back to School Prints"
+        },
+        {
+          "collection": "Mental Health",
+          "heading": "Mental Health Prints"
+        },
+        {
+          "collection": "Hobby Clubs",
+          "heading": "Hobby Club Prints"
+        }
+      ],
+      "faq": [
+        {
+          "question": "When should I order, and who handles shipping?",
+          "answer": "Ordering and shipping cut-offs are set by Redbubble and TeePublic and shown on their product pages. Check the delivery estimate there before you order."
+        },
+        {
+          "question": "Are there sales or special prices?",
+          "answer": "Any promotions are set by the marketplaces, not by this site, and nothing here guarantees one. Prices, sizes and colours are shown on each marketplace page."
+        },
+        {
+          "question": "How do I choose a back-to-school gift?",
+          "answer": "Choose a school-life message that matches the person: playful for a student who enjoys classroom humour, or a teaching theme for an educator. Read the wording on the print before choosing."
+        }
+      ],
+      "topic": "back-to-school"
+    }
+  ]
+}

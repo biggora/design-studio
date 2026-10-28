@@ -30,6 +30,7 @@ describe("getGiftPages", () => {
             {...valid, slug: "Bad Slug"}, {...valid, slug: ""},
             {...valid, title: " "}, {...valid, description: undefined}, {...valid, intro: 3},
             {...valid, heading: ""}, {...valid, sections: []}, {...valid, sections: "x"},
+            {...valid, topic: "typo"}, {...valid, topic: null},
             {...valid, sections: [{collection: "", heading: "H"}]},
             {...valid, sections: [{collection: "C", heading: ""}]},
             {...valid, sections: [{collection: "C", heading: "H", blurb: " "}]},
