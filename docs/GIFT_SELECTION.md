@@ -40,7 +40,9 @@ Writes back up the previous marker in `.cache/`, update only `giftTopics`, and v
 
 ## Rollout and verification
 
-Apply migration 016 through the existing `npm run db:migrate` runner **before deploying code that reads the new column**. Existing rows remain automatic; no content backfill is needed. Existing `giftPages` entries remain compatible; their slugs resolve to built-in topics without rewriting production configuration. Review any overly specific section headings/blurbs when editing gift copy: those texts never act as filters. “Browse the … collection” intentionally opens the broader catalogue collection.
+Deployment through a normal Git push works before migration 016: if the database reports that only `giftTopics` is missing, selection retries with title/tags and keeps every occasion/recipient filter. This fallback lasts for that request only; a later request reads reviewed markers once the column exists. Other missing columns, permissions, schema-cache and network errors remain visible. No migration or database write runs during a build.
+
+Apply migration 016 through the existing `npm run db:migrate` runner before **writing reviewed markers**. Existing rows remain automatic; no content backfill is needed. Existing `giftPages` entries remain compatible; their slugs resolve to built-in topics without rewriting production configuration. Review any overly specific section headings/blurbs when editing gift copy: those texts never act as filters. “Browse the … collection” intentionally opens the broader catalogue collection.
 
 The reviewed copy plan `docs/plans/2026-10-28-gift-selection-copy.json` preserves the current 16 pages, URLs, seasonal windows and FAQ, assigns explicit topics, uses collection headings rather than promises about particular motifs, and corrects the affected occasion copy. Apply with the existing `scripts/apply-seo-copy.ts --plan=docs/plans/2026-10-28-gift-selection-copy.json --dry-run` / `--apply`, then invalidate config through `POST /api/revalidate/config`. It changes only `studio.giftPages`. Recheck the plan against current configuration if applying after further page edits.
 

@@ -30,6 +30,7 @@ function makeBuilder(table: string) {
         or: (...args: unknown[]) => { record(table, "or", args); return builder; },
         in: (...args: unknown[]) => { record(table, "in", args); return builder; },
         order: (...args: unknown[]) => { record(table, "order", args); return builder; },
+        returns: () => builder,
         range: (...args: unknown[]) => { record(table, "range", args); return resolveTable(table); },
         then: (
             resolve: (value: TableResponse) => unknown,
@@ -188,6 +189,54 @@ describe("fetchFeedCollections", () => {
 describe("fetchGiftFeedDesigns", () => {
     const gift = {slug: "halloween-gift-ideas", title: "Halloween", description: "D", intro: "I",
         sections: [{collection: "Space", heading: "H"}, {collection: "Cats", heading: "H"}]};
+
+    it("keeps automatic selection and pagination before migration 016", async () => {
+        const matching = supabaseRow({id: "older-match", title: "Halloween Ghost"});
+        responses = {designs: [
+            {data: null, error: {code: "42703", message: "column designs.giftTopics does not exist"}},
+            {data: Array.from({length: 250}, (_, n) => supabaseRow({id: `wrong-${n}`, title: `Christmas ${n}`})), error: null},
+            {data: [matching], error: null},
+            {data: [matching], error: null},
+        ]};
+        const {fetchGiftFeedDesigns} = await importFacade();
+        expect((await fetchGiftFeedDesigns(gift, 100)).designs.map(d => d.id)).toEqual(["older-match"]);
+        const selections = steps.designs.filter(s => s.method === "select").map(s => s.args[0]);
+        expect(selections.filter(s => String(s).includes("giftTopics"))).toHaveLength(1);
+        expect(selections.filter(s => s !== "*" && !String(s).includes("giftTopics"))).toHaveLength(2);
+        expect(steps.designs.filter(s => s.method === "range").map(s => s.args)).toEqual([[0, 249], [0, 249], [250, 499]]);
+    });
+
+    it.each([
+        {code: "42703", message: "column designs.active does not exist"},
+        {code: "42501", message: "permission denied for table designs"},
+        {code: "PGRST301", message: "invalid JWT"},
+        {code: "PGRST204", message: "Could not find giftTopics in the schema cache"},
+    ])("does not hide other database errors ($code)", async error => {
+        responses = {designs: {data: null, error}};
+        const {fetchGiftFeedDesigns} = await importFacade();
+        await expect(fetchGiftFeedDesigns(gift, 100)).rejects.toThrow("Failed to read gift selection metadata");
+        expect(steps.designs.filter(s => s.method === "select")).toHaveLength(1);
+    });
+
+    it("keeps automatic selection before the MySQL migration", async () => {
+        stubMySQLEnv();
+        mysqlQuery.mockImplementation(async (sql: string) => {
+            if (sql.includes("giftTopics")) throw {code: "ER_BAD_FIELD_ERROR", message: "Unknown column 'giftTopics' in 'field list'"};
+            return sql.includes("FROM designs ") ? [[{...mysqlDesignRow("m1", "Other"), title: "Halloween"}]] : [[]];
+        });
+        const {fetchGiftFeedDesigns} = await importFacade();
+        expect((await fetchGiftFeedDesigns(gift, 100)).designs.map(d => d.id)).toEqual(["m1"]);
+        expect(mysqlQuery.mock.calls.filter(([sql]) => String(sql).includes("giftTopics"))).toHaveLength(1);
+    });
+
+    it("does not treat an unrelated MySQL missing column as optional", async () => {
+        stubMySQLEnv();
+        const error = {code: "ER_BAD_FIELD_ERROR", message: "Unknown column 'active' in 'field list'"};
+        mysqlQuery.mockRejectedValue(error);
+        const {fetchGiftFeedDesigns} = await importFacade();
+        await expect(fetchGiftFeedDesigns(gift, 100)).rejects.toBe(error);
+        expect(mysqlQuery).toHaveBeenCalledTimes(1);
+    });
 
     it("matches the occasion before limiting, independently of section collections", async () => {
         vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "https://images.threadquirk.lv");

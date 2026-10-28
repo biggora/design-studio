@@ -100,6 +100,8 @@ Vercel is the recommended platform for hosting the web application thanks to nat
    only cover the storefront itself.
 4. Click **Deploy**.
 
+Once the Git integration is configured, normal fixes are committed and pushed to the repository; Vercel deploys the update automatically. For this project's delivery workflow, use that path rather than starting a manual Redeploy or email-confirmation flow in the dashboard, unless the owner explicitly requests dashboard work.
+
 ### 2.2 Scheduling automatic synchronization
 
 The Redbubble catalog sync **cannot run on Vercel**: Cloudflare blocks both plain-fetch (Cheerio)

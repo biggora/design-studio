@@ -1149,23 +1149,45 @@ export async function fetchFeaturedCollections(value: SiteConfig["collectionPage
     return results.filter(page => page.total > 0);
 }
 
+function isMissingGiftTopics(error: unknown): boolean {
+    if (!error || typeof error !== "object") return false;
+    const {code, message} = error as {code?: string; message?: string};
+    return ["42703", "ER_BAD_FIELD_ERROR"].includes(code ?? "")
+        && typeof message === "string" && /\bgiftTopics\b/i.test(message);
+}
+
 /** Per-request snapshot shared by gift pages, thumbnails and discovery. No fixed recent-item window:
  * an older relevant print must survive an arbitrary number of unrelated new uploads. */
 const loadGiftDesigns = cache(async (): Promise<GiftCandidate[]> => {
     // Do not pull large frozen OG/Pinterest specs, descriptions or image URLs just to
     // decide which pages are live. Load complete rows only for the selected cards.
-    const fields = "id,title,keywords,giftTopics,active,collection,createdAt";
+    const fields = "id,title,keywords,active,collection,createdAt";
+    // The optional manual markers must not prevent builds before migration 016.
+    // Retry only a missing giftTopics column; the next request probes again after migration.
+    let withGiftTopics = true;
     const designs = new Map<string, GiftCandidate>();
     for (let offset = 0; ; offset += 250) {
         let rows: Record<string, unknown>[];
         if (getProvider() === "supabase") {
-            const {data, error} = await getSupabase().from("designs").select(fields).eq("active", true)
-                .order("id").range(offset, offset + 249);
+            const run = () => getSupabase().from("designs").select(withGiftTopics ? `${fields},giftTopics` : fields).eq("active", true)
+                .order("id").returns<Record<string, unknown>[]>().range(offset, offset + 249);
+            let {data, error} = await run();
+            if (withGiftTopics && isMissingGiftTopics(error)) {
+                withGiftTopics = false;
+                ({data, error} = await run());
+            }
             if (error) throw new Error("Failed to read gift selection metadata", {cause: error});
             rows = data ?? [];
         } else {
-            [rows] = await getMySQLPool().query<mysql.RowDataPacket[]>(
-                "SELECT id,title,keywords,giftTopics,active,collection,createdAt FROM designs WHERE active = TRUE ORDER BY id LIMIT 250 OFFSET ?", [offset]);
+            const run = () => getMySQLPool().query<mysql.RowDataPacket[]>(
+                `SELECT ${withGiftTopics ? `${fields},giftTopics` : fields} FROM designs WHERE active = TRUE ORDER BY id LIMIT 250 OFFSET ?`, [offset]);
+            try {
+                [rows] = await run();
+            } catch (error) {
+                if (!withGiftTopics || !isMissingGiftTopics(error)) throw error;
+                withGiftTopics = false;
+                [rows] = await run();
+            }
         }
         for (const row of rows) designs.set(row.id as string, {
             id: row.id as string, title: row.title as string, keywords: (row.keywords as string) ?? "",

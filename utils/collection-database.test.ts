@@ -29,6 +29,7 @@ vi.mock("@supabase/supabase-js", () => ({createClient: () => ({from: (table: str
             in: (...args: unknown[]) => {filters.push(args); return builder;},
             neq: (...args: unknown[]) => {filters.push(args); return builder;},
             order: () => builder,
+            returns: () => builder,
             single: async () => ({data: row, error: null}),
             limit: async () => result(),
             range: async () => ({data: [{...row, design_collections: []}], count: collection === "Empty" ? 0 : 2, error: null}),

@@ -22,6 +22,19 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
     let pool: mysql.Pool;
     let db: typeof import("./database");
     const execute = async (sql: string) => provider === "supabase" ? pg(sql) : pool.query(sql);
+    const reloadSchema = async (hasGiftTopics: boolean) => {
+        if (provider !== "supabase") return;
+        pg("NOTIFY pgrst, 'reload schema'");
+        for (let attempt = 0; attempt < 30; attempt++) {
+            const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/designs?select=*&limit=1`);
+            if (r.ok) {
+                const rows = await r.json();
+                if (rows.length && Object.hasOwn(rows[0], "giftTopics") === hasGiftTopics) return;
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        throw new Error("PostgREST schema did not refresh");
+    };
     beforeAll(async () => {
         vi.resetModules();
         vi.stubEnv("DATABASE_PROVIDER", provider);
@@ -44,18 +57,7 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
         await execute(`INSERT INTO designs (id,title,description,keywords,collection,${q("createdAt")}) VALUES ${rows.join(",")};
             UPDATE designs SET active = FALSE WHERE id = '${id(503)}';
             UPDATE designs SET ${q("externalLink")}='https://www.redbubble.com/shop/ap/1', props='{"mockup_tshirt":"https://ih1.redbubble.net/tee.jpg"}';`);
-        if (provider === "supabase") {
-            pg("NOTIFY pgrst, 'reload schema'");
-            // Wait for the actual schema cache; this is not a fixed sleep as readiness evidence.
-            const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-            let ready = false;
-            for (let attempt = 0; attempt < 30; attempt++) {
-                const r = await fetch(`${url}/rest/v1/designs?select=giftTopics&limit=1`);
-                if (r.ok) {ready = true; break;}
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            expect(ready).toBe(true);
-        }
+        await reloadSchema(true);
         db = await import("./database");
     }, 30000);
     afterAll(async () => {await db?.closeDatabaseConnections(); await pool?.end(); vi.unstubAllEnvs();});
@@ -94,5 +96,21 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
         const pages = getGiftPages(JSON.parse(readFileSync("docs/plans/2026-10-17-audience-seo-copy.json", "utf8")).giftPages);
         expect(pages).toHaveLength(16);
         expect((await db.fetchLiveGiftPages(pages)).every(p => ["halloween-gift-ideas", "christmas-gift-ideas", "gifts-for-gamers-and-geeks"].includes(p.slug))).toBe(true);
+    });
+
+    it("serves filtered pages and feeds before migration and reads markers immediately after it", async () => {
+        await execute(`ALTER TABLE designs DROP COLUMN ${provider === "supabase" ? '"giftTopics"' : "giftTopics"}`);
+        try {
+            await reloadSchema(false);
+            const sections = await db.fetchGiftPageSections(gift);
+            expect(sections.flatMap(s => s.designs).map(d => d.id)).toEqual([id(501), id(504), id(502)]);
+            expect((await db.fetchGiftFeedDesigns(gift, 100)).designs.map(d => d.id)).toEqual([id(502), id(501)]);
+        } finally {
+            await execute(readFileSync(`init/migrations/016_gift_topics_${provider === "supabase" ? "postgres" : "mysql"}.sql`, "utf8"));
+            await reloadSchema(true);
+        }
+        await db.setDesignGiftTopics(id(501), []);
+        expect((await db.fetchGiftPageSections(gift)).flatMap(s => s.designs).some(d => d.id === id(501))).toBe(false);
+        await db.setDesignGiftTopics(id(501), null);
     });
 });
