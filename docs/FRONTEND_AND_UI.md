@@ -179,8 +179,11 @@ Generated per deployment from the configured domain:
 ### 3.4 Structured Data (JSON-LD)
 - Site-wide: `Organization` (name, url, logo, email, `sameAs` social profiles) and `WebSite`, emitted by the root layout via the `JsonLd` component.
 - Site-wide `WebSite` also carries a `SearchAction` pointing at `/designs?search={search_term_string}`.
-- Per design: `BreadcrumbList` (Home → primary collection → design, or Home → Designs → design when uncollected) and `CreativeWork` (name, description, image, `dateCreated`, keywords, creator).
-- Collection catalog pages (`/designs?collection=...`, known and non-empty): `CollectionPage` with an `ItemList` of the current page's designs.
+- Per design: `BreadcrumbList` (Home → primary collection → design, or Home → Designs → design when uncollected) and `CreativeWork` (name, description, image, `dateCreated`, keywords, creator), plus one concrete T-shirt `Product`/`Offer` when a fresh verified price is available. Visible prices and schema use the same cached quote.
+- Inner pages receive a default Home → page breadcrumb from `pageJsonLd`; an explicit trail replaces it when available. The homepage has no breadcrumb. Collection catalog trails include Home → Our Designs → collection.
+- Catalog, collection and gift detail pages emit named `ItemList` entries for their visible prints. With at least three unique prints and fresh prices for all of them, each entry contains a `Product`/`Offer` matching its card. Otherwise the whole list remains named links. Pagination retains absolute positions and total result counts.
+- `/articles` lists articles; collection/gift indexes list pages. They do not acquire Product schema. Google Rich Results Test shows supported search features rather than every Schema.org type.
+- Price collection runs offline in pod-uploader. Pages only read CDN snapshots, in parallel for listing cards, with a five-minute cache and two-second timeout. See [cached prices and structured data](MARKETPLACE_PRICES.md) for source selection, expiry, troubleshooting and validator evidence.
 
 ### 3.5 Gift pages (`app/gifts`)
 - Config key `giftPages` (studio row as JSON text, or an array in `config.json`), parsed by `getGiftPages` in `lib/gifts.ts`: `{slug, topic?, title, heading?, description, intro, sections: [{collection, heading, blurb?}], faq?: [{question, answer}]}`. Invalid entries (bad slug, unsupported explicit topic, missing copy, empty sections) and duplicate slugs are dropped.

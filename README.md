@@ -99,6 +99,12 @@ npm run sync:redbubble
 
 The sync cannot run on Vercel — Cloudflare blocks both Cheerio and headless Playwright there. Schedule `npm run sync:redbubble` with `SYNC_PLAYWRIGHT_HEADLESS=false` via the OS scheduler (Windows Task Scheduler / cron) on a machine/VM with a display; `POST /api/sync/redbubble` (authenticated via the `x-sync-secret` header) remains available as an optional manual trigger from that machine. See [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) for scheduler recipes and the Docker-based Playwright runner.
 
+## Cached marketplace prices
+
+T-shirt prices are collected offline by pod-uploader through existing browser profiles and published to R2. The storefront reads validated CDN snapshots with a five-minute cache; it never visits marketplaces during rendering. Fresh prices appear on design pages and catalog/gift cards, with matching Product/Offer JSON-LD. Complete lists of at least three priced prints also include Products in ItemList.
+
+See [cached prices and structured data](docs/MARKETPLACE_PRICES.md) for collection, expiry, breadcrumbs and validator checks. Starting the site does not collect prices, and no daily schedule is installed automatically.
+
 ## Documentation
 
 The full technical documentation set lives in [docs/](docs/):
@@ -110,6 +116,7 @@ The full technical documentation set lives in [docs/](docs/):
 - [docs/FRONTEND_AND_UI.md](docs/FRONTEND_AND_UI.md) — frontend, UI components, and the design-token system
 - [docs/DEPLOYMENT_AND_CONFIGURATION.md](docs/DEPLOYMENT_AND_CONFIGURATION.md) — deployment and configuration guide
 - [docs/PUBLIC_API.md](docs/PUBLIC_API.md) — public, unauthenticated read-only prints API
+- [docs/MARKETPLACE_PRICES.md](docs/MARKETPLACE_PRICES.md) — cached T-shirt prices, Product/ItemList/BreadcrumbList and troubleshooting
 - [docs/RELEASE_PLAN.md](docs/RELEASE_PLAN.md) — release plan
 
 Root-level references: [PRODUCT.md](PRODUCT.md) (product truth) and [DESIGN.md](DESIGN.md) (design system of record — token names, the No-Hardcode Rule, component contracts).

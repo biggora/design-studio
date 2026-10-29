@@ -15,6 +15,7 @@ Welcome to the technical documentation for **Design Studio** — a self-hostable
 | [**Deployment and Configuration**](./DEPLOYMENT_AND_CONFIGURATION.md) | Setup and operations guide | `.env` variable reference, Vercel deployment with cron jobs, running the Playwright sync runner in Docker, troubleshooting captcha and database connectivity. |
 | [**Public Prints API**](./PUBLIC_API.md) | Public, unauthenticated read-only API | `/api/v1/prints`, `/api/v1/prints/random`, `/api/v1/prints/{id}`, `/api/v1/collections` endpoints, CORS setup via `PRINTS_API_ALLOWED_ORIGINS`, `PublicPrint` shape, curl/JS/React usage examples. |
 | [**Release Plan**](./RELEASE_PLAN.md) | Release readiness and rollout | v0.1.0 release scope, verification checklist, known limitations. Historical record. |
+| [**Cached Prices and Structured Data**](./MARKETPLACE_PRICES.md) | Offline T-shirt price collection and storefront rendering | pod-uploader → SQLite → R2/CDN, freshness and cache rules, Product/Offer lists, breadcrumbs, validator results and troubleshooting. |
 | [**Progress Ledger**](./progress.md) | Working ledger of the documentation-update run | Task table, decisions log, review findings (RV-DOCS), session state. |
 
 Additional root-level documents:

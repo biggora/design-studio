@@ -432,6 +432,18 @@ Errors retain the existing string-valued `error`, with additive machine-readable
 
 Validation errors also include `field`; conflicts may include `details`. Redbubble IDs and source image IDs are limited to the JavaScript safe integer range because existing catalog readers return numbers. Store hashes/source IDs in the private client workflow; the public print DTO omits them. A non-Redbubble design remains visible with `link: ""`, its other marketplace links and the existing image placeholder until it has a supported design image.
 
+### T-shirt price sources: GET /api/v1/designs/tshirt-prices
+
+This authenticated read-only endpoint supplies canonical marketplace links to the offline pod-uploader collector. It does not return prices or request marketplaces. It shares the listings API's `Authorization: Bearer <LISTINGS_API_TOKEN>` authentication; public prints CORS/cache rules do not apply. Responses use `Cache-Control: no-store`.
+
+- `page`: positive safe integer, default `1`.
+- `limit`: integer `1`–`100`, default `50`.
+- `id`: optional storefront design UUID for a single active print. It is not the uploader's file SHA. Page and limit are still validated when id is supplied.
+- Response: `{ items: [{ designId, title, sources: [{ platform, url }] }], total, page, limit }`. Sources contain canonical URLs without affiliate wrapping; listing IDs are encoded in those URLs. Both database providers use the same facade and active-design filters.
+- Errors: `400` for invalid parameters, `401` for invalid/missing credentials, `404` for an unknown/inactive design, `503` when the server token is unconfigured, `500` for a query failure. An older deployment without this route also returns `404`; deploy it before collecting against that host.
+
+For published snapshot format, collection and cache diagnostics, see [cached prices and structured data](MARKETPLACE_PRICES.md). Starting a local storefront does not run collection; the uploader's `--studio-url` can select a local source endpoint while retaining the configured R2 destination.
+
 ### Design CDN mockups: PUT/GET /api/v1/designs/cdn-image
 
 Writes (and reads back) `designs."cdnImage"` — the design's CDN mockup array described under `design.cdnImage` above — for designs that already exist, so mockups can be published without touching the database. Same bearer auth (`LISTINGS_API_TOKEN`), JSON error envelope and `Cache-Control: no-store` as the listings API. It writes nothing else and renders nothing.

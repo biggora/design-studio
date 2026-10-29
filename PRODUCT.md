@@ -36,6 +36,8 @@ Confirmed functionality: catalog with search, collection filter, and pagination;
 
 Constraints: no on-site checkout — purchases happen on external marketplaces; Redbubble is the only sync source in the codebase today (TeePublic and Tostadora exist as link-out config fields; marketplace logos ship for Redbubble, TeePublic, Amazon, Temu, Tostadora, Zazzle); sync fidelity depends on Redbubble's page structure and JSON-LD; placeholder values in `config/config.json` (example.com, via.placeholder.com) are not brand commitments.
 
+Verified T-shirt prices are collected separately by pod-uploader and cached on the image CDN. Buyers see the marketplace's original currency on design pages and catalog/gift cards. Matching Product/Offer data supports search visibility; complete lists of at least three priced prints include Products in ItemList. Expired or unverified prices are omitted. Daily collection requires an external schedule; opening the storefront does not refresh prices. See [cached prices and structured data](docs/MARKETPLACE_PRICES.md).
+
 ## Brand Commitments
 
 - The product name is **Design Studio** — a distinct product name, separate from any deployment's shop name (confirmed during init).
@@ -47,7 +49,7 @@ Constraints: no on-site checkout — purchases happen on external marketplaces; 
 - Marketplace logo SVGs and hero-carousel slides in `public/images`.
 - Technical documentation set in [docs/](docs/) (architecture, database, sync system, frontend, deployment — in English).
 - 18 unit tests in `lib/utils.test.ts` (`npm test`); a verified production build of all 11 routes (route set unchanged since the v0.1.0 release plan).
-- **Absences future work must not fabricate:** no real testimonials, customers, or usage numbers; no filled-in brand identity (logo, banner, domain are placeholders); no live product screenshots beyond the local carousel slides; no pricing or licensing claims.
+- **Absences future work must not fabricate:** no real testimonials, customers, or usage numbers; no filled-in brand identity (logo, banner, domain are placeholders); no live product screenshots beyond the local carousel slides; no invented prices, ratings, shipping, return or licensing claims. Displayed prices must come from verified marketplace quotes.
 
 ## Product Principles
 
