@@ -27,7 +27,17 @@ function findJsonLdData(node: unknown): unknown {
 describe("root JSON-LD", () => {
   it("shares stable organization and website identities without losing company details", async () => {
     const { default: RootLayout } = await import("./layout");
-    getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test", siteLogo: "/logo.svg" });
+    getSiteConfig.mockResolvedValue({
+      ...baseConfig, name: "Other Studio", domain: "other.example.test", siteLogo: "/logo.svg",
+      social: { pinterest: "https://www.pinterest.com/other", shop: "https://www.redbubble.com/people/other/shop" },
+      representation: {
+        redbuble: "https://www.redbubble.com/people/other/shop",
+        teepublic: "https://www.teepublic.com/user/other",
+        tostadora: "https://www.tostadora.co.uk/shop/other",
+        zazzle: "https://www.zazzle.com/store/other",
+      },
+      affiliate: { redbubbleTemplate: "https://example.test/redirect?u={url}", teepublicReferralId: "123" },
+    });
     const data = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
     expect(data).toHaveLength(2);
     expect(data[0]).toMatchObject({
@@ -40,6 +50,13 @@ describe("root JSON-LD", () => {
       publisher: { "@id": data[0]["@id"] }, inLanguage: "en",
     });
     expect(data[0]).not.toHaveProperty("address");
+    expect(data[0].sameAs).toEqual([
+      "https://www.pinterest.com/other",
+      "https://www.redbubble.com/people/other/shop",
+      "https://www.teepublic.com/user/other",
+      "https://www.tostadora.co.uk/shop/other",
+      "https://www.zazzle.com/store/other",
+    ]);
   });
   it("declares a WebSite SearchAction for the catalog search", async () => {
     const { default: RootLayout } = await import("./layout");
@@ -56,6 +73,15 @@ describe("root JSON-LD", () => {
         "query-input": "required name=search_term_string",
       },
     });
+  });
+  it("uses the footer's legacy Tostadora setting and omits empty sameAs", async () => {
+    const { default: RootLayout } = await import("./layout");
+    getSiteConfig.mockResolvedValue({ ...baseConfig, social: {}, representation: { tostaDora: "https://www.tostadora.com/shop/other" } });
+    const legacy = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+    expect(legacy[0].sameAs).toEqual(["https://www.tostadora.com/shop/other"]);
+    getSiteConfig.mockResolvedValue({ ...baseConfig, social: {}, representation: {} });
+    const empty = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+    expect(empty[0]).not.toHaveProperty("sameAs");
   });
 });
 

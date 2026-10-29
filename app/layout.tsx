@@ -101,7 +101,13 @@ export default async function RootLayout({
 
   const themeLink = newConfig?.themeLink;
   const siteUrl = `https://${newConfig.domain}`;
-  const sameAs = Object.values(newConfig?.social || {}).filter(Boolean);
+  const sameAs = [...new Set([
+    ...Object.values(newConfig?.social || {}),
+    newConfig.representation.redbuble,
+    newConfig.representation.teepublic,
+    newConfig.representation.tostadora || newConfig.representation.tostaDora,
+    newConfig.representation.zazzle,
+  ].filter(Boolean))];
 
   const jsonLdData = [
     {

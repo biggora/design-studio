@@ -177,7 +177,7 @@ Generated per deployment from the configured domain:
 - Declares the sitemap at `https://<domain>/sitemap.xml` and the canonical host.
 
 ### 3.4 Structured Data (JSON-LD)
-- Site-wide: `Organization` (name, url, logo, email, `sameAs` social profiles) and `WebSite`, emitted by the root layout via the `JsonLd` component.
+- Site-wide: `Organization` (name, url, logo, email) and `WebSite`, emitted by the root layout via the `JsonLd` component. Organization `sameAs` combines configured social profiles with the four official shop links used by the footer (Redbubble, TeePublic, Tostadora, Zazzle), without affiliate wrapping, empty entries or duplicate URLs; the legacy `tostaDora` setting remains supported.
 - Site-wide `WebSite` also carries a `SearchAction` pointing at `/designs?search={search_term_string}`.
 - Per design: `BreadcrumbList` (Home → primary collection → design, or Home → Designs → design when uncollected) and `CreativeWork` (name, description, image, `dateCreated`, keywords, creator), plus one concrete T-shirt `Product`/`Offer` when a fresh verified price is available. Visible prices and schema use the same cached quote.
 - Inner pages receive a default Home → page breadcrumb from `pageJsonLd`; an explicit trail replaces it when available. The homepage has no breadcrumb. Collection catalog trails include Home → Our Designs → collection.
