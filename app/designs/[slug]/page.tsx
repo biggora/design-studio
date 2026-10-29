@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getSiteConfig, getDesignById, getDesignBySlug, fetchRandomDesigns, fetchDesignListingUrl } from "@/utils/database";
+import { getSiteConfig, getDesignById, getDesignBySlug, fetchRandomDesigns, fetchPublicListings } from "@/utils/database";
 import { getShareImageUrl, getProductMockupUrl, type ProductMockupKey } from "@/lib/image";
 import { notFound, permanentRedirect } from "next/navigation";
 import {
@@ -22,7 +22,9 @@ import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { DesignImage } from "@/app/components/DesignImage";
 import { JsonLd } from "@/app/components/JsonLd";
-import { pageJsonLd } from "@/lib/structured-data";
+import { pageJsonLd, tshirtProductJsonLd } from "@/lib/structured-data";
+import { getTshirtOffers, tshirtPriceSources } from "@/lib/marketplace-prices";
+import { TshirtPrices } from "@/app/components/TshirtPrices";
 import BuyLink from "@/app/components/BuyLink";
 import { MobileBuyBar } from "@/app/components/MobileBuyBar";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -149,12 +151,6 @@ export default async function DesignDetails(
   const shareUrl = `https://${config.domain}${designPath(design)}`;
   const shareText = `Check out this amazing design: ${design.title} by ${config.name}`;
 
-  const buyUrl = sanitizeUrl(
-    applyRedbubbleAffiliate(
-      design.externalLink || (design.externalId !== null ? getRedBubbleDesignPageLink(design.externalId) : ""),
-      config.affiliate.redbubbleTemplate,
-    ),
-  );
   const teePublicLink = applyTeepublicReferral(
     getTeepublicLink(design),
     config.affiliate.teepublicReferralId,
@@ -162,11 +158,23 @@ export default async function DesignDetails(
   // Tostadora's and Zazzle's listing URLs live only in design_listings (no
   // externalLink/props bridge); absent or on lookup failure the button just
   // doesn't render.
-  const tostadoraUrl = await fetchDesignListingUrl(design.id, "tostadora");
-  const zazzleUrl = await fetchDesignListingUrl(design.id, "zazzle");
+  const listings = await fetchPublicListings([design.id])
+    .then(byDesign => byDesign[design.id] || [])
+    .catch(error => { console.warn("Marketplace listings unavailable:", error); return []; });
+  const tostadoraUrl = listings.find(listing => listing.platform === "tostadora")?.url;
+  const zazzleUrl = listings.find(listing => listing.platform === "zazzle")?.url;
+  const tshirtOffers = await getTshirtOffers(design.id, tshirtPriceSources(design, listings));
+  const buyUrl = sanitizeUrl(applyRedbubbleAffiliate(
+    tshirtOffers.find(offer => offer.platform === "redbubble")?.url ||
+      design.externalLink || (design.externalId !== null ? getRedBubbleDesignPageLink(design.externalId) : ""),
+    config.affiliate.redbubbleTemplate,
+  ));
   // Share surfaces (Pinterest intent, JSON-LD) take the share image — the CDN's
   // pre-flattened JPEG when published, else the Redbubble display image.
   const shareImage = getShareImageUrl(design) || "/images/no_image_available.svg";
+  const tshirtProduct = tshirtOffers[0]
+    ? tshirtProductJsonLd(shareUrl, tshirtOffers[0], design.description, new URL(shareImage, `https://${config.domain}/`).href)
+    : null;
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -218,9 +226,12 @@ export default async function DesignDetails(
       <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd, {
         ...pageJsonLd(config, designPath(design), design.title),
         description: design.description,
-        mainEntity: { "@id": `${shareUrl}#artwork` },
+        mainEntity: tshirtProduct
+          ? [{ "@id": `${shareUrl}#artwork` }, { "@id": tshirtProduct["@id"] }]
+          : { "@id": `${shareUrl}#artwork` },
         breadcrumb: { "@id": `${shareUrl}#breadcrumb` },
       }]} />
+      {tshirtProduct && <JsonLd data={tshirtProduct} />}
       <PageShell>
         <BackToCatalog fallbackHref={collectionUrl} />
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
@@ -266,6 +277,66 @@ export default async function DesignDetails(
                   </p>
                 )}
               </div>
+              <TshirtPrices offers={tshirtOffers} design={design} config={config} />
+              {buyUrl !== "#" && (
+                <div data-in-card-buy>
+                  <BuyLink
+                    href={buyUrl}
+                    platform="redbubble"
+                    designSlug={design.slug || design.id}
+                    pageType="design"
+                    position="primary"
+                    className={buttonVariants({ className: "w-full gap-2 min-h-11" })}
+                  >
+                    Buy on Redbubble
+                    <span aria-hidden="true">&#8599;</span>
+                  </BuyLink>
+                </div>
+              )}
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                Printed &amp; shipped by our marketplace partner. We may earn a
+                commission —{" "}
+                <AccentLink href="/disclosure">learn more</AccentLink>
+              </p>
+              {teePublicLink && !tshirtOffers.some(offer => offer.platform === "teepublic") && (
+                <BuyLink
+                  href={sanitizeUrl(teePublicLink)}
+                  platform="teepublic"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="secondary"
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
+                >
+                  Buy on TeePublic
+                  <span aria-hidden="true">&#8599;</span>
+                </BuyLink>
+              )}
+              {tostadoraUrl && !tshirtOffers.some(offer => offer.platform === "tostadora") && (
+                <BuyLink
+                  href={sanitizeUrl(tostadoraUrl)}
+                  platform="tostadora"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="secondary"
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
+                >
+                  Buy on Tostadora
+                  <span aria-hidden="true">&#8599;</span>
+                </BuyLink>
+              )}
+              {zazzleUrl && !tshirtOffers.some(offer => offer.platform === "zazzle") && (
+                <BuyLink
+                  href={sanitizeUrl(zazzleUrl)}
+                  platform="zazzle"
+                  designSlug={design.slug || design.id}
+                  pageType="design"
+                  position="secondary"
+                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
+                >
+                  Buy on Zazzle
+                  <span aria-hidden="true">&#8599;</span>
+                </BuyLink>
+              )}
               {productMockups.length > 0 && (
                 <div className="mb-6">
                   <div className="grid grid-cols-3 gap-3">
@@ -288,65 +359,6 @@ export default async function DesignDetails(
                     ))}
                   </div>
                 </div>
-              )}
-              {buyUrl !== "#" && (
-                <div data-in-card-buy>
-                  <BuyLink
-                    href={buyUrl}
-                    platform="redbubble"
-                    designSlug={design.slug || design.id}
-                    pageType="design"
-                    position="primary"
-                    className={buttonVariants({ className: "w-full gap-2 min-h-11" })}
-                  >
-                    Buy on Redbubble
-                    <span aria-hidden="true">&#8599;</span>
-                  </BuyLink>
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground mt-2 text-center">
-                Printed &amp; shipped by our marketplace partner. We may earn a
-                commission —{" "}
-                <AccentLink href="/disclosure">learn more</AccentLink>
-              </p>
-              {teePublicLink && (
-                <BuyLink
-                  href={sanitizeUrl(teePublicLink)}
-                  platform="teepublic"
-                  designSlug={design.slug || design.id}
-                  pageType="design"
-                  position="secondary"
-                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
-                >
-                  Buy on TeePublic
-                  <span aria-hidden="true">&#8599;</span>
-                </BuyLink>
-              )}
-              {tostadoraUrl && (
-                <BuyLink
-                  href={sanitizeUrl(tostadoraUrl)}
-                  platform="tostadora"
-                  designSlug={design.slug || design.id}
-                  pageType="design"
-                  position="secondary"
-                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
-                >
-                  Buy on Tostadora
-                  <span aria-hidden="true">&#8599;</span>
-                </BuyLink>
-              )}
-              {zazzleUrl && (
-                <BuyLink
-                  href={sanitizeUrl(zazzleUrl)}
-                  platform="zazzle"
-                  designSlug={design.slug || design.id}
-                  pageType="design"
-                  position="secondary"
-                  className={buttonVariants({ variant: "outline", size: "sm", className: "mt-3 w-full gap-2" })}
-                >
-                  Buy on Zazzle
-                  <span aria-hidden="true">&#8599;</span>
-                </BuyLink>
               )}
               <div className="flex items-center space-x-4 mt-6">
                 <ShareLinks

@@ -1,4 +1,29 @@
 import type { SiteConfig } from "@/lib/store";
+import type { TshirtOffer } from "@/lib/marketplace-prices";
+
+/** One concrete marketplace T-shirt; other stores' currencies are not aggregated. */
+export function tshirtProductJsonLd(pageUrl: string, offer: TshirtOffer, description: string, image: string) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "@id": `${pageUrl}#tshirt-${offer.platform}`,
+    name: offer.name,
+    description,
+    image: offer.image || image,
+    category: "T-Shirt",
+    url: pageUrl,
+    mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
+    offers: {
+      "@type": "Offer",
+      url: offer.url,
+      price: offer.price,
+      priceCurrency: offer.currency,
+      seller: { "@type": "Organization", name: offer.seller },
+      ...(offer.availability ? { availability: offer.availability } : {}),
+      ...(offer.priceValidUntil ? { priceValidUntil: offer.priceValidUntil } : {}),
+    },
+  };
+}
 
 /** The page and the global website/organization share stable identities. */
 export function pageJsonLd(

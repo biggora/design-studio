@@ -14,16 +14,18 @@ const design: Design = {
   props: { teepublicLink: "https://teepublic.com/t-shirt/123-space-cat" },
 };
 const fetchRandomDesigns = vi.fn();
-const fetchDesignListingUrl = vi.fn();
+const fetchPublicListings = vi.fn();
+const getTshirtOffers = vi.hoisted(() => vi.fn().mockResolvedValue([]));
+vi.mock("@/lib/marketplace-prices", async (importOriginal) => ({ ...await importOriginal<typeof import("@/lib/marketplace-prices")>(), getTshirtOffers }));
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   getDesignBySlug: async () => ({ design, relatedDesigns: [] }),
   getDesignById: async () => ({ design, relatedDesigns: [] }),
   fetchRandomDesigns: (...args: unknown[]) => fetchRandomDesigns(...args),
-  fetchDesignListingUrl: (...args: unknown[]) => fetchDesignListingUrl(...args),
+  fetchPublicListings: (...args: unknown[]) => fetchPublicListings(...args),
 }));
 fetchRandomDesigns.mockResolvedValue([]);
-fetchDesignListingUrl.mockResolvedValue(null);
+fetchPublicListings.mockResolvedValue({});
 vi.mock("next/image", () => ({ default: ({ src, alt }: { src: string; alt: string }) => createElement("img", { src, alt }) }));
 vi.mock("@/app/components/FeaturedDesigns", () => ({ default: () => null }));
 vi.mock("@/app/components/BackToCatalog", () => ({ default: () => null }));
@@ -66,6 +68,32 @@ function findBuyLinks(node: unknown): ReactElement<BuyLinkProps>[] {
 }
 
 describe("non-Redbubble design page", () => {
+  it("retains the page and existing links when the batched marketplace lookup fails", async () => {
+    const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchPublicListings.mockRejectedValueOnce(new Error("temporary listing outage"));
+    try {
+      const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
+      expect(html).toContain("Space cat");
+      expect(html).toContain("Buy on TeePublic");
+    } finally { warning.mockRestore(); }
+  });
+  it("puts verified T-shirt pricing before other products and reuses the exact tee destination", async () => {
+    const url = "https://www.redbubble.com/i/t-shirt/Space-cat/123/lrcw";
+    getTshirtOffers.mockResolvedValue([
+      { platform: "redbubble", seller: "Redbubble", name: "Space cat Classic T-Shirt", url, price: "26.21", currency: "EUR", checkedAt: "2026-10-29T07:00:00Z", expiresAt: "2026-10-29T07:30:00Z" },
+      { platform: "teepublic", seller: "TeePublic", name: "Space cat T-Shirt", url: "https://www.teepublic.com/t-shirt/123-space-cat", price: "16.26", currency: "EUR", checkedAt: "2026-10-29T07:00:00Z", expiresAt: "2026-10-29T07:30:00Z" },
+    ]);
+    try {
+      const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
+      const html = renderToStaticMarkup(page);
+      expect(findBuyLinks(page).find(link => link.props.position === "primary")?.props.href).toBe(url);
+      expect(html).toContain('"@type":"Product"');
+      expect(html).toContain('"priceCurrency":"EUR"');
+      expect(html).toContain("T-Shirt prices");
+      expect(html).not.toContain("Buy on TeePublic");
+      expect(html).toContain("Buy on Redbubble");
+    } finally { getTshirtOffers.mockResolvedValue([]); }
+  });
   it("keeps artwork details and breadcrumbs connected to the page and company", async () => {
     const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
     const data = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);
@@ -160,31 +188,30 @@ describe("non-Redbubble design page", () => {
     }
   });
   it("renders Buy on Tostadora from the stored listing only when there is one", async () => {
-    fetchDesignListingUrl.mockResolvedValue("https://www.tostadora.co.uk/web/choose-joy/4929330");
+    fetchPublicListings.mockResolvedValue({ [design.id]: [{ platform: "tostadora", url: "https://www.tostadora.co.uk/web/choose-joy/4929330" }] });
     const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
     const html = renderToStaticMarkup(page);
     expect(html).toContain("Buy on Tostadora");
     expect(html).toContain("https://www.tostadora.co.uk/web/choose-joy/4929330");
     const tostadora = findBuyLinks(page).find(link => link.props.platform === "tostadora");
     expect(tostadora?.props).toMatchObject({ position: "secondary", pageType: "design" });
-    expect(fetchDesignListingUrl).toHaveBeenCalledWith(design.id, "tostadora");
+    expect(fetchPublicListings).toHaveBeenCalledWith([design.id]);
 
-    fetchDesignListingUrl.mockResolvedValue(null);
+    fetchPublicListings.mockResolvedValue({});
     expect(renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) })))
       .not.toContain("Buy on Tostadora");
   });
   it("renders Buy on Zazzle from the stored listing only when there is one", async () => {
-    fetchDesignListingUrl.mockImplementation((_id: unknown, platform: unknown) =>
-      platform === "zazzle" ? Promise.resolve("https://www.zazzle.com/space-cat-t-shirt-256325396025543708") : Promise.resolve(null));
+    fetchPublicListings.mockResolvedValue({ [design.id]: [{ platform: "zazzle", url: "https://www.zazzle.com/space-cat-t-shirt-256325396025543708" }] });
     const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
     const html = renderToStaticMarkup(page);
     expect(html).toContain("Buy on Zazzle");
     expect(html).toContain("https://www.zazzle.com/space-cat-t-shirt-256325396025543708");
     const zazzle = findBuyLinks(page).find(link => link.props.platform === "zazzle");
     expect(zazzle?.props).toMatchObject({ position: "secondary", pageType: "design" });
-    expect(fetchDesignListingUrl).toHaveBeenCalledWith(design.id, "zazzle");
+    expect(fetchPublicListings).toHaveBeenCalledWith([design.id]);
 
-    fetchDesignListingUrl.mockResolvedValue(null);
+    fetchPublicListings.mockResolvedValue({});
     expect(renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) })))
       .not.toContain("Buy on Zazzle");
   });
