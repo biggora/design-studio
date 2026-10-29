@@ -4,6 +4,7 @@ import {createHmac} from "node:crypto";
 import {readFileSync} from "node:fs";
 import mysql from "mysql2/promise";
 import {getGiftPages} from "@/lib/gifts";
+import {createClient} from "@supabase/supabase-js";
 
 vi.mock("next/cache", () => ({unstable_cache: (fn: unknown) => fn}));
 const enabled = process.env.GIFTS_TEST_DATABASES === "1";
@@ -58,6 +59,16 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
             UPDATE designs SET active = FALSE WHERE id = '${id(503)}';
             UPDATE designs SET ${q("externalLink")}='https://www.redbubble.com/shop/ap/1', props='{"mockup_tshirt":"https://ih1.redbubble.net/tee.jpg"}';`);
         await reloadSchema(true);
+        if (provider === "supabase") {
+            for (let n = 0; n < 2; n++) pg(readFileSync("init/migrations/017_collection_designs_postgres.sql", "utf8"));
+            pg("NOTIFY pgrst, 'reload schema'");
+            for (let n = 0; n < 30; n++) {
+                const r = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/rpc/get_collection_designs?collection_title=Family`);
+                if (r.ok) break;
+                if (n === 29) throw new Error("Collection RPC schema did not refresh");
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
         db = await import("./database");
     }, 30000);
     afterAll(async () => {await db?.closeDatabaseConnections(); await pool?.end(); vi.unstubAllEnvs();});
@@ -151,5 +162,48 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
         expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "!!!"})).total).toBe(0);
         expect((await db.fetchGiftPageDesigns(thanksgiving, {page: 999})).page).toBe(2);
         expect((await db.fetchGiftPageDesigns({...gift, slug: "unknown"}))).toMatchObject({total: 0, hasDesigns: false});
+    });
+    it("keeps collection pagination, secondary memberships, search and legacy fallback identical", async () => {
+        const q = (name: string) => provider === "supabase" ? `"${name}"` : `\`${name}\``;
+        await execute(`INSERT INTO collections (id,title,${q("externalId")}) VALUES ('${id(701)}','Family',701);
+            INSERT INTO design_collections (${q("designId")},${q("collectionId")}) SELECT id,'${id(701)}' FROM designs WHERE collection='Family';`);
+        const first = await db.fetchDesigns(1, "", "Family", 20);
+        const second = await db.fetchDesigns(2, "", "Family", 20);
+        // One explicit Food membership with a Family primary label; unchanged
+        // provider semantics: Supabase prefers joins, MySQL unions legacy labels.
+        const food = await db.fetchDesigns(1, "apple cider", "Food", 20);
+        expect(food.designs.map(d => d.id)).toEqual([id(601)]);
+        expect(food.total).toBe(1);
+        expect(first.designs).toHaveLength(20);
+        expect(second.designs).toHaveLength(20); // older non-gift prints remain catalog-visible
+        expect(new Set([...first.designs, ...second.designs].map(d => d.id)).size).toBe(40);
+        const overflow = await db.fetchDesigns(999, "", "Family", 20);
+        expect(overflow.designs).toEqual([]);
+        expect(overflow.total).toBe(first.total);
+        expect((await db.fetchDesigns(1, "", "unknown", 20)).total).toBe(0);
+        expect((await db.fetchDesigns(1, "Halloween", "Food", 20)).designs).toEqual([]);
+        expect((await db.fetchDesigns(1, "apple", "Food", 20, ["turkey"])).total).toBe(1);
+        if (provider === "supabase") {
+            const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, token("anon"), {auth: {persistSession: false}});
+            const read = () => client.rpc("get_collection_designs", {collection_title: "Food"}, {get: true});
+            expect((await read()).data?.map((d: {id: string}) => d.id)).toEqual([id(601)]);
+            pg(`UPDATE public.designs SET active=false WHERE id='${id(601)}';`);
+            try {expect((await read()).data).toEqual([]);}
+            finally {pg(`UPDATE public.designs SET active=true WHERE id='${id(601)}';`);}
+            pg(`CREATE POLICY test_collection_rpc_visibility ON public.designs AS RESTRICTIVE FOR SELECT TO anon USING (id <> '${id(601)}');`);
+            try {expect((await read()).data).toEqual([]);}
+            finally {pg("DROP POLICY test_collection_rpc_visibility ON public.designs");}
+            pg("DROP FUNCTION public.get_collection_designs(text); NOTIFY pgrst, 'reload schema';");
+            try {
+                for (let n = 0; n < 30; n++) {
+                    if ((await read()).error?.code === "PGRST202") break;
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+                expect((await db.fetchDesigns(1, "apple cider", "Food", 20)).designs.map(d => d.id)).toEqual([id(601)]);
+            } finally {
+                pg(readFileSync("init/migrations/017_collection_designs_postgres.sql", "utf8"));
+                pg("NOTIFY pgrst, 'reload schema'");
+            }
+        }
     });
 });

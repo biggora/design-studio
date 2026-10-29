@@ -9,7 +9,15 @@ let noRowsWritten = false;
 const filters: unknown[][] = [];
 const mysqlQuery = vi.fn();
 
-vi.mock("@supabase/supabase-js", () => ({createClient: () => ({from: (table: string) => {
+vi.mock("@supabase/supabase-js", () => ({createClient: () => ({
+rpc: (_name: string, args: {collection_title: string}) => {
+    const builder = {
+        returns: () => builder, eq: () => builder, order: () => builder,
+        range: async () => ({data: [row], count: args.collection_title === "Empty" ? 0 : 2, error: null}),
+    };
+    return builder;
+},
+from: (table: string) => {
     const writer = (value: unknown) => {
         writes.push({table, value});
         const written = () => ({error: null, data: noRowsWritten ? [] : [{id: "1"}]});

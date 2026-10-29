@@ -553,14 +553,24 @@ export async function fetchDesigns(
         };
 
         const runJoinQuery = async (from = start, to = end) => {
-            let query = supabaseClient
-                .from("designs")
-                .select("*, design_collections!inner(collections!inner(title))", {count: "exact"})
-                .eq("active", true);
-            if (filters) query = query.or(filters);
-            query = query.eq("design_collections.collections.title", collection);
-            query = query.order("createdAt", { ascending: false }).order("id", { ascending: false });
-            return query.range(from, to);
+            const run = (useRpc: boolean) => {
+                // EXISTS can be planned as one join before paging. Embedding the
+                // memberships instead builds unused JSON once per catalog row.
+                let query = useRpc
+                    ? supabaseClient.rpc<"get_collection_designs", {Args: {collection_title: string}; Returns: Record<string, unknown>[]}>(
+                        "get_collection_designs", {collection_title: collection}, {get: true, count: "exact"})
+                    : supabaseClient.from("designs")
+                        .select("*, design_collections!inner(collections!inner(title))", {count: "exact"})
+                        .eq("design_collections.collections.title", collection);
+                query = query.eq("active", true);
+                if (filters) query = query.or(filters);
+                return query.order("createdAt", {ascending: false}).order("id", {ascending: false})
+                    .range(from, to);
+            };
+            const result = await run(true);
+            // Deploy-before-migration compatibility: retain all memberships, not
+            // just the primary label. Probe the RPC again on the next request.
+            return result.error?.code === "PGRST202" ? run(false) : result;
         };
 
         let runQuery = collection ? runJoinQuery : runLegacyQuery;

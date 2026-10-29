@@ -19,6 +19,21 @@ order by random()
     limit 3;
 $$;-- Invoker privileges, callable only by the service role. Raising an error rolls back
 -- every change, including a newly created or adopted design.
+-- An inlinable, caller-privileged collection filter for paginated PostgREST reads.
+CREATE OR REPLACE FUNCTION public.get_collection_designs(collection_title text)
+RETURNS SETOF public.designs
+LANGUAGE sql STABLE SECURITY INVOKER
+AS $$
+  SELECT d.* FROM public.designs AS d
+  WHERE d.active = true AND EXISTS (
+    SELECT 1 FROM public.design_collections AS dc
+    JOIN public.collections AS c ON c.id = dc."collectionId"
+    WHERE dc."designId" = d.id AND c.title = collection_title
+  );
+$$;
+REVOKE ALL ON FUNCTION public.get_collection_designs(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_collection_designs(text) TO anon, authenticated, service_role;
+
 CREATE OR REPLACE FUNCTION public.ingest_design_listing(payload JSONB, slug_base TEXT)
 RETURNS JSONB LANGUAGE plpgsql SECURITY INVOKER SET search_path = public
 AS $$

@@ -540,7 +540,7 @@ Performs pagination and filtering of the catalog.
 
 - **Parameters**:
   - `page: number` — 1-based page number; values below 1 are clamped to 1.
-  - `searchQuery: string` — case-insensitive title search.
+  - `searchQuery: string` — case-insensitive title/tag/description search, ranked before pagination.
   - `collection: string` — exact collection-name filter.
   - `itemsPerPage: number` — page size (default 12); clamped to the 1–100 range.
 - **Return value**:
@@ -548,13 +548,26 @@ Performs pagination and filtering of the catalog.
   Promise<{ designs: Design[]; total: number }>
   ```
 - **Query logic**:
-  - Supabase query builder: `.from("designs").select("*", { count: "exact" })`, optionally `.ilike("title", `%${searchQuery}%`)` and `.eq("collection", collection)`, then a deterministic `.order("createdAt", { ascending: false }).order("id", { ascending: false })` and `.range(start, end)`. On error it logs and returns `{ designs: [], total: 0 }`.
-  - MySQL uses a parameterized query with a parallel count:
-    ```sql
-    SELECT * FROM designs WHERE 1 [AND title LIKE ?] [AND collection = ?]
-    ORDER BY createdAt DESC, id DESC LIMIT ? OFFSET ?
-    SELECT COUNT(*) as total FROM designs WHERE 1 [AND title LIKE ?] [AND collection = ?]
-    ```
+  - Unfiltered Supabase reads use the `designs` table. Collection reads call `get_collection_designs(collection_title)` through a read-only GET RPC with an exact count; active/search/keyword filters, stable date/id ordering and ranges remain in the facade. The SQL function filters memberships with `EXISTS`, returning each print once without embedding unused collection JSON. MySQL already uses a parameterized `EXISTS` query and retains its behavior.
+  - Migration `017_collection_designs_postgres.sql` adds the function; fresh PostgreSQL installs get it from `postgres_functions.sql`. It is `SQL STABLE SECURITY INVOKER`, respects RLS, excludes inactive designs and grants execution only to `anon`, `authenticated` and `service_role`. Schema-qualified references are intentional; adding a function-level `SET` clause or `SECURITY DEFINER` would prevent inlining or alter privileges.
+  - If PostgREST reports a missing function (`PGRST202`), the facade uses the previous embedded membership query for that request, preserving secondary memberships before migration. The next request probes the RPC again. Existing primary-collection fallbacks and out-of-range count handling remain unchanged. Other errors are not reclassified as a missing migration.
+
+#### Collection-query performance and rollout (2026-10-29)
+
+Measured on one fixed public catalog snapshot: 624 designs, 30 collections and 656 memberships, loaded into isolated PostgreSQL 17 + PostgREST 12.2. Each scenario used 30 warm-cache samples per version, with alternating before/after order and two excluded warm-up pairs. Both variants included the real PostgREST exact count and JSON response. SQL medians came from `EXPLAIN ANALYZE`; request medians include local HTTP handling. These are not production page-load timings.
+
+| Scenario | SQL before → after | Local HTTP before → after |
+|---|---:|---:|
+| Family and Friends, first 15 | 2.360 → 0.494 ms | 5.329 → 3.471 ms |
+| Programming, first 15 | 2.633 → 0.728 ms | 5.850 → 4.008 ms |
+| Programming, page 4 | 2.561 → 0.701 ms | 5.589 → 3.830 ms |
+| Holidays and Festivals, page 2 | 2.327 → 0.514 ms | 5.244 → 3.505 ms |
+| Programming, search `code` | 3.344 → 1.565 ms | 7.463 → 5.655 ms |
+| Family and Friends, keyword `retro` | 1.268 → 0.370 ms | 4.024 → 2.808 ms |
+
+All 30 collections were compared across every result page: 31 pages / 656 memberships, with identical complete rows, ordering and totals. The RPC is inlined (no `get_collection_designs` Function Scan); PostgREST's separate `json_to_record` node only decodes its arguments. The representative Family query reduced shared-buffer hits from 3,435 to 188. Raw snapshot hash, all samples' summaries, plans and checks are retained locally in `.cache/collection-query-2026-10-29/`.
+
+Before rollout, apply pending migrations through the existing `npm run db:migrate` runner, which also notifies PostgREST to reload its schema; then deploy the application. If code arrives first, the compatibility path remains functional but does not gain the measured speedup. MySQL needs no additional migration because its collection query already uses `EXISTS`. This change adds no index, table or paid dependency. Production migration/deployment was not performed during this verification. Rolling back application code can leave the unused read function installed.
 
 ### 4.4 `getDesignById(id: string)`
 

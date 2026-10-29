@@ -6,14 +6,16 @@ vi.mock("next/cache", () => ({unstable_cache: (fn: unknown) => fn}));
 let rows: Record<string, unknown>[];
 let joinFails: boolean;
 let failSecondBatch: boolean;
+let rpcMissing: boolean;
 const filters: string[] = [];
 const ranges: number[][] = [];
 const selections: string[] = [];
+const rpcCalls: unknown[][] = [];
 const mysqlQuery = vi.fn();
 
 vi.mock("@supabase/supabase-js", () => ({
-    createClient: () => ({
-        from: () => ({
+    createClient: () => {
+        const from = () => ({
             select: (selection: string) => {
                 selections.push(selection);
                 let titleQuery = "";
@@ -22,20 +24,24 @@ vi.mock("@supabase/supabase-js", () => ({
                     or: (filter: string) => {filters.push(filter); return builder;},
                     eq: () => builder,
                     order: () => builder,
+                    returns: () => builder,
                     range: async (from: number, to: number) => {
                         ranges.push([from, to]);
-                        if ((joinFails && selection.includes("design_collections")) || (failSecondBatch && from > 0)) {
-                            return {data: null, count: null, error: {message: "query failed"}};
-                        }
                         const matches = titleQuery
                             ? rows.filter(row => String(row.title).toLowerCase().includes(titleQuery)) : rows;
-                        return {data: matches.slice(from, to + 1), count: matches.length, error: null};
+                        const result = rpcMissing && selection.startsWith("rpc:")
+                            ? {data: null, count: null, error: {code: "PGRST202", message: "function missing"}}
+                            : ((joinFails && (selection.includes("design_collections") || selection.startsWith("rpc:"))) || (failSecondBatch && from > 0))
+                                ? {data: null, count: null, error: {message: "query failed"}}
+                                : {data: matches.slice(from, to + 1), count: matches.length, error: null};
+                        return result;
                     },
                 };
                 return builder;
             },
-        }),
-    }),
+        });
+        return {from, rpc: (...args: unknown[]) => {rpcCalls.push(args); return from().select("rpc:get_collection_designs");}};
+    },
 }));
 
 vi.mock("mysql2/promise", () => ({default: {createPool: () => ({query: mysqlQuery})}}));
@@ -48,9 +54,11 @@ beforeEach(() => {
     rows = catPrints.map(row => ({...row, createdAt: "2026-10-09T00:00:00Z"}));
     joinFails = false;
     failSecondBatch = false;
+    rpcMissing = false;
     filters.length = 0;
     ranges.length = 0;
     selections.length = 0;
+    rpcCalls.length = 0;
     mysqlQuery.mockReset();
     vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -83,7 +91,8 @@ describe("Supabase catalog search", () => {
     it("keeps the keywords filter in the same AND expression as search terms", async () => {
         const {fetchDesigns} = await import("@/utils/database");
         await fetchDesigns(1, "cat gift", "Pets", 15, ["pixel art"]);
-        expect(selections[0]).toContain("design_collections!inner");
+        expect(selections[0]).toBe("rpc:get_collection_designs");
+        expect(rpcCalls).toEqual([["get_collection_designs", {collection_title: "Pets"}, {get: true, count: "exact"}]]);
         expect(filters).toHaveLength(1);
         expect(filters[0]).toContain("or(keywords.ilike.\"%pixel art%\")");
         expect(filters[0]).toMatch(/^and\(/);
@@ -96,6 +105,16 @@ describe("Supabase catalog search", () => {
         expect(result.total).toBe(8);
         expect(selections).toHaveLength(2);
         expect(filters[0]).toEqual(filters[1]);
+    });
+
+    it("retains membership filtering before the RPC migration and probes the RPC again later", async () => {
+        rpcMissing = true;
+        const {fetchDesigns} = await import("@/utils/database");
+        expect((await fetchDesigns(1, "cat lover gift", "Pets", 100)).total).toBe(8);
+        expect(selections).toEqual(["rpc:get_collection_designs", "*, design_collections!inner(collections!inner(title))"]);
+        rpcMissing = false;
+        await fetchDesigns(1, "cat lover gift", "Pets", 100);
+        expect(rpcCalls).toHaveLength(2);
     });
 
     it("does not return a partially ranked page when a later batch fails", async () => {
