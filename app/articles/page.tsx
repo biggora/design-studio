@@ -126,6 +126,8 @@ export default async function ArticlesPage({ searchParams }: Props) {
                   <h2 className="font-display text-xl font-semibold leading-snug text-balance">
                     <a
                       href={article.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className={cn(
                         "rounded-sm transition-colors hover:text-accent",
                         focusRingClasses,
@@ -139,6 +141,8 @@ export default async function ArticlesPage({ searchParams }: Props) {
                   </p>
                   <a
                     href={article.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className={cn(
                       "mt-auto pt-3 text-accent underline-offset-4 hover:underline",
                       focusRingClasses,
