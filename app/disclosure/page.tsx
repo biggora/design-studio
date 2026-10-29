@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -6,7 +6,8 @@ import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `Affiliate Disclosure - ${config.name}`;
   const description = `${config.name} may earn a commission when you buy through our marketplace partner links. Here is how it works.`;
@@ -16,12 +17,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: "affiliate disclosure, affiliate links, commissions",
     alternates: { canonical: "/disclosure" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/disclosure`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },

@@ -1,16 +1,28 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import { getSiteConfig } from "@/utils/database";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 import { AccentLink } from "@/app/components/AccentLink";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config = await getSiteConfig();
+  const title = `Publisher Privacy Policy - ${config.name}`;
+  const description = `How ${config.name} Publisher uses Facebook and Instagram data and how to request its deletion.`;
   return {
-    title: `Publisher Privacy Policy - ${config.name}`,
-    description: `How ${config.name} Publisher uses Facebook and Instagram data and how to request its deletion.`,
+    title,
+    description,
     alternates: { canonical: "/publisher-privacy" },
+    openGraph: {
+      ...inherited?.openGraph,
+      url: `https://${config.domain}/publisher-privacy`,
+      type: "website",
+      siteName: config.name,
+      locale: "en_US",
+      title,
+      description,
+    },
   };
 }
 

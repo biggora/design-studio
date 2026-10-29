@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { getSiteConfig, fetchFeaturedCollections } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -8,7 +8,8 @@ import { CardGrid } from "@/app/components/CardGrid";
 import { IndexCard } from "@/app/components/IndexCard";
 import { collectionPath } from "@/lib/collections";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config = await getSiteConfig();
   const collections = await fetchFeaturedCollections(config.collectionPages);
   const title = `Collections - ${config.name}`;
@@ -18,8 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     alternates: { canonical: "/collections" },
     ...(collections.length ? {} : { robots: { index: false, follow: true } }),
-    openGraph: { url: `https://${config.domain}/collections`, type: "website", title, description },
-    twitter: { title, description },
+    openGraph: { ...inherited?.openGraph, url: `https://${config.domain}/collections`, type: "website", title, description },
+    twitter: { ...inherited?.twitter, title, description },
   };
 }
 

@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { getSiteConfig, fetchLiveGiftPages, fetchGiftPageSections } from "@/utils/database";
 import { JsonLd } from "@/app/components/JsonLd";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -10,7 +10,8 @@ import { giftPath, orderGiftPages } from "@/lib/gifts";
 
 const DESCRIPTION = "Gift ideas by interest: find a print for the programmer, pet lover, photographer or traveller in your life.";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config = await getSiteConfig();
   const title = `Gift Ideas by Interest - ${config.name}`;
   return {
@@ -18,8 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description: DESCRIPTION,
     alternates: { canonical: "/gifts" },
     ...((await fetchLiveGiftPages(config.giftPages)).length ? {} : { robots: { index: false, follow: true } }),
-    openGraph: { url: `https://${config.domain}/gifts`, type: "website", title, description: DESCRIPTION },
-    twitter: { title, description: DESCRIPTION },
+    openGraph: { ...inherited?.openGraph, url: `https://${config.domain}/gifts`, type: "website", title, description: DESCRIPTION },
+    twitter: { ...inherited?.twitter, title, description: DESCRIPTION },
   };
 }
 

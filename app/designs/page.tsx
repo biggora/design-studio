@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import {cache} from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -38,7 +38,8 @@ const loadCatalog = cache(async (page: number, search: string, collection: strin
 export async function generateMetadata(
   props: {
     searchParams: Promise<{ page?: string; search?: string; collection?: string }>;
-  }
+  },
+  parent?: ResolvingMetadata,
 ): Promise<Metadata> {
   const searchParams = await props.searchParams;
   const currentPage = parsePageParam(searchParams.page);
@@ -57,6 +58,8 @@ export async function generateMetadata(
   if (currentPage > 1) canonicalParams.set("page", currentPage.toString());
   const canonicalQuery = canonicalParams.toString();
   const canonical = canonicalQuery ? `/designs?${canonicalQuery}` : "/designs";
+  const inherited = await parent;
+  const images = designs.slice(0, 4).map((design) => getShareImageUrl(design));
 
   return {
     title,
@@ -65,16 +68,18 @@ export async function generateMetadata(
     ...(searchQuery || (selectedCollection && (!knownCollection || !total))
       ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}${canonical}`,
       type: "website",
       title,
       description,
-      images: designs.slice(0, 4).map((design) => getShareImageUrl(design)),
+      ...(images.length ? { images } : {}),
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
-      images: designs.slice(0, 4).map((design) => getShareImageUrl(design)),
+      ...(images.length ? { images } : {}),
     },
   };
 }

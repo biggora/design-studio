@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import ContactForm from "../components/ContactForm";
 import SocialLinks from "../components/SocialLinks";
@@ -13,7 +13,8 @@ import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `Contact Us - ${config.name}`;
   const description = `Get in touch with ${config.name}. We're here to answer your questions and discuss your custom design requests.`;
@@ -23,12 +24,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: "contact, get in touch, custom design requests, print-on-demand",
     alternates: { canonical: "/contact" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/contact`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },

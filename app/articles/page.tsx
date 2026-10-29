@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -20,18 +20,31 @@ const pageUrl = (page: number) =>
 
 export async function generateMetadata({
   searchParams,
-}: Props): Promise<Metadata> {
+}: Props, parent?: ResolvingMetadata): Promise<Metadata> {
   const [config, articles, params] = await Promise.all([
     getSiteConfig(),
     fetchPublishedArticles(),
     searchParams,
   ]);
+  const inherited = await parent;
   const page = pageNumber(params.page);
+  const title = `Articles${page > 1 ? ` — Page ${page}` : ""} | ${config.name}`;
+  const description =
+    "Practical guides to caring for your clothes, looking after your prints, and making everyday fixes. Read the full articles on Tumblr.";
+  const canonical = `https://${config.domain}${pageUrl(page)}`;
   return {
-    title: `Articles${page > 1 ? ` — Page ${page}` : ""} | ${config.name}`,
-    description:
-      "Practical guides to caring for your clothes, looking after your prints, and making everyday fixes. Read the full articles on Tumblr.",
-    alternates: { canonical: `https://${config.domain}${pageUrl(page)}` },
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      ...inherited?.openGraph,
+      url: canonical,
+      type: "website",
+      siteName: config.name,
+      locale: "en_US",
+      title,
+      description,
+    },
     robots: {
       index: articles.length > 0 && page <= Math.ceil(articles.length / 12),
       follow: true,

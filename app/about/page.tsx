@@ -1,11 +1,12 @@
 import { SiteConfig, AboutConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `About ${config.name} - Our Story and Approach`;
   const description = `Learn about ${config.name}'s journey, our passionate team, and our approach to print-on-demand apparel design.`;
@@ -15,12 +16,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: `${config.name}, about us, design studio, print-on-demand, apparel design`,
     alternates: { canonical: "/about" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/about`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },

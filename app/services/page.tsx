@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
 import { getSiteConfig } from "@/utils/database";
@@ -10,7 +10,8 @@ import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 import { CardGrid } from "@/app/components/CardGrid";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `Our Services - ${config.name}`;
   const description =
@@ -21,12 +22,14 @@ export async function generateMetadata(): Promise<Metadata> {
     description,
     alternates: { canonical: "/services" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/services`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },

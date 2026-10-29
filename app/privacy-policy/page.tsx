@@ -1,4 +1,4 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -6,7 +6,8 @@ import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `Privacy Policy - ${config.name}`;
   const description = `Read our privacy policy to understand how ${config.name} collects, uses, and protects your personal information.`;
@@ -16,12 +17,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: "privacy policy, data protection, personal information",
     alternates: { canonical: "/privacy-policy" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/privacy-policy`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },

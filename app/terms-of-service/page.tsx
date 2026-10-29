@@ -1,11 +1,12 @@
-import { Metadata } from "next";
+import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(_props?: unknown, parent?: ResolvingMetadata): Promise<Metadata> {
+  const inherited = await parent;
   const config: SiteConfig = await getSiteConfig();
   const title = `Terms of Service - ${config.name}`;
   const description = `Read our terms of service to understand the agreement between you and ${config.name} regarding the use of our website and services.`;
@@ -15,12 +16,14 @@ export async function generateMetadata(): Promise<Metadata> {
     keywords: "terms of service, user agreement, legal, conditions of use",
     alternates: { canonical: "/terms-of-service" },
     openGraph: {
+      ...inherited?.openGraph,
       url: `https://${config.domain}/terms-of-service`,
       type: "website",
       title,
       description,
     },
     twitter: {
+      ...inherited?.twitter,
       title,
       description,
     },
