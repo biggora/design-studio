@@ -76,6 +76,26 @@ describe("Articles", () => {
       follow: true,
     });
   });
+  it("describes only the visible article announcements and their real publication dates", async () => {
+    published.mockResolvedValue(Array.from({ length: 13 }, (_, i) => ({
+      ...article, sourceArticleId: String(i), url: `https://shop.tumblr.com/post/${100 + i}/wash`,
+    })));
+    const $ = cheerio.load(renderToStaticMarkup(await Page({ searchParams: Promise.resolve({ page: "2" }) })));
+    const data = JSON.parse($('script[type="application/ld+json"]').text());
+    expect(data).toMatchObject({
+      "@type": "CollectionPage", "@id": "https://shop.test/articles?page=2#webpage",
+      isPartOf: { "@id": "https://shop.test/#website" },
+      mainEntity: { "@type": "ItemList", numberOfItems: 13 },
+    });
+    expect(data.mainEntity.itemListElement).toHaveLength(1);
+    expect(data.mainEntity.itemListElement[0]).toMatchObject({ position: 13, item: {
+      "@type": "Article", url: "https://shop.tumblr.com/post/112/wash",
+      headline: article.title, description: article.excerpt,
+      datePublished: article.publishedAt, image: article.imageUrl,
+      author: { "@id": "https://shop.test/#organization" },
+    } });
+    expect(data.mainEntity.itemListElement[0].item).not.toHaveProperty("articleBody");
+  });
   it("returns 404 beyond verified results", async () => {
     await expect(
       Page({ searchParams: Promise.resolve({ page: "2" }) }),

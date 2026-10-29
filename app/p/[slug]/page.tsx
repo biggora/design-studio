@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { cache } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -114,6 +116,7 @@ export default async function PinLandingPage(props: Props) {
 
   return (
     <PageShell as="main" className="pt-6">
+      <JsonLd data={{ ...pageJsonLd(config, designPath(design), design.title), mainEntity: { "@id": `https://${config.domain}${designPath(design)}#artwork` } }} />
       <div className="mx-auto w-full max-w-md">
         <div
           className="relative aspect-[3/4] w-full overflow-hidden rounded-lg shadow-md"

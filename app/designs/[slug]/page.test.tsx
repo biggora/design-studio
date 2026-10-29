@@ -66,6 +66,25 @@ function findBuyLinks(node: unknown): ReactElement<BuyLinkProps>[] {
 }
 
 describe("non-Redbubble design page", () => {
+  it("keeps artwork details and breadcrumbs connected to the page and company", async () => {
+    const html = renderToStaticMarkup(await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) }));
+    const data = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);
+    const work = data.find((item: Record<string, unknown>) => item["@type"] === "CreativeWork");
+    const page = data.find((item: Record<string, unknown>) => item["@type"] === "WebPage");
+    const crumbs = data.find((item: Record<string, unknown>) => item["@type"] === "BreadcrumbList");
+    const url = `https://${config.domain}/designs/space-cat`;
+    expect(work).toMatchObject({
+      "@id": `${url}#artwork`, additionalType: "https://schema.org/VisualArtwork",
+      name: design.title, description: design.description, keywords: design.keywords,
+      dateCreated: design.createdAt, url, image: `https://${config.domain}/images/no_image_available.svg`,
+      creator: { "@type": "Organization", "@id": `https://${config.domain}/#organization`, name: config.name },
+      mainEntityOfPage: { "@id": `${url}#webpage` },
+    });
+    expect(page.mainEntity["@id"]).toBe(work["@id"]);
+    expect(page.breadcrumb["@id"]).toBe(crumbs["@id"]);
+    expect(work).not.toHaveProperty("offers");
+    expect(work).not.toHaveProperty("aggregateRating");
+  });
   it("renders the placeholder and TeePublic link without a bogus Redbubble button", async () => {
     const page = await DesignDetails({ params: Promise.resolve({ slug: "space-cat" }) });
     const html = renderToStaticMarkup(page);

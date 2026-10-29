@@ -28,8 +28,13 @@ describe("/gifts", () => {
     expect($("li a").map((_, el) => $(el).attr("href")).get()).toEqual(["/gifts/programmers", "/gifts/cats"]);
     expect($("li a").first().text()).toContain("Programmer Gifts");
     expect($("li a").last().text()).toContain("Prints for cat people.");
-    const ld = JSON.parse($('script[type="application/ld+json"]').text());
-    expect(ld.itemListElement.map((item: {name: string}) => item.name)).toEqual(["Home", "Gift Ideas"]);
+    const ld = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get();
+    expect(ld.find(item => item["@type"] === "BreadcrumbList").itemListElement.map((item: {name: string}) => item.name)).toEqual(["Home", "Gift Ideas"]);
+    const collection = ld.find(item => item["@type"] === "CollectionPage");
+    expect(collection.mainEntity.itemListElement.map((item: {url: string}) => item.url)).toEqual([
+      "https://example.test/gifts/programmers", "https://example.test/gifts/cats",
+    ]);
+    expect(collection.breadcrumb["@id"]).toBe(ld[0]["@id"]);
     const metadata = await generateMetadata();
     expect(metadata.alternates?.canonical).toBe("/gifts");
     expect(metadata.robots).toBeUndefined();

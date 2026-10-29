@@ -9,6 +9,8 @@ import { CardGrid } from "@/app/components/CardGrid";
 import { AccentLink } from "@/app/components/AccentLink";
 import { buttonVariants } from "@/components/ui/button";
 import { cn, focusRingClasses } from "@/lib/utils";
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 
 type Props = { searchParams: Promise<{ page?: string }> };
 const pageNumber = (value?: string) =>
@@ -53,16 +55,41 @@ export async function generateMetadata({
 }
 
 export default async function ArticlesPage({ searchParams }: Props) {
-  const [articles, params] = await Promise.all([
+  const [articles, params, config] = await Promise.all([
     fetchPublishedArticles(),
     searchParams,
+    getSiteConfig(),
   ]);
   const page = pageNumber(params.page);
   const totalPages = Math.ceil(articles.length / 12);
   if (page > Math.max(1, totalPages)) notFound();
   const visible = articles.slice((page - 1) * 12, page * 12);
+  const structuredData = {
+    ...pageJsonLd(config, pageUrl(page), "Articles", "CollectionPage"),
+    mainEntity: {
+      "@type": "ItemList",
+      numberOfItems: articles.length,
+      itemListElement: visible.map((article, index) => ({
+        "@type": "ListItem",
+        position: (page - 1) * 12 + index + 1,
+        item: {
+          "@type": "Article",
+          "@id": `${article.url}#article`,
+          url: article.url,
+          headline: article.title,
+          description: article.excerpt,
+          image: article.imageUrl,
+          datePublished: article.publishedAt,
+          inLanguage: "en",
+          author: { "@id": `https://${config.domain}/#organization` },
+          publisher: { "@id": `https://${config.domain}/#organization` },
+        },
+      })),
+    },
+  };
   return (
     <PageShell>
+      <JsonLd data={structuredData} />
       <PageHeader
         title="Articles"
         intro="Care for your clothes. Make the prints last. Find practical guides and everyday fixes, with the full stories on Tumblr."

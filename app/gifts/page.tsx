@@ -7,6 +7,7 @@ import { PageHeader } from "@/app/components/PageHeader";
 import { CardGrid } from "@/app/components/CardGrid";
 import { IndexCard } from "@/app/components/IndexCard";
 import { giftPath, orderGiftPages } from "@/lib/gifts";
+import { pageJsonLd } from "@/lib/structured-data";
 
 const DESCRIPTION = "Gift ideas by interest: find a print for the programmer, pet lover, photographer or traveller in your life.";
 
@@ -37,6 +38,7 @@ export default async function GiftsIndex() {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${siteUrl}/gifts#breadcrumb`,
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
       { "@type": "ListItem", position: 2, name: "Gift Ideas", item: `${siteUrl}/gifts` },
@@ -46,6 +48,21 @@ export default async function GiftsIndex() {
   return (
     <PageShell>
       <JsonLd data={breadcrumbJsonLd} />
+      <JsonLd data={{
+        ...pageJsonLd(config, "/gifts", "Gift Ideas by Interest", "CollectionPage"),
+        description: DESCRIPTION,
+        breadcrumb: { "@id": breadcrumbJsonLd["@id"] },
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: pages.length,
+          itemListElement: pages.map((page, index) => ({
+            "@type": "ListItem",
+            position: index + 1,
+            name: page.heading || page.title,
+            url: `${siteUrl}${giftPath(page.slug)}`,
+          })),
+        },
+      }} />
       <PageHeader
         title="Gift Ideas by Interest"
         intro="Pick an interest to see prints that suit the person you are shopping for."

@@ -17,6 +17,7 @@ import {CollectionLinks} from "@/app/components/CollectionLinks";
 import {PageShell} from "@/app/components/PageShell";
 import {PageHeader} from "@/app/components/PageHeader";
 import {CardGrid} from "@/app/components/CardGrid";
+import {pageJsonLd} from "@/lib/structured-data";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -118,9 +119,7 @@ export default async function DesignFolio(
 
   const siteUrl = `https://${config.domain}`;
   const collectionJsonLd = selectedCollection && !searchQuery && knownCollection && total > 0 ? {
-    "@context": "https://schema.org",
-    "@type": "CollectionPage",
-    name: heading,
+    ...pageJsonLd(config, collectionPath(selectedCollection, currentPage), heading, "CollectionPage"),
     description: description || intro,
     url: `${siteUrl}${collectionPath(selectedCollection, currentPage)}`,
     mainEntity: {
@@ -135,7 +134,19 @@ export default async function DesignFolio(
 
   return (
     <PageShell>
-      {collectionJsonLd && <JsonLd data={collectionJsonLd} />}
+      <JsonLd data={collectionJsonLd || {
+        ...pageJsonLd(config, createPageUrl(currentPage), heading,
+          searchQuery ? "SearchResultsPage" : designs.length ? "CollectionPage" : "WebPage"),
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: total,
+          itemListElement: designs.map((design, index) => ({
+            "@type": "ListItem",
+            position: (currentPage - 1) * ITEMS_PER_PAGE + index + 1,
+            url: `${siteUrl}${designPath(design)}`,
+          })),
+        },
+      }} />
       <TrackCatalogState />
       <PageHeader title={heading} intro={intro || undefined} />
 

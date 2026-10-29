@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { SiteConfig, AboutConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import { Metadata, type ResolvingMetadata } from "next";
@@ -50,6 +52,7 @@ export default async function About() {
 
   return (
     <PageShell className="pb-3">
+      <JsonLd data={{ ...pageJsonLd(config, "/about", `About ${config.name}`, "AboutPage"), mainEntity: { "@id": `https://${config.domain}/#organization` } }} />
       <PageHeader title={`About ${config.name}`} />
 
       {story.length > 0 && (

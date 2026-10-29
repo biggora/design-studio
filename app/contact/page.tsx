@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import ContactForm from "../components/ContactForm";
@@ -58,6 +60,7 @@ export default async function Contact() {
 
   return (
     <PageShell>
+      <JsonLd data={{ ...pageJsonLd(config, "/contact", "Contact Us", "ContactPage"), mainEntity: { "@id": `https://${config.domain}/#organization` } }} />
       <PageHeader title="Contact Us" />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12">

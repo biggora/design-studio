@@ -43,7 +43,7 @@ describe("collection catalog pages", () => {
     expect(html).toContain('href="/designs?collection=Programming"');
   });
 
-  it("emits CollectionPage JSON-LD with the page's designs for a known non-empty collection only", async () => {
+  it("describes collection, catalog and search pages with their visible designs", async () => {
     const {default: Page} = await import("./page");
     fetchDesigns.mockResolvedValue({designs: [{id: "1", slug: "one", title: "One"}], total: 22});
     const html = renderToStaticMarkup(await Page({searchParams: Promise.resolve({collection: "Programming"})}));
@@ -52,8 +52,16 @@ describe("collection catalog pages", () => {
       "@type": "CollectionPage", name: "Programming Prints", url: "https://example.test/designs?collection=Programming",
       mainEntity: {"@type": "ItemList", itemListElement: [{position: 1, url: "https://example.test/designs/one"}]},
     });
+    const catalog = renderToStaticMarkup(await Page({searchParams: Promise.resolve({})}));
+    expect(catalog).toContain('"@type":"CollectionPage"');
+    expect(catalog).toContain('"name":"Our Designs"');
+    const search = renderToStaticMarkup(await Page({searchParams: Promise.resolve({search: "cat"})}));
+    expect(search).toContain('"@type":"SearchResultsPage"');
+    expect(search).toContain('"url":"https://example.test/designs?search=cat"');
+    fetchDesigns.mockResolvedValue({designs: [], total: 0});
     const empty = renderToStaticMarkup(await Page({searchParams: Promise.resolve({})}));
     expect(empty).not.toContain("CollectionPage");
+    expect(empty).toContain('"@type":"WebPage"');
   });
 
   it("uses database copy for other real collections", async () => {

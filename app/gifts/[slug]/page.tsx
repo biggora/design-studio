@@ -14,6 +14,7 @@ import { getShareImageUrl } from "@/lib/image";
 import { designPath } from "@/lib/slug";
 import { collectionPath } from "@/lib/collections";
 import { getGiftPages, giftPath } from "@/lib/gifts";
+import { pageJsonLd } from "@/lib/structured-data";
 
 const DESIGNS_PER_SECTION = 8;
 
@@ -69,6 +70,7 @@ export default async function GiftPage(props: Props) {
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${siteUrl}${giftPath(page.slug)}#breadcrumb`,
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
       { "@type": "ListItem", position: 2, name: "Gift Ideas", item: `${siteUrl}/gifts` },
@@ -78,6 +80,8 @@ export default async function GiftPage(props: Props) {
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
+    "@id": `${siteUrl}${giftPath(page.slug)}#items`,
+    numberOfItems: listed.length,
     itemListElement: listed.map((design, index) => ({
       "@type": "ListItem",
       position: index + 1,
@@ -87,7 +91,12 @@ export default async function GiftPage(props: Props) {
 
   return (
     <PageShell>
-      <JsonLd data={[breadcrumbJsonLd, itemListJsonLd]} />
+      <JsonLd data={[breadcrumbJsonLd, itemListJsonLd, {
+        ...pageJsonLd(config, giftPath(page.slug), page.heading || page.title, "CollectionPage"),
+        description: page.description,
+        breadcrumb: { "@id": breadcrumbJsonLd["@id"] },
+        mainEntity: { "@id": itemListJsonLd["@id"] },
+      }]} />
       <PageHeader title={page.heading || page.title} intro={page.intro} />
 
       {sections.map((section) => (

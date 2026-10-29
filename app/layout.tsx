@@ -107,17 +107,22 @@ export default async function RootLayout({
     {
       "@context": "https://schema.org",
       "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
       name: newConfig.name,
       url: siteUrl,
-      ...(newConfig.siteLogo ? { logo: newConfig.siteLogo } : {}),
+      ...(newConfig.description ? { description: newConfig.description } : {}),
+      ...(newConfig.siteLogo ? { logo: new URL(newConfig.siteLogo, `${siteUrl}/`).href } : {}),
       ...(newConfig.email ? { email: newConfig.email } : {}),
       ...(sameAs.length ? { sameAs } : {}),
     },
     {
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
       name: newConfig.name,
       url: siteUrl,
+      inLanguage: "en",
+      publisher: { "@id": `${siteUrl}/#organization` },
       potentialAction: {
         "@type": "SearchAction",
         target: {

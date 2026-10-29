@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import type { Metadata, ResolvingMetadata } from "next";
 import { getSiteConfig } from "@/utils/database";
 import { PageShell } from "@/app/components/PageShell";
@@ -31,6 +33,7 @@ export default async function PublisherPrivacy() {
   const app = `${config.name} Publisher`;
   return (
     <PageShell>
+      <JsonLd data={pageJsonLd(config, "/publisher-privacy", `${app}: Privacy Policy`)} />
       <PageHeader title={`${app}: Privacy Policy`} intro="Effective date: October 25, 2026" />
       <div className="prose prose-lg max-w-prose text-foreground">
         <p>

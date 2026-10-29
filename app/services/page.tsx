@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { Metadata, type ResolvingMetadata } from "next";
 import Link from "next/link";
 import { CheckCircle } from "lucide-react";
@@ -73,6 +75,7 @@ export default async function Services() {
   const config: SiteConfig = await getSiteConfig();
   return (
     <PageShell>
+      <JsonLd data={pageJsonLd(config, "/services", "Our Services")} />
       <PageHeader
         title="Our Services"
         intro={`${config.name} creates original designs and turns them into print-on-demand apparel and merch, sold through our marketplace partners.`}

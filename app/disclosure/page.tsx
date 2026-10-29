@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { Metadata, type ResolvingMetadata } from "next";
 import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
@@ -35,6 +37,7 @@ export default async function AffiliateDisclosure() {
   const config: SiteConfig = await getSiteConfig();
   return (
     <PageShell>
+      <JsonLd data={pageJsonLd(config, "/disclosure", "Affiliate Disclosure")} />
       <PageHeader title="Affiliate Disclosure" />
       <div className="prose prose-lg max-w-prose text-foreground">
         <p className="mb-4">Effective Date: {config.policyUpdateDate}</p>

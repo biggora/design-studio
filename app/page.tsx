@@ -1,3 +1,5 @@
+import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, Search } from "lucide-react";
@@ -133,6 +135,7 @@ export default async function Home() {
 
   return (
     <>
+      <JsonLd data={pageJsonLd(config, "/", home.heading)} />
       {/* Hero: the catalog's own artwork leads, inside the woven texture band. */}
       <Band
         tone="field"

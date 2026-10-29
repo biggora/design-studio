@@ -25,6 +25,22 @@ function findJsonLdData(node: unknown): unknown {
 }
 
 describe("root JSON-LD", () => {
+  it("shares stable organization and website identities without losing company details", async () => {
+    const { default: RootLayout } = await import("./layout");
+    getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test", siteLogo: "/logo.svg" });
+    const data = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+    expect(data).toHaveLength(2);
+    expect(data[0]).toMatchObject({
+      "@type": "Organization", "@id": "https://other.example.test/#organization",
+      name: "Other Studio", logo: "https://other.example.test/logo.svg",
+      url: "https://other.example.test", description: baseConfig.description,
+    });
+    expect(data[1]).toMatchObject({
+      "@type": "WebSite", "@id": "https://other.example.test/#website",
+      publisher: { "@id": data[0]["@id"] }, inLanguage: "en",
+    });
+    expect(data[0]).not.toHaveProperty("address");
+  });
   it("declares a WebSite SearchAction for the catalog search", async () => {
     const { default: RootLayout } = await import("./layout");
     getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test" });

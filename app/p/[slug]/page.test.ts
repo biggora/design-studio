@@ -105,7 +105,7 @@ describe("/p/[slug] landing page", () => {
     });
     getDesignBySlug.mockResolvedValue({ design, relatedDesigns: [] });
 
-    const html = await renderPage(design.slug as string);
+    const html = (await renderPage(design.slug as string)).replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, "");
     const titleIndex = html.indexOf(design.title);
     const imageIndex = html.indexOf("<img");
     const redbubbleIndex = html.indexOf("Buy on Redbubble");

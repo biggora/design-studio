@@ -22,6 +22,7 @@ import BackToCatalog from "@/app/components/BackToCatalog";
 import ShareLinks from "@/app/components/ShareLinks";
 import { DesignImage } from "@/app/components/DesignImage";
 import { JsonLd } from "@/app/components/JsonLd";
+import { pageJsonLd } from "@/lib/structured-data";
 import BuyLink from "@/app/components/BuyLink";
 import { MobileBuyBar } from "@/app/components/MobileBuyBar";
 import { AccentLink } from "@/app/components/AccentLink";
@@ -170,6 +171,7 @@ export default async function DesignDetails(
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
+    "@id": `${shareUrl}#breadcrumb`,
     itemListElement: [
       {
         "@type": "ListItem",
@@ -195,21 +197,30 @@ export default async function DesignDetails(
   const creativeWorkJsonLd = {
     "@context": "https://schema.org",
     "@type": "CreativeWork",
+    "@id": `${shareUrl}#artwork`,
+    additionalType: "https://schema.org/VisualArtwork",
+    mainEntityOfPage: { "@id": `${shareUrl}#webpage` },
     name: design.title,
     description: design.description,
-    image: shareImage,
+    image: new URL(shareImage, `https://${config.domain}/`).href,
     url: shareUrl,
     ...(design.createdAt ? { dateCreated: design.createdAt } : {}),
     keywords: design.keywords,
     creator: {
       "@type": "Organization",
+      "@id": `https://${config.domain}/#organization`,
       name: config.name,
     },
   };
 
   return (
     <>
-      <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd]} />
+      <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd, {
+        ...pageJsonLd(config, designPath(design), design.title),
+        description: design.description,
+        mainEntity: { "@id": `${shareUrl}#artwork` },
+        breadcrumb: { "@id": `${shareUrl}#breadcrumb` },
+      }]} />
       <PageShell>
         <BackToCatalog fallbackHref={collectionUrl} />
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
