@@ -5,7 +5,6 @@ import { notFound, permanentRedirect } from "next/navigation";
 import {
   formatDate,
   getRedBubbleDesignPageLink,
-  safeHexColor,
   getTeepublicLink,
   sanitizeUrl,
   truncateAtWord,
@@ -236,10 +235,7 @@ export default async function DesignDetails(
         <BackToCatalog fallbackHref={collectionUrl} />
         <div className="bg-card shadow-md rounded-lg overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div
-              className="relative md:pb-0 md:h-full"
-              style={{ backgroundColor: safeHexColor(design.backgroundColor) }}
-            >
+            <div className="relative bg-card md:pb-0 md:h-full">
               <DesignImage
                 design={design}
                 alt={design.collection ? `${design.title} – ${design.collection} design` : `${design.title} design`}
