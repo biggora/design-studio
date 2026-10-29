@@ -1,124 +1,159 @@
 import { Metadata } from "next";
 import { cache } from "react";
-import { notFound } from "next/navigation";
-import { getSiteConfig, fetchGiftPageSections } from "@/utils/database";
-import { Design } from "@/types/design";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { getSiteConfig, fetchGiftPageDesigns } from "@/utils/database";
 import { DesignCard } from "@/app/components/DesignCard";
 import { JsonLd } from "@/app/components/JsonLd";
-import { AccentLink } from "@/app/components/AccentLink";
+import { CatalogSearchBar } from "@/app/components/CatalogSearchBar";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHeader } from "@/app/components/PageHeader";
 import { SectionHeading } from "@/app/components/SectionHeading";
 import { CardGrid } from "@/app/components/CardGrid";
 import { getShareImageUrl } from "@/lib/image";
-import { collectionPath } from "@/lib/collections";
-import { getGiftPages, giftPath } from "@/lib/gifts";
+import { collectionDisplayNames } from "@/lib/collections";
+import { getGiftPages, giftPath, GIFT_PAGE_SIZE } from "@/lib/gifts";
+import { parsePageParam } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { pageJsonLd, designListElements } from "@/lib/structured-data";
 import { getListingTshirtOffers } from "@/lib/marketplace-prices";
 
-const DESIGNS_PER_SECTION = 8;
-
 type Props = {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<{search?: string; collection?: string; page?: string}>;
 };
 
+function resultsPath(slug: string, search: string, collection: string, page: number) {
+  const params = new URLSearchParams();
+  if (search) params.set("search", search);
+  if (collection) params.set("collection", collection);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return `${giftPath(slug)}${query ? `?${query}` : ""}`;
+}
+
 // Per-request dedupe: generateMetadata and the page share one set of lookups.
-const loadGiftPage = cache(async (slug: string) => {
+const loadGiftPage = cache(async (slug: string, search: string, collection: string, currentPage: number) => {
   const config = await getSiteConfig();
   const page = getGiftPages(config.giftPages).find((item) => item.slug === slug);
-  if (!page) return { config, page: null, sections: [] };
-  const sections = await fetchGiftPageSections(page, DESIGNS_PER_SECTION);
-  return { config, page, sections };
+  if (!page) return { config, gift: null, designs: [], total: 0, collections: [], hasDesigns: false, page: 1 };
+  return { config, gift: page, ...await fetchGiftPageDesigns(page, {search, collection, page: currentPage}) };
 });
 
+async function loadRequest(props: Props) {
+  const {slug} = await props.params;
+  const params = await props.searchParams ?? {};
+  const search = (params.search || "").trim();
+  const collection = params.collection || "";
+  const data = await loadGiftPage(slug, search, collection, parsePageParam(params.page));
+  return {...data, params, search, collection};
+}
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
-  const { slug } = await props.params;
-  const { config, page, sections } = await loadGiftPage(slug);
-  if (!page || !sections.length) {
+  const { config, gift, designs, hasDesigns, page, search, collection } = await loadRequest(props);
+  if (!gift || !hasDesigns) {
     return { title: "Gift Ideas Not Found", robots: { index: false, follow: true } };
   }
 
-  const title = `${page.title} - ${config.name}`;
-  const canonical = giftPath(page.slug);
-  const images = sections.flatMap((section) => section.designs).slice(0, 4).map((design) => getShareImageUrl(design));
+  const title = `${gift.title} - ${config.name}${page > 1 ? ` - Page ${page}` : ""}`;
+  const canonical = search || collection ? giftPath(gift.slug) : resultsPath(gift.slug, "", "", page);
+  const images = designs.slice(0, 4).map((design) => getShareImageUrl(design));
   return {
     title,
-    description: page.description,
+    description: gift.description,
     alternates: { canonical },
+    ...(search || collection ? {robots: {index: false, follow: true}} : {}),
     openGraph: {
       url: `https://${config.domain}${canonical}`,
       type: "website",
       title,
-      description: page.description,
+      description: gift.description,
       images,
     },
-    twitter: { title, description: page.description, images },
+    twitter: { title, description: gift.description, images },
   };
 }
 
 export default async function GiftPage(props: Props) {
-  const { slug } = await props.params;
-  const { config, page, sections } = await loadGiftPage(slug);
-  if (!page || !sections.length) notFound();
+  const { config, gift, designs, total, collections, hasDesigns, page, search, collection, params } = await loadRequest(props);
+  if (!gift || !hasDesigns) notFound();
+  if (params.page !== undefined && params.page !== (page > 1 ? String(page) : undefined)) {
+    redirect(resultsPath(gift.slug, search, collection, page));
+  }
 
   const siteUrl = `https://${config.domain}`;
-  const listed: Design[] = [];
-  for (const design of sections.flatMap((section) => section.designs)) {
-    if (!listed.some((item) => item.id === design.id)) listed.push(design);
-  }
-  const tshirtOffers = await getListingTshirtOffers(listed);
+  const path = resultsPath(gift.slug, search, collection, page);
+  const collectionNames = collectionDisplayNames(config.collectionPages);
+  const selectedName = collectionNames.get(collection) ?? collection;
+  const tshirtOffers = await getListingTshirtOffers(designs);
+  const totalPages = Math.ceil(total / GIFT_PAGE_SIZE);
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
-    "@id": `${siteUrl}${giftPath(page.slug)}#breadcrumb`,
+    "@id": `${siteUrl}${path}#breadcrumb`,
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
       { "@type": "ListItem", position: 2, name: "Gift Ideas", item: `${siteUrl}/gifts` },
-      { "@type": "ListItem", position: 3, name: page.heading || page.title, item: `${siteUrl}${giftPath(page.slug)}` },
+      { "@type": "ListItem", position: 3, name: gift.heading || gift.title, item: `${siteUrl}${giftPath(gift.slug)}` },
     ],
   };
   const itemListJsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "@id": `${siteUrl}${giftPath(page.slug)}#items`,
-    name: page.heading || page.title,
-    numberOfItems: listed.length,
-    itemListElement: designListElements(listed, siteUrl, tshirtOffers),
+    "@id": `${siteUrl}${path}#items`,
+    name: gift.heading || gift.title,
+    numberOfItems: total,
+    itemListElement: designListElements(designs, siteUrl, tshirtOffers, (page - 1) * GIFT_PAGE_SIZE),
   };
 
   return (
     <PageShell>
       <JsonLd data={[breadcrumbJsonLd, itemListJsonLd, {
-        ...pageJsonLd(config, giftPath(page.slug), page.heading || page.title, "CollectionPage"),
-        description: page.description,
+        ...pageJsonLd(config, path, gift.heading || gift.title, search ? "SearchResultsPage" : "CollectionPage"),
+        description: gift.description,
         breadcrumb: { "@id": breadcrumbJsonLd["@id"] },
         mainEntity: { "@id": itemListJsonLd["@id"] },
       }]} />
-      <PageHeader title={page.heading || page.title} intro={page.intro} />
+      <PageHeader title={gift.heading || gift.title} intro={gift.intro} />
 
-      {sections.map((section) => (
-        <section key={section.collection || "other"} className="mb-10">
-          <SectionHeading className="mb-2">{section.heading}</SectionHeading>
-          {section.blurb && <p className="text-muted-foreground max-w-3xl mb-4">{section.blurb}</p>}
-          <CardGrid className="mb-4">
-            {section.designs.map((design: Design) => (
-              <DesignCard key={design.id} design={design} tshirtOffer={tshirtOffers.get(design.id)} />
-            ))}
-          </CardGrid>
-          {section.collection && <AccentLink
-            href={collectionPath(section.collection)}
-            className="inline-flex items-center min-h-11"
-          >
-            Browse the {section.collection} collection
-          </AccentLink>}
-        </section>
-      ))}
+      <CatalogSearchBar
+        basePath={giftPath(gift.slug)}
+        searchLabel="Search gift designs"
+        searchQuery={search}
+        selectedCollection={collection}
+        collections={collections.map(value => ({value, label: collectionNames.get(value) ?? value}))}
+      />
+      <p className="text-sm text-muted-foreground mb-4">
+        {total} {total === 1 ? "design" : "designs"}
+        {search ? ` matching "${search}"` : ""}
+        {collection ? ` in "${selectedName}"` : ""}
+      </p>
+      {designs.length > 0 ? (
+        <CardGrid className="mb-8 grid-cols-2 gap-3 sm:gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {designs.map((design, index) => (
+            <DesignCard key={design.id} design={design} tshirtOffer={tshirtOffers.get(design.id)}
+              compactOnMobile priority={index < 4} showCollection={!collection} collectionLabels={collectionNames} />
+          ))}
+        </CardGrid>
+      ) : (
+        <div className="text-center py-16 space-y-6">
+          <p className="text-muted-foreground">No designs found. Try adjusting your search or filter.</p>
+          <Link href={giftPath(gift.slug)} className={buttonVariants({variant: "outline"})}>Clear search &amp; filters</Link>
+        </div>
+      )}
+      {totalPages > 1 && (
+        <nav aria-label="Gift design pages" className="flex justify-center items-center gap-4 mb-8">
+          {page > 1 && <Link href={resultsPath(gift.slug, search, collection, page - 1)} className={buttonVariants({size: "sm"})}>Previous</Link>}
+          <span>Page {page} of {totalPages}</span>
+          {page < totalPages && <Link href={resultsPath(gift.slug, search, collection, page + 1)} className={buttonVariants({size: "sm"})}>Next</Link>}
+        </nav>
+      )}
 
-      {page.faq && page.faq.length > 0 && (
+      {gift.faq && gift.faq.length > 0 && (
         <section className="mb-8">
           <SectionHeading>Questions</SectionHeading>
-          {page.faq.map((item) => (
+          {gift.faq.map((item) => (
             <div key={item.question} className="mb-4 max-w-3xl">
               <h3 className="text-lg font-semibold mb-1 text-foreground">{item.question}</h3>
               <p className="text-muted-foreground">{item.answer}</p>

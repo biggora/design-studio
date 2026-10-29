@@ -3,8 +3,10 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {load} from "cheerio";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Design} from "@/types/design";
+import type {TshirtOffer} from "@/lib/marketplace-prices";
 
-const fetchGiftPageSections = vi.fn();
+const fetchGiftPageDesigns = vi.fn();
+const offers = new Map<string, TshirtOffer>();
 const config = {
   name: "Example Studio", domain: "example.test",
   giftPages: [{
@@ -19,11 +21,17 @@ const config = {
 };
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
-  fetchGiftPageSections: (...args: unknown[]) => fetchGiftPageSections(...args),
+  fetchGiftPageDesigns: (...args: unknown[]) => fetchGiftPageDesigns(...args),
 }));
-vi.mock("next/navigation", () => ({notFound: () => {throw new Error("NEXT_NOT_FOUND");}}));
+vi.mock("next/navigation", () => ({
+  notFound: () => {throw new Error("NEXT_NOT_FOUND");},
+  redirect: (url: string) => {throw new Error(`REDIRECT:${url}`);},
+  useRouter: () => ({push: vi.fn()}),
+}));
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));
-vi.mock("@/app/components/DesignCard", () => ({DesignCard: ({design}: {design: Design}) => <article>{design.title}</article>}));
+vi.mock("@/lib/marketplace-prices", () => ({getListingTshirtOffers: async () => offers}));
+vi.mock("@/app/components/DesignCard", () => ({DesignCard: ({design, tshirtOffer}: {design: Design; tshirtOffer?: TshirtOffer}) =>
+  <article>{design.title}{tshirtOffer && <span>{tshirtOffer.price} {tshirtOffer.currency}</span>}</article>}));
 
 const design = (id: string, slug: string): Design => ({
   id, slug, title: `Design ${id}`, externalId: null, externalLink: "", externalImageUrl: "https://ih1.redbubble.net/a.jpg",
@@ -32,25 +40,29 @@ const design = (id: string, slug: string): Design => ({
 });
 
 beforeEach(() => {
-  fetchGiftPageSections.mockReset().mockResolvedValue([
-    {...config.giftPages[0].sections[0], designs: [design("1", "one"), design("2", "two")]},
-  ]);
+  offers.clear();
+  fetchGiftPageDesigns.mockReset().mockResolvedValue({
+    designs: [design("1", "one"), design("2", "two")], total: 2,
+    collections: ["Programming"], hasDesigns: true, page: 1,
+  });
 });
 
 describe("/gifts/[slug]", () => {
-  it("renders heading, non-empty sections, FAQ and ItemList JSON-LD", async () => {
+  it("renders a single grid with scoped search, categories, FAQ and ItemList JSON-LD", async () => {
     const {default: Page} = await import("./page");
     const html = renderToStaticMarkup(await Page({params: Promise.resolve({slug: "programmers"})}));
     const $ = load(html);
     expect($("h1").text()).toBe("Programmer Gift Ideas");
     expect(html).toContain(config.giftPages[0].intro);
-    expect($("section")).toHaveLength(2); // one design section + FAQ
-    expect($("h2").map((_, el) => $(el).text()).get()).toEqual(["Coding jokes", "Questions"]);
+    expect($("section")).toHaveLength(1); // FAQ only
+    expect($("h2").map((_, el) => $(el).text()).get()).toEqual(["Questions"]);
     expect(html).not.toContain("Nothing here");
     expect($("article")).toHaveLength(2);
-    expect($('a[href="/designs?collection=Programming"]').text()).toBe("Browse the Programming collection");
+    expect(html).not.toContain("Browse the");
+    expect($('input[name="search"]').attr("aria-label")).toBe("Search gift designs");
+    expect($('select[name="collection"] option').map((_, el) => $(el).text()).get()).toEqual(["All Collections", "Programming"]);
     expect($("h3").text()).toBe("Do they ship?");
-    expect(fetchGiftPageSections).toHaveBeenCalledWith(config.giftPages[0], 8);
+    expect(fetchGiftPageDesigns).toHaveBeenCalledWith(config.giftPages[0], {page: 1, search: "", collection: ""});
 
     const ld = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get().flat();
     const itemList = ld.find(item => item["@type"] === "ItemList");
@@ -67,8 +79,68 @@ describe("/gifts/[slug]", () => {
   it("returns notFound for unknown slugs and for pages without designs", async () => {
     const {default: Page} = await import("./page");
     await expect(Page({params: Promise.resolve({slug: "nope"})})).rejects.toThrow("NEXT_NOT_FOUND");
-    fetchGiftPageSections.mockResolvedValue([]);
+    fetchGiftPageDesigns.mockResolvedValue({designs: [], total: 0, collections: [], hasDesigns: false, page: 1});
     await expect(Page({params: Promise.resolve({slug: "programmers"})})).rejects.toThrow("NEXT_NOT_FOUND");
+  });
+
+  it("keeps empty filtered results on the gift page with a scoped reset link and noindex", async () => {
+    fetchGiftPageDesigns.mockResolvedValue({designs: [], total: 0, collections: ["Programming"], hasDesigns: true, page: 1});
+    const {default: Page, generateMetadata} = await import("./page");
+    const props = {params: Promise.resolve({slug: "programmers"}), searchParams: Promise.resolve({search: "cat", collection: "unknown"})};
+    const $ = load(renderToStaticMarkup(await Page(props)));
+    expect($.text()).toContain("No designs found");
+    expect($('a[href="/gifts/programmers"]').text()).toBe("Clear search & filters");
+    const metadata = await generateMetadata(props);
+    expect(metadata.robots).toEqual({index: false, follow: true});
+    expect(metadata.alternates?.canonical).toBe("/gifts/programmers");
+  });
+
+  it("paginates the filtered topic, keeps filters and lists only visible cards with global positions", async () => {
+    fetchGiftPageDesigns.mockResolvedValue({designs: [design("21", "twenty-one")], total: 45, collections: ["Programming"], hasDesigns: true, page: 2});
+    const {default: Page, generateMetadata} = await import("./page");
+    const props = {params: Promise.resolve({slug: "programmers"}), searchParams: Promise.resolve({search: "code", collection: "Programming", page: "2"})};
+    const $ = load(renderToStaticMarkup(await Page(props)));
+    const nav = $('nav[aria-label="Gift design pages"]');
+    expect(nav.find("a").map((_, el) => $(el).attr("href")).get()).toEqual([
+      "/gifts/programmers?search=code&collection=Programming",
+      "/gifts/programmers?search=code&collection=Programming&page=3",
+    ]);
+    const ld = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get().flat();
+    const items = ld.find(item => item["@type"] === "ItemList");
+    expect(items.numberOfItems).toBe(45);
+    expect(items.itemListElement).toHaveLength(1);
+    expect(items.itemListElement[0]).toMatchObject({position: 21, name: "Design 21"});
+    expect(ld.find(item => item["@type"] === "SearchResultsPage").url).toBe("https://example.test/gifts/programmers?search=code&collection=Programming&page=2");
+    expect((await generateMetadata(props)).robots).toEqual({index: false, follow: true});
+    const plain = {params: props.params, searchParams: Promise.resolve({page: "2"})};
+    expect((await generateMetadata(plain)).alternates?.canonical).toBe("/gifts/programmers?page=2");
+    expect((await generateMetadata(plain)).title).toContain("Page 2");
+  });
+
+  it("normalizes page numbers while preserving the topic and filters", async () => {
+    const {default: Page} = await import("./page");
+    const params = Promise.resolve({slug: "programmers"});
+    for (const page of ["0", "-1", "abc", "1", "999"]) {
+      await expect(Page({params, searchParams: Promise.resolve({page, search: "code", collection: "Programming"})}))
+        .rejects.toThrow("REDIRECT:/gifts/programmers?search=code&collection=Programming");
+    }
+  });
+
+  it("passes the same current-page prices to cards and structured Products", async () => {
+    const visible = [design("1", "one"), design("2", "two"), design("3", "three")];
+    fetchGiftPageDesigns.mockResolvedValue({designs: visible, total: 23, collections: [], hasDesigns: true, page: 2});
+    for (const d of visible) offers.set(d.id, {
+      platform: "redbubble", seller: "Redbubble", name: `${d.title} Classic T-Shirt`, price: "26.21", currency: "EUR",
+      url: "https://www.redbubble.com/shop/ap/1", checkedAt: "2026-10-29T00:00:00Z", expiresAt: "2026-10-30T00:00:00Z",
+    });
+    const {default: Page} = await import("./page");
+    const $ = load(renderToStaticMarkup(await Page({params: Promise.resolve({slug: "programmers"}), searchParams: Promise.resolve({page: "2"})})));
+    expect($("article span").map((_, el) => $(el).text()).get()).toEqual(Array(3).fill("26.21 EUR"));
+    const data = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get().flat();
+    const items = data.find(item => item["@type"] === "ItemList").itemListElement;
+    expect(items.map((item: {position: number}) => item.position)).toEqual([21, 22, 23]);
+    expect(items.every((item: {item: {offers: {price: string; priceCurrency: string}}}) =>
+      item.item.offers.price === "26.21" && item.item.offers.priceCurrency === "EUR")).toBe(true);
   });
 
   it("sets the canonical and social metadata, and noindexes unknown pages", async () => {

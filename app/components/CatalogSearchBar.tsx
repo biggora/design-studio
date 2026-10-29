@@ -12,12 +12,16 @@ type CatalogSearchBarProps = {
   selectedCollection: string;
   /** Filter values with their canonical display labels (value = URL param). */
   collections: {value: string; label: string}[];
+  basePath?: string;
+  searchLabel?: string;
 };
 
 export function CatalogSearchBar({
   searchQuery,
   selectedCollection,
   collections,
+  basePath = "/designs",
+  searchLabel = "Search designs",
 }: CatalogSearchBarProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -47,7 +51,7 @@ export function CatalogSearchBar({
 
     const query = params.toString();
     startTransition(() => {
-      router.push(query ? `/designs?${query}` : "/designs");
+      router.push(query ? `${basePath}?${query}` : basePath);
     });
   };
 
@@ -69,11 +73,11 @@ export function CatalogSearchBar({
           <Input
             type="text"
             name="search"
-            placeholder="Search designs..."
+            placeholder={`${searchLabel}...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pr-10"
-            aria-label="Search designs"
+            aria-label={searchLabel}
           />
           <button
             type="submit"

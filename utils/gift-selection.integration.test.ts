@@ -104,6 +104,7 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
             await reloadSchema(false);
             const sections = await db.fetchGiftPageSections(gift);
             expect(sections.flatMap(s => s.designs).map(d => d.id)).toEqual([id(501), id(504), id(502)]);
+            expect((await db.fetchGiftPageDesigns(gift)).designs.map(d => d.id)).toEqual([id(504), id(502), id(501)]);
             expect((await db.fetchGiftFeedDesigns(gift, 100)).designs.map(d => d.id)).toEqual([id(502), id(501)]);
         } finally {
             await execute(readFileSync(`init/migrations/016_gift_topics_${provider === "supabase" ? "postgres" : "mysql"}.sql`, "utf8"));
@@ -112,5 +113,43 @@ describe.skipIf(!enabled).each(["supabase", "mysql"] as const)("gift selection t
         await db.setDesignGiftTopics(id(501), []);
         expect((await db.fetchGiftPageSections(gift)).flatMap(s => s.designs).some(d => d.id === id(501))).toBe(false);
         await db.setDesignGiftTopics(id(501), null);
+    });
+    it("lists the entire gift topic with scoped search, category memberships and twenty-item pages", async () => {
+        const q = (name: string) => provider === "supabase" ? `"${name}"` : `\`${name}\``;
+        const rows = Array.from({length: 25}, (_, n) =>
+            `('${id(600 + n)}','Thanksgiving Print ${n}','Warm apple cider','turkey','Family','2026-10-29')`);
+        rows.push(`('${id(625)}','Hidden Thanksgiving','','turkey','Family','2026-10-29')`);
+        rows.push(`('${id(626)}','Reviewed Gathering','Warm apple cider','','Science','2026-10-29')`);
+        await execute(`INSERT INTO designs (id,title,description,keywords,collection,${q("createdAt")}) VALUES ${rows.join(",")};
+            UPDATE designs SET active = FALSE WHERE id = '${id(625)}';`);
+        await db.setDesignGiftTopics(id(626), ["thanksgiving"]);
+        await db.setDesignGiftTopics(id(600), []);
+        await execute(`INSERT INTO collections (id,title,${q("externalId")}) VALUES ('${id(700)}','Food',700);
+            INSERT INTO design_collections (${q("designId")},${q("collectionId")}) VALUES ('${id(601)}','${id(700)}');`);
+        const thanksgiving = {...gift, slug: "thanksgiving-gift-ideas"};
+        const first = await db.fetchGiftPageDesigns(thanksgiving);
+        const second = await db.fetchGiftPageDesigns(thanksgiving, {page: 2});
+        expect(first.total).toBe(25);
+        expect(first.hasDesigns).toBe(true);
+        expect(first.designs).toHaveLength(20);
+        expect(second.designs).toHaveLength(5);
+        expect(new Set([...first.designs, ...second.designs].map(d => d.id)).size).toBe(25);
+        expect(first.designs[0].id).toBe(id(626));
+        expect(first.collections).toEqual(["Family", "Food", "Science"]);
+        const searched = await db.fetchGiftPageDesigns(thanksgiving, {search: "apple cider", page: 2});
+        expect(searched.total).toBe(25);
+        expect(searched.designs).toHaveLength(5);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "Thanksgiving Print 24"})).designs.map(d => d.id)).toEqual([id(624)]);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "turkey"})).total).toBe(24);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "apple banana"})).total).toBe(0);
+        const food = await db.fetchGiftPageDesigns(thanksgiving, {collection: "Food", search: "apple cider"});
+        expect(food.designs.map(d => d.id)).toEqual([id(601)]);
+        expect(food.collections).toEqual(first.collections);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {collection: "Science"})).designs.map(d => d.id)).toEqual([id(626)]);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "Halloween"})).total).toBe(0);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {collection: "unknown"}))).toMatchObject({total: 0, hasDesigns: true, designs: []});
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {search: "!!!"})).total).toBe(0);
+        expect((await db.fetchGiftPageDesigns(thanksgiving, {page: 999})).page).toBe(2);
+        expect((await db.fetchGiftPageDesigns({...gift, slug: "unknown"}))).toMatchObject({total: 0, hasDesigns: false});
     });
 });

@@ -18,7 +18,7 @@ vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   fetchDesigns: async () => ({designs, total: 3}),
   fetchFeedCollections: async () => [], fetchFeaturedCollections: async () => [],
-  fetchGiftPageSections: async () => [{heading: "Spooky", designs}],
+  fetchGiftPageDesigns: async () => ({designs, total: designs.length, collections: [], hasDesigns: true, page: 1}),
 }));
 vi.mock("next/navigation", () => ({redirect: () => {throw new Error("redirect");}, notFound: () => {throw new Error("not found");}}));
 vi.mock("next/link", () => ({default: ({children, ...props}: React.ComponentProps<"a">) => <a {...props}>{children}</a>}));

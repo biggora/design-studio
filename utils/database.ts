@@ -23,7 +23,7 @@ import {hasMarketplaceLink} from "@/lib/utils";
 import {hasPinImage, normalizeCdnArtworkOptions, normalizeCdnImageMockups} from "@/lib/image";
 import {getSearchTerms, rankSearchDesigns} from "@/lib/catalog-search";
 import {CollectionPage, curatedCollectionTitles, getCollectionPages} from "@/lib/collections";
-import {GiftPage, getGiftPages} from "@/lib/gifts";
+import {GiftPage, getGiftPages, GIFT_PAGE_SIZE} from "@/lib/gifts";
 import {matchesGiftPage, giftPageTopic, normalizeGiftTopics, selectGiftSections, isGiftTopic, type GiftTopic, type GiftCandidate, type GiftDesignSection} from "@/lib/gift-selection";
 import {assignCollectionSlugs, assignDesignsToFeeds} from "@/lib/pinterest-feed";
 import {createHash, randomUUID} from "node:crypto";
@@ -1231,6 +1231,40 @@ async function loadSelectedGiftDesigns(ids: string[]): Promise<Design[]> {
     }
     const order = new Map(ids.map((id, index) => [id, index]));
     return designs.filter(design => design.active !== false).sort((a, b) => order.get(a.id)! - order.get(b.id)!);
+}
+
+/** One gift topic, filtered and ranked before paging; section limits do not apply. */
+export async function fetchGiftPageDesigns(gift: GiftPage, options: {page?: number; search?: string; collection?: string} = {}): Promise<{
+    designs: Design[]; total: number; collections: string[]; hasDesigns: boolean; page: number;
+}> {
+    const candidates = giftPageTopic(gift)
+        ? (await loadGiftDesigns()).filter(design => matchesGiftPage(design, gift)) : [];
+    const memberships = new Map<string, string[]>();
+    for (let offset = 0; offset < candidates.length; offset += 100) {
+        for (const [id, titles] of await fetchDesignMemberships(candidates.slice(offset, offset + 100))) memberships.set(id, titles);
+    }
+    const collectionsFor = (design: GiftCandidate) =>
+        [...new Set([design.collection, ...(memberships.get(design.id) ?? [])].filter(Boolean))];
+    const collections = [...new Set(candidates.flatMap(collectionsFor))].sort((a, b) => a.localeCompare(b));
+    const selected = options.collection ? candidates.filter(design => collectionsFor(design).includes(options.collection!)) : candidates;
+    const search = (options.search ?? "").trim();
+    let matching: GiftCandidate[] = selected;
+    let full: Design[] | undefined;
+    if (search) {
+        const terms = getSearchTerms(search);
+        full = terms.length ? rankSearchDesigns(
+            (await loadSelectedGiftDesigns(selected.map(design => design.id))).filter(design => matchesGiftPage(design, gift)), terms,
+        ) : [];
+        matching = full;
+    }
+    const total = matching.length;
+    const requestedPage = options.page && Number.isInteger(options.page) ? Math.max(1, options.page) : 1;
+    const page = Math.min(requestedPage, Math.max(1, Math.ceil(total / GIFT_PAGE_SIZE)));
+    const offset = (page - 1) * GIFT_PAGE_SIZE;
+    const designs = full ? full.slice(offset, offset + GIFT_PAGE_SIZE)
+        : (await loadSelectedGiftDesigns(matching.slice(offset, offset + GIFT_PAGE_SIZE).map(design => design.id)))
+            .filter(design => matchesGiftPage(design, gift));
+    return {designs, total, collections, hasDesigns: candidates.length > 0, page};
 }
 
 export async function fetchGiftPageSections(page: GiftPage, limit = 8): Promise<GiftDesignSection[]> {

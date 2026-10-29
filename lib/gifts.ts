@@ -1,5 +1,7 @@
 import {isGiftTopic, type GiftTopic} from "@/lib/gift-selection";
 
+export const GIFT_PAGE_SIZE = 20;
+
 export type GiftSection = {
     collection: string;
     heading: string;
