@@ -108,6 +108,11 @@ export default async function Footer() {
       href: config.representation.tostadora || config.representation.tostaDora || "",
       sponsored: false,
     },
+    {
+      label: "Zazzle",
+      href: config.representation.zazzle || "",
+      sponsored: false,
+    },
   ].filter((shop) => shop.href);
 
   return (
