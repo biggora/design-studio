@@ -12,12 +12,10 @@ in the JSON defaults or the corresponding `studio` row. The route remains `/arti
 1. Apply `012_articles` for the configured database provider. Fresh-install table scripts
    include the same table. PostgreSQL enables RLS, revokes anonymous/authenticated grants,
    and grants only the server `service_role` access. MySQL uses its server connection.
-2. Set server-only `TUMBLR_API_KEY` to the existing Tumblr application's consumer key.
-   No Tumblr OAuth token or secret is needed on the website.
-   This integration is optional: with an absent, empty or whitespace-only key, verification
-   and scheduled processing are disabled. No Tumblr requests or verification writes run.
-   Existing verified cards retain their normal status/time gates; new and scheduled cards
-   remain hidden. The build does not require this key.
+2. `TUMBLR_API_KEY` is optional. When present, the site checks Tumblr and saves the
+   current public URL and publication date. A scheduled announcement appears from its
+   `showAt` time even when this key is absent; it uses the URL and time saved with the
+   schedule. No Tumblr OAuth token or secret is needed.
 3. Set `NEXT_PUBLIC_IMAGES_CDN` to the existing public CDN base URL. Covers are restricted
    to its `/articles/` namespace and immutable hash-bearing paths.
 4. Apply `015_article_schedules_postgres.sql` or `015_article_schedules_mysql.sql` after
@@ -88,7 +86,7 @@ This becomes `2026-10-27T10:30:00.000Z` in storage and API responses. `Z` is acc
 An explicit numeric timezone offset or Z is required; local times without an offset,
 invalid dates and IANA zone names in place of an offset are rejected. For Riga, choose
 the correct offset for the date (including daylight-saving changes). Past times are
-allowed and become eligible on the next processor invocation.
+allowed and become visible on the next page request.
 
 New columns: `showAt` (requested UTC website time), `status`, `shownAt` (actual website
 release), `scheduleRevision` (concurrency token), `lastError` (safe verification error).
@@ -96,50 +94,52 @@ States behave as follows:
 
 - `automatic`: existing rows, including all migrated rows without a schedule, retain
   their previous visitor-driven Tumblr publication checks and Tumblr date on the card.
-- `scheduled`: always hidden, even after showAt, until the independent processor
-  verifies that the time has arrived and Tumblr is publicly published.
+- `scheduled`: hidden before showAt and shown automatically at or after showAt. It uses
+  the saved announcement and Tumblr link; no separate processor or Tumblr key is needed
+  to make the card appear. If configured, the processor can later refresh the saved
+  Tumblr URL and publication date.
 - `published`: website release completed. `shownAt` and the card date/order reflect
   that website release, rather than the older Tumblr publication time.
 - `cancelled`: hidden; cancellation also removes a card that was already visible.
   A later ordinary ingest does not undo cancellation or change an existing schedule.
 
 Private GET responses additionally give `state`: `waiting_time`, `waiting_tumblr`,
-`verification_error`, `published` or `cancelled`. A failed check leaves a scheduled
-announcement hidden and sets `lastError=tumblr_verification_unavailable`.
-Publish-now can therefore return a waiting state;
-it never forces a queued/private Tumblr article to become visible.
+`verification_error`, `published` or `cancelled`. For a due scheduled item, `published`
+means the card is visible on the site. A Tumblr check can still refresh its canonical
+link and date, but an unavailable check does not hide the card. Publish-now makes a card
+eligible immediately.
 
 Creating/moving a schedule or requesting immediate release clears its previous public
 snapshot. Content-only PUT calls preserve scheduling columns. If a schedule is supplied
 on initial ingest, saving its source data and hidden scheduled state is one upsert;
-use this for new future announcements to avoid a gap between ingest and scheduling.
+use this for new future announcements so their content and release time are stored together.
 Every schedule change replaces `scheduleRevision`. Processor writes compare both that
 token and the content revision, current status and due time, so a stale check cannot
 undo a cancellation or reschedule. Public reads re-read state after verification.
 
 Schedule changes, cancellation, publish-now and processor calls invalidate `/articles`
-and `/sitemap.xml`. All public article readers use the same status/time gate, including
-the sitemap. Processing never exposes a future timestamp, even if stale public data exists.
+and `/sitemap.xml`. The `/articles` page is rendered on each request, so a scheduled card
+becomes visible at its saved time without waiting for a visitor-driven Tumblr check or a
+background job. The sitemap refreshes on its five-minute cache interval.
 
 ## Publication gate and outages
 
-All database access goes through `utils/database.ts`. Public rendering checks only the
-Tumblr **public posts** API with API-key authentication. The expected ID is tried first;
-if absent, all public pages are searched for exactly one matching registered slug.
-IDs stay strings. Ambiguous matches, drafts, queued and private posts remain hidden.
-The canonical URL and date come from the actual published post.
+All database access goes through `utils/database.ts`. Automatic (unscheduled) rows still
+use the Tumblr **public posts** API with API-key authentication. The expected ID is tried
+first; if absent, all public pages are searched for exactly one matching registered slug.
+IDs stay strings. Ambiguous matches, drafts, queued and private posts are not shown as
+automatic articles. Scheduled rows follow their saved website time instead; a missing or
+unavailable Tumblr check does not delay the agreed website release time.
 
 Verification timestamps and the last successful public snapshots persist in the database,
 so they survive serverless restarts. Automatic/published records recheck after five minutes.
 A due scheduled record retries after one minute; future and cancelled records are skipped.
-A confirmed absence removes a card. A transient response/schema/auth/network failure
-preserves the last verified cards and never opens a previously hidden card; another check
-is attempted at the next eligible check. A failure in any part of a verification batch
-preserves already released cards in that batch; scheduled records stay hidden. Error
-details/keys/remote URLs are never returned or stored as `lastError`.
-If saving a verification result fails, public pages and the sitemap read only the saved,
-verified snapshots with the same status/time gates. The private processor still reports
-database errors so the scheduler can retry them.
+A confirmed absence removes an automatic card. A transient error keeps the last verified
+automatic cards and retries at the next eligible check. Scheduled cards stay visible from
+their saved release time even if a Tumblr check fails. Error details/keys/remote URLs are
+never returned or stored as `lastError`. If saving a verification result fails, scheduled
+cards still use their saved announcement data; the private processor reports database
+errors for retry.
 
 ## Running without visitors
 
@@ -150,7 +150,9 @@ account credentials are configured here. [Vercel's published limits](https://ver
 allow only daily, hour-precision cron on Hobby and minute-precision cron on Pro/Enterprise.
 Do not add a minute-level vercel.json cron that may break a Hobby deployment.
 
-Use the existing self-hosted n8n scheduler for a simple no-new-subscription solution:
+No scheduler is required for scheduled cards to appear. An optional processor call can
+refresh their Tumblr URLs and publication dates. If you want those refreshes to happen
+without an operator, use the existing self-hosted n8n scheduler:
 
 1. Schedule Trigger: every minute.
 2. HTTP Request: POST `https://<your-domain>/api/articles/process?limit=25`, no request body.
@@ -175,10 +177,9 @@ publishing or paid queue services. The response reports `processed`, `published`
 cards), `waiting`, `failed`, `superseded`, `changed` and `disabled`. With no `TUMBLR_API_KEY`,
 `disabled` is true and every counter is zero; no records are processed or changed.
 Otherwise `disabled` is false; remaining eligible rows are handled
-on subsequent calls. Running it every minute means release is at or after showAt,
-usually within one minute plus the Tumblr request time. API outages, paused schedulers
-or backlogs delay release; they never move it earlier. Visitors do not release scheduled
-records, so configuring the scheduler is required for unattended operation.
+on subsequent calls. Running it every minute refreshes Tumblr details shortly after a
+change. API outages or paused schedulers do not delay a scheduled card; its saved release
+time controls visibility.
 
 If the existing Vercel account already supports minute cron, an optional alternative is
 `{"crons":[{"path":"/api/articles/process","schedule":"* * * * *"}]}` in vercel.json.

@@ -13,6 +13,7 @@ import { JsonLd } from "@/app/components/JsonLd";
 import { pageJsonLd } from "@/lib/structured-data";
 
 type Props = { searchParams: Promise<{ page?: string }> };
+export const dynamic = "force-dynamic";
 const pageNumber = (value?: string) =>
   value && /^[1-9]\d*$/.test(value) && Number.isSafeInteger(Number(value))
     ? Number(value)

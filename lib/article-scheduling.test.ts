@@ -49,17 +49,14 @@ describe("website announcement time", () => {
       articleIsVisible({ ...row, status: undefined, showAt: null }, now),
     ).toBe(true);
     expect(articleScheduleView(row, now).state).toBe("waiting_time");
-    expect(
-      articleScheduleView(
-        { ...row, showAt: "2026-10-26T09:00:00Z", publication: null },
-        now,
-      ).state,
-    ).toBe("waiting_tumblr");
+    const due = { ...row, showAt: "2026-10-26T09:00:00Z", publication: null };
+    expect(articleIsVisible(due, now)).toBe(true);
+    expect(articleScheduleView(due, now).state).toBe("published");
     expect(
       articleScheduleView(
         { ...row, showAt: "2026-10-26T09:00:00Z", lastError: "unavailable" },
         now,
       ).state,
-    ).toBe("verification_error");
+    ).toBe("published");
   });
 });

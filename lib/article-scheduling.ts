@@ -75,6 +75,7 @@ export function articleIsVisible(
   row: ArticleRecord,
   now = Date.now(),
 ): boolean {
+  if (row.status === "scheduled" && articleTimeReached(row, now)) return true;
   return (
     (row.status == null ||
       row.status === "automatic" ||
@@ -111,10 +112,10 @@ export function articleScheduleView(row: ArticleRecord, now = Date.now()) {
       ? "cancelled"
       : !articleTimeReached(row, now)
         ? "waiting_time"
-        : row.lastError
-          ? "verification_error"
-          : articleIsVisible(row, now)
-            ? "published"
+        : articleIsVisible(row, now)
+          ? "published"
+          : row.lastError
+            ? "verification_error"
             : "waiting_tumblr";
   return {
     ...row,

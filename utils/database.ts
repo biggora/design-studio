@@ -173,7 +173,7 @@ export async function processArticleAnnouncements(options: {target?: ArticleTarg
     return result;
 }
 
-/** Legacy reads retain their behavior; scheduled releases require the independent processor. */
+/** Scheduled cards use their saved release time; the optional processor refreshes Tumblr details. */
 export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]> => {
     try {
         await processArticleAnnouncements({includeScheduled: false});
@@ -182,8 +182,23 @@ export const fetchPublishedArticles = cache(async (): Promise<PublishedArticle[]
         console.error("Article publication refresh unavailable; keeping the last verified articles");
     }
     // Read again so a concurrent cancellation/reschedule wins over a check that was in flight.
-    return (await fetchArticleAnnouncements()).filter(row => articleIsVisible(row))
-        .flatMap(row => row.publication ? [row.publication] : [])
+    const now = Date.now();
+    return (await fetchArticleAnnouncements()).filter(row => articleIsVisible(row, now))
+        .flatMap(row => {
+            if (row.publication) return [row.publication];
+            if (row.status === "scheduled" && row.showAt && Date.parse(row.showAt) <= now) {
+                return [{
+                    sourceArticleId: row.sourceArticleId,
+                    title: row.title,
+                    excerpt: row.excerpt,
+                    imageUrl: row.imageUrl,
+                    imageAlt: row.imageAlt,
+                    url: row.tumblrUrl,
+                    publishedAt: row.showAt,
+                }];
+            }
+            return [];
+        })
         .sort((a, b) => b.publishedAt.localeCompare(a.publishedAt) || a.sourceArticleId.localeCompare(b.sourceArticleId));
 });
 
