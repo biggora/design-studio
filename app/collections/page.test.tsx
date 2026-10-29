@@ -38,8 +38,8 @@ describe("/collections", () => {
     expect(crumbs.map((item: {name: string}) => item.name)).toEqual(["Home", "Collections"]);
     const list = ld.find((item: {"@type": string}) => item["@type"] === "ItemList").itemListElement;
     expect(list).toEqual([
-      {"@type": "ListItem", position: 1, url: "https://example.test/designs?collection=Pet+lovers"},
-      {"@type": "ListItem", position: 2, url: "https://example.test/designs?collection=Programming"},
+      {"@type": "ListItem", position: 1, name: "Pet Prints", url: "https://example.test/designs?collection=Pet+lovers"},
+      {"@type": "ListItem", position: 2, name: "Coding Prints", url: "https://example.test/designs?collection=Programming"},
     ]);
   });
 

@@ -1,5 +1,25 @@
 import type { SiteConfig } from "@/lib/store";
 import type { TshirtOffer } from "@/lib/marketplace-prices";
+import type { Design } from "@/types/design";
+import { designPath } from "@/lib/slug";
+import { getShareImageUrl } from "@/lib/image";
+
+/** A carousel needs at least three complete products; otherwise retain a plain link list. */
+export function designListElements(designs: Design[], siteUrl: string, offers: Map<string, TshirtOffer>, offset = 0) {
+  const products = designs.length >= 3 && designs.every(design => offers.has(design.id));
+  return designs.map((design, index) => {
+    const url = `${siteUrl}${designPath(design)}`;
+    const offer = offers.get(design.id);
+    return {
+      "@type": "ListItem",
+      position: offset + index + 1,
+      name: design.title,
+      url,
+      ...(products && offer ? {item: tshirtProductJsonLd(url, offer, design.description,
+        new URL(getShareImageUrl(design) || "/images/no_image_available.svg", `${siteUrl}/`).href)} : {}),
+    };
+  });
+}
 
 /** One concrete marketplace T-shirt; other stores' currencies are not aggregated. */
 export function tshirtProductJsonLd(pageUrl: string, offer: TshirtOffer, description: string, image: string) {
@@ -33,7 +53,8 @@ export function pageJsonLd(
   type: "WebPage" | "CollectionPage" | "AboutPage" | "ContactPage" | "SearchResultsPage" = "WebPage",
 ) {
   const siteUrl = `https://${config.domain}`;
-  const url = new URL(path, `${siteUrl}/`).href;
+  const pageUrl = new URL(path, `${siteUrl}/`);
+  const url = pageUrl.href;
   return {
     "@context": "https://schema.org",
     "@type": type,
@@ -43,5 +64,15 @@ export function pageJsonLd(
     inLanguage: "en",
     isPartOf: { "@id": `${siteUrl}/#website` },
     publisher: { "@id": `${siteUrl}/#organization` },
+    ...(pageUrl.pathname !== "/" ? {
+      breadcrumb: {
+        "@type": "BreadcrumbList",
+        "@id": `${url}#breadcrumb`,
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+          { "@type": "ListItem", position: 2, name, item: url },
+        ],
+      },
+    } : {}),
   };
 }

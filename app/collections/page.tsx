@@ -43,10 +43,12 @@ export default async function CollectionsIndex() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     "@id": `${siteUrl}/collections#items`,
+    name: "Collections",
     numberOfItems: collections.length,
     itemListElement: collections.map((collection, index) => ({
       "@type": "ListItem",
       position: index + 1,
+      name: collection.heading || collection.title,
       url: `${siteUrl}${collectionPath(collection.collection)}`,
     })),
   };

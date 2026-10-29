@@ -11,13 +11,13 @@ import TrackCatalogState from "@/app/components/TrackCatalogState";
 import { buttonVariants } from "@/components/ui/button";
 import { parsePageParam } from "@/lib/utils";
 import {getCollectionPages, collectionPath, collectionDisplayNames} from "@/lib/collections";
-import {designPath} from "@/lib/slug";
 import {JsonLd} from "@/app/components/JsonLd";
 import {CollectionLinks} from "@/app/components/CollectionLinks";
 import {PageShell} from "@/app/components/PageShell";
 import {PageHeader} from "@/app/components/PageHeader";
 import {CardGrid} from "@/app/components/CardGrid";
-import {pageJsonLd} from "@/lib/structured-data";
+import {pageJsonLd, designListElements} from "@/lib/structured-data";
+import {getListingTshirtOffers} from "@/lib/marketplace-prices";
 
 const ITEMS_PER_PAGE = 15;
 
@@ -118,17 +118,26 @@ export default async function DesignFolio(
   }
 
   const siteUrl = `https://${config.domain}`;
+  const tshirtOffers = await getListingTshirtOffers(designs);
+  const listElements = designListElements(designs, siteUrl, tshirtOffers, (currentPage - 1) * ITEMS_PER_PAGE);
   const collectionJsonLd = selectedCollection && !searchQuery && knownCollection && total > 0 ? {
     ...pageJsonLd(config, collectionPath(selectedCollection, currentPage), heading, "CollectionPage"),
     description: description || intro,
     url: `${siteUrl}${collectionPath(selectedCollection, currentPage)}`,
+    breadcrumb: {
+      "@type": "BreadcrumbList",
+      "@id": `${siteUrl}${collectionPath(selectedCollection, currentPage)}#breadcrumb`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+        { "@type": "ListItem", position: 2, name: "Our Designs", item: `${siteUrl}/designs` },
+        { "@type": "ListItem", position: 3, name: heading, item: `${siteUrl}${collectionPath(selectedCollection, currentPage)}` },
+      ],
+    },
     mainEntity: {
       "@type": "ItemList",
-      itemListElement: designs.map((design: Design, index: number) => ({
-        "@type": "ListItem",
-        position: index + 1,
-        url: `${siteUrl}${designPath(design)}`,
-      })),
+      name: heading,
+      numberOfItems: total,
+      itemListElement: listElements,
     },
   } : null;
 
@@ -139,12 +148,9 @@ export default async function DesignFolio(
           searchQuery ? "SearchResultsPage" : designs.length ? "CollectionPage" : "WebPage"),
         mainEntity: {
           "@type": "ItemList",
+          name: heading,
           numberOfItems: total,
-          itemListElement: designs.map((design, index) => ({
-            "@type": "ListItem",
-            position: (currentPage - 1) * ITEMS_PER_PAGE + index + 1,
-            url: `${siteUrl}${designPath(design)}`,
-          })),
+          itemListElement: listElements,
         },
       }} />
       <TrackCatalogState />
@@ -184,6 +190,7 @@ export default async function DesignFolio(
                 <DesignCard
                   key={design.id}
                   design={design}
+                  tshirtOffer={tshirtOffers.get(design.id)}
                   compactOnMobile
                   priority={index < 4}
                   showCollection={!selectedCollection}

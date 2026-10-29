@@ -54,6 +54,7 @@ export default async function GiftsIndex() {
         breadcrumb: { "@id": breadcrumbJsonLd["@id"] },
         mainEntity: {
           "@type": "ItemList",
+          name: "Gift Ideas by Interest",
           numberOfItems: pages.length,
           itemListElement: pages.map((page, index) => ({
             "@type": "ListItem",

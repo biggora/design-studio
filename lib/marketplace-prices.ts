@@ -105,3 +105,11 @@ export async function getTshirtOffers(designId: string, sources: PriceSource[]):
     return parsePriceSnapshot(JSON.parse(text), designId, sources);
   } catch { return []; }
 }
+
+/** Listing pages reuse the same cached snapshots, in parallel and only for visible designs. */
+export async function getListingTshirtOffers(designs: Design[]): Promise<Map<string, TshirtOffer>> {
+  const entries = await Promise.all(designs.map(async design => [
+    design.id, (await getTshirtOffers(design.id, tshirtPriceSources(design, [])))[0],
+  ] as const));
+  return new Map(entries.filter((entry): entry is readonly [string, TshirtOffer] => !!entry[1]));
+}

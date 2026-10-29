@@ -71,6 +71,20 @@ describe("collection catalog pages", () => {
     expect(metadata.description).toBe("Camera and lens artwork for photographers.");
   });
 
+  it("keeps collection breadcrumbs and list positions correct on page two", async () => {
+    const {default: Page} = await import("./page");
+    fetchDesigns.mockResolvedValue({designs: [{id: "1", slug: "one", title: "One"}], total: 22});
+    const html = renderToStaticMarkup(await Page({searchParams: Promise.resolve({collection: "Programming", page: "2"})}));
+    const ld = JSON.parse(html.split('<script type="application/ld+json">')[1].split("</script>")[0]);
+    expect(ld.breadcrumb.itemListElement).toEqual([
+      {"@type": "ListItem", position: 1, name: "Home", item: "https://example.test/"},
+      {"@type": "ListItem", position: 2, name: "Our Designs", item: "https://example.test/designs"},
+      {"@type": "ListItem", position: 3, name: "Programming Prints", item: "https://example.test/designs?collection=Programming&page=2"},
+    ]);
+    expect(ld.mainEntity).toMatchObject({name: "Programming Prints", numberOfItems: 22,
+      itemListElement: [{position: 16, name: "One", url: "https://example.test/designs/one"}]});
+  });
+
   it("keeps searches and empty/unknown collection results out of the index", async () => {
     const {generateMetadata} = await import("./page");
     expect((await generateMetadata({searchParams: Promise.resolve({collection: "Programming", search: "cat"})})).robots)

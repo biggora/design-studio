@@ -55,8 +55,8 @@ describe("/gifts/[slug]", () => {
     const ld = $('script[type="application/ld+json"]').map((_, el) => JSON.parse($(el).text())).get().flat();
     const itemList = ld.find(item => item["@type"] === "ItemList");
     expect(itemList.itemListElement).toEqual([
-      {"@type": "ListItem", position: 1, url: "https://example.test/designs/one"},
-      {"@type": "ListItem", position: 2, url: "https://example.test/designs/two"},
+      {"@type": "ListItem", position: 1, name: "Design 1", url: "https://example.test/designs/one"},
+      {"@type": "ListItem", position: 2, name: "Design 2", url: "https://example.test/designs/two"},
     ]);
     const crumbs = ld.find(item => item["@type"] === "BreadcrumbList").itemListElement;
     expect(crumbs.map((item: {item: string}) => item.item)).toEqual([

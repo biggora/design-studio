@@ -16,6 +16,18 @@ describe("structured page data", () => {
     expect(pageJsonLd({ domain: "other.test" }, "/", "Home")["@id"]).toBe("https://other.test/#webpage");
   });
 
+  it("includes a complete breadcrumb on inner pages while leaving home without one", () => {
+    const data = pageJsonLd({ domain: "other.test" }, "/articles?page=2", "Articles", "CollectionPage");
+    expect(data).toHaveProperty("breadcrumb", {
+      "@type": "BreadcrumbList", "@id": "https://other.test/articles?page=2#breadcrumb",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://other.test/" },
+        { "@type": "ListItem", position: 2, name: "Articles", item: "https://other.test/articles?page=2" },
+      ],
+    });
+    expect(pageJsonLd({ domain: "other.test" }, "/", "Home")).not.toHaveProperty("breadcrumb");
+  });
+
   it("keeps content inside JSON-LD when a title contains a script closing tag", () => {
     const title = '</script><script>alert("bad")</script>';
     const $ = load(renderToStaticMarkup(createElement(JsonLd, {

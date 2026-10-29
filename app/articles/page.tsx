@@ -68,10 +68,12 @@ export default async function ArticlesPage({ searchParams }: Props) {
     ...pageJsonLd(config, pageUrl(page), "Articles", "CollectionPage"),
     mainEntity: {
       "@type": "ItemList",
+      name: "Articles",
       numberOfItems: articles.length,
       itemListElement: visible.map((article, index) => ({
         "@type": "ListItem",
         position: (page - 1) * 12 + index + 1,
+        name: article.title,
         item: {
           "@type": "Article",
           "@id": `${article.url}#article`,

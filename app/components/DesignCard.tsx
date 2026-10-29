@@ -8,6 +8,7 @@ import { designPath } from "@/lib/slug";
 import { cn, focusRingClasses, safeHexColor } from "@/lib/utils";
 import { collectionPath } from "@/lib/collections";
 import { buttonVariants } from "@/components/ui/button";
+import type { TshirtOffer } from "@/lib/marketplace-prices";
 
 type DesignCardProps = {
   design: Design;
@@ -20,9 +21,10 @@ type DesignCardProps = {
   sizes?: string;
   /** Raw collection name → canonical display name (curated heading). */
   collectionLabels?: Map<string, string>;
+  tshirtOffer?: TshirtOffer;
 };
 
-export function DesignCard({ design, showCollection = true, compactOnMobile = false, priority, sizes, collectionLabels }: DesignCardProps) {
+export function DesignCard({ design, showCollection = true, compactOnMobile = false, priority, sizes, collectionLabels, tshirtOffer }: DesignCardProps) {
   const collectionLabel =
     (design.collection && collectionLabels?.get(design.collection)) || design.collection;
 
@@ -84,6 +86,14 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
         >
           {design.description}
         </p>
+        {tshirtOffer && (
+          <p className="mb-3 text-sm text-foreground">
+            T-shirt · <span className="font-semibold tabular-nums">{new Intl.NumberFormat("en", {style: "currency", currency: tshirtOffer.currency}).format(Number(tshirtOffer.price))} {tshirtOffer.currency}</span>
+            <span className="block text-xs text-muted-foreground">
+              {tshirtOffer.seller}{tshirtOffer.availability === "https://schema.org/OutOfStock" || tshirtOffer.availability === "https://schema.org/SoldOut" ? " · Out of stock" : ""}
+            </span>
+          </p>
+        )}
         <Link
           href={designPath(design)}
           className={cn(

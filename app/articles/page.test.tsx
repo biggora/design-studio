@@ -85,7 +85,11 @@ describe("Articles", () => {
     expect(data).toMatchObject({
       "@type": "CollectionPage", "@id": "https://shop.test/articles?page=2#webpage",
       isPartOf: { "@id": "https://shop.test/#website" },
-      mainEntity: { "@type": "ItemList", numberOfItems: 13 },
+      breadcrumb: { "@type": "BreadcrumbList", itemListElement: [
+        { position: 1, name: "Home", item: "https://shop.test/" },
+        { position: 2, name: "Articles", item: "https://shop.test/articles?page=2" },
+      ] },
+      mainEntity: { "@type": "ItemList", name: "Articles", numberOfItems: 13 },
     });
     expect(data.mainEntity.itemListElement).toHaveLength(1);
     expect(data.mainEntity.itemListElement[0]).toMatchObject({ position: 13, item: {
