@@ -334,7 +334,7 @@ export default async function DesignDetails(
                 </BuyLink>
               )}
               {productMockups.length > 0 && (
-                <div className="mb-6">
+                <div className="mt-4 mb-6">
                   <div className="grid grid-cols-3 gap-3">
                     {productMockups.map((mockup) => (
                       <figure key={mockup.key} className="min-w-0">
