@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
-const db = vi.hoisted(() => ({ fetchDesigns: vi.fn(), getDesignById: vi.fn(), fetchPublicListings: vi.fn() }));
+const db = vi.hoisted(() => ({ fetchDesigns: vi.fn(), getDesignById: vi.fn(), getDesignListings:vi.fn(), fetchPublicListings: vi.fn() }));
 vi.mock("@/utils/database", () => db);
 import { GET } from "./route";
 const id = "123e4567-e89b-12d3-a456-426614174000";
@@ -31,4 +31,14 @@ it("returns 404 for an inactive or absent design and rejects invalid pagination"
   expect((await GET(request(`?id=${id}`))).status).toBe(404);
   expect((await GET(request("?page=0"))).status).toBe(400);
   expect((await GET(request(`?id=${"-".repeat(36)}`))).status).toBe(400);
+});
+
+it('resolves an uploaded SHA only through the authenticated lookup and still applies active-design filtering',async()=>{
+ const sha256='a'.repeat(64);db.getDesignListings.mockResolvedValue({design:{id}});db.getDesignById.mockResolvedValue({design:{...design,sha256}});
+ expect((await (await GET(request(`?sha256=${sha256}`))).json()).items[0].sha256).toBe(sha256);
+ expect(db.getDesignListings).toHaveBeenCalledWith({sha256});
+ db.getDesignById.mockResolvedValue(null);expect((await GET(request(`?sha256=${sha256}`))).status).toBe(404);
+ db.getDesignListings.mockResolvedValue(null);db.getDesignById.mockClear();expect((await GET(request(`?sha256=${sha256}`))).status).toBe(404);expect(db.getDesignById).not.toHaveBeenCalled();
+ expect((await GET(request(`?sha256=${sha256}&id=${id}`))).status).toBe(400);
+ expect((await GET(request('?sha256=bad'))).status).toBe(400);
 });

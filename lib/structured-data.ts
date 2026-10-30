@@ -1,12 +1,13 @@
 import type { SiteConfig } from "@/lib/store";
 import type { TshirtOffer } from "@/lib/marketplace-prices";
+import { isVerifiedPrice } from "@/lib/price-policy";
 import type { Design } from "@/types/design";
 import { designPath } from "@/lib/slug";
 import { getShareImageUrl } from "@/lib/image";
 
 /** A carousel needs at least three complete products; otherwise retain a plain link list. */
 export function designListElements(designs: Design[], siteUrl: string, offers: Map<string, TshirtOffer>, offset = 0) {
-  const products = designs.length >= 3 && designs.every(design => offers.has(design.id));
+  const products = designs.length >= 3 && designs.every(design => {const offer=offers.get(design.id);return offer && isVerifiedPrice(offer);});
   return designs.map((design, index) => {
     const url = `${siteUrl}${designPath(design)}`;
     const offer = offers.get(design.id);

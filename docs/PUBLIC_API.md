@@ -439,7 +439,8 @@ This authenticated read-only endpoint supplies canonical marketplace links to th
 - `page`: positive safe integer, default `1`.
 - `limit`: integer `1`–`100`, default `50`.
 - `id`: optional storefront design UUID for a single active print. It is not the uploader's file SHA. Page and limit are still validated when id is supplied.
-- Response: `{ items: [{ designId, title, sources: [{ platform, url }] }], total, page, limit }`. Sources contain canonical URLs without affiliate wrapping; listing IDs are encoded in those URLs. Both database providers use the same facade and active-design filters.
+- `sha256`: optional 64-character hex file SHA for the uploader's post-publication lookup, mutually exclusive with `id`. It resolves identity through the listings facade and still requires an active design.
+- Response: `{ items: [{ designId, title, sha256?, sources: [{ platform, url, publishedAt? }] }], total, page, limit }`. Sources contain canonical URLs without affiliate wrapping; listing IDs are encoded in those URLs. `publishedAt` is the actual per-marketplace listing timestamp when present. Both database providers use the same facade and active-design filters. The file SHA and source timestamps are specific to this authenticated endpoint; public print DTOs are unchanged.
 - Errors: `400` for invalid parameters, `401` for invalid/missing credentials, `404` for an unknown/inactive design, `503` when the server token is unconfigured, `500` for a query failure. An older deployment without this route also returns `404`; deploy it before collecting against that host.
 
 For published snapshot format, collection and cache diagnostics, see [cached prices and structured data](MARKETPLACE_PRICES.md). Starting a local storefront does not run collection; the uploader's `--studio-url` can select a local source endpoint while retaining the configured R2 destination.

@@ -9,6 +9,8 @@ export type CdnArtwork = { key: string; version: number; width: number; height: 
 
 export interface Design {
   id: string;
+  /** Internal uploader identity; public DTOs omit this field. */
+  sha256?: string;
   externalId: number | null;
   title: string;
   slug?: string | null;

@@ -90,7 +90,7 @@ export function DesignCard({ design, showCollection = true, compactOnMobile = fa
           <p className="mb-3 text-sm text-foreground">
             T-shirt · <span className="font-semibold tabular-nums">{new Intl.NumberFormat("en", {style: "currency", currency: tshirtOffer.currency}).format(Number(tshirtOffer.price))} {tshirtOffer.currency}</span>
             <span className="block text-xs text-muted-foreground">
-              {tshirtOffer.seller}{tshirtOffer.availability === "https://schema.org/OutOfStock" || tshirtOffer.availability === "https://schema.org/SoldOut" ? " · Out of stock" : ""}
+              {tshirtOffer.seller}{tshirtOffer.priceStatus === 'regular' ? ' · Regular price; check store' : tshirtOffer.priceStatus === 'last-checked' ? ' · Last checked price' : ''}{tshirtOffer.availability === "https://schema.org/OutOfStock" || tshirtOffer.availability === "https://schema.org/SoldOut" ? " · Out of stock" : ""}
             </span>
           </p>
         )}

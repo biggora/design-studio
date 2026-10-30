@@ -449,6 +449,7 @@ export function mapRowToDesign(row: mysql.RowDataPacket): Design {
         category: row.category as string,
         collection: normalizeCollection(row.collection),
         imageName: row.imageName as string,
+        ...(typeof row.sha256 === 'string' ? {sha256:row.sha256} : {}),
         description: row.description as string,
         keywords: row.keywords as string,
         backgroundColors: row.backgroundColors as string,
@@ -851,6 +852,7 @@ function mapSupabaseRowToDesign(item: Record<string, unknown>): Design {
         category: item.category as string,
         collection: normalizeCollection(item.collection),
         imageName: item.imageName as string,
+        ...(typeof item.sha256 === 'string' ? {sha256:item.sha256} : {}),
         description: item.description as string,
         keywords: item.keywords as string,
         backgroundColors: item.backgroundColors as string,
@@ -1813,21 +1815,21 @@ export async function getDesignCdnImage(lookup: CdnImageLookup): Promise<{design
 
 // Project only public marketplace links; account, source identity and extra never leave
 // the authenticated lookup endpoint. Batch one query per API response, not per design.
-export async function fetchPublicListings(ids: string[]): Promise<Record<string, {platform: ListingPlatform; url: string}[]>> {
+export async function fetchPublicListings(ids: string[], includePublishedAt = false): Promise<Record<string, {platform: ListingPlatform; url: string; publishedAt?: string}[]>> {
     if (!ids.length) return {};
-    let rows: {designId: string; platform: ListingPlatform; url: string}[];
+    let rows: {designId: string; platform: ListingPlatform; url: string; publishedAt?: string | Date | null}[];
     if (getProvider() === "supabase") {
         const {data, error} = await getSupabase().from("design_listings")
-            .select("designId, platform, url").in("designId", ids).order("platform").order("url");
+            .select("designId, platform, url, publishedAt").in("designId", ids).order("platform").order("url");
         if (error) throw new Error("Failed to load public listing links", {cause: error});
         rows = data as typeof rows;
     } else {
         const [data] = await getMySQLPool().query<mysql.RowDataPacket[]>(
-            "SELECT designId, platform, url FROM design_listings WHERE designId IN (?) ORDER BY platform, url", [ids]);
+            `SELECT designId, platform, url${includePublishedAt ? ', publishedAt' : ''} FROM design_listings WHERE designId IN (?) ORDER BY platform, url`, [ids]);
         rows = data as mysql.RowDataPacket[] & typeof rows;
     }
-    const byDesign: Record<string, {platform: ListingPlatform; url: string}[]> = {};
-    for (const row of rows) (byDesign[row.designId] ??= []).push({platform: row.platform, url: row.url});
+    const byDesign: Record<string, {platform: ListingPlatform; url: string; publishedAt?: string}[]> = {};
+    for (const row of rows) (byDesign[row.designId] ??= []).push({platform: row.platform, url: row.url, ...(includePublishedAt && row.publishedAt ? {publishedAt:new Date(row.publishedAt).toISOString()} : {})});
     return byDesign;
 }
 

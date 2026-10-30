@@ -49,6 +49,8 @@ async function loadRequest(props: Props) {
   return {...data, params, search, collection};
 }
 
+export const revalidate = 300;
+
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { config, gift, designs, hasDesigns, page, search, collection } = await loadRequest(props);
   if (!gift || !hasDesigns) {

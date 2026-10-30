@@ -22,7 +22,7 @@ import ShareLinks from "@/app/components/ShareLinks";
 import { DesignImage } from "@/app/components/DesignImage";
 import { JsonLd } from "@/app/components/JsonLd";
 import { pageJsonLd, tshirtProductJsonLd } from "@/lib/structured-data";
-import { getTshirtOffers, tshirtPriceSources } from "@/lib/marketplace-prices";
+import { getTshirtOffers, tshirtPriceSources, isVerifiedPrice } from "@/lib/marketplace-prices";
 import { TshirtPrices } from "@/app/components/TshirtPrices";
 import BuyLink from "@/app/components/BuyLink";
 import { MobileBuyBar } from "@/app/components/MobileBuyBar";
@@ -50,6 +50,8 @@ const loadDesign = cache(async (param: string) => {
   if (param.length > 255 || !SLUG_PATTERN.test(param)) return null; // skip the DB for junk
   return getDesignBySlug(param);
 });
+
+export const revalidate = 300;
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;
@@ -171,8 +173,9 @@ export default async function DesignDetails(
   // Share surfaces (Pinterest intent, JSON-LD) take the share image — the CDN's
   // pre-flattened JPEG when published, else the Redbubble display image.
   const shareImage = getShareImageUrl(design) || "/images/no_image_available.svg";
-  const tshirtProduct = tshirtOffers[0]
-    ? tshirtProductJsonLd(shareUrl, tshirtOffers[0], design.description, new URL(shareImage, `https://${config.domain}/`).href)
+  const verifiedOffer = tshirtOffers.find(isVerifiedPrice);
+  const tshirtProduct = verifiedOffer
+    ? tshirtProductJsonLd(shareUrl, verifiedOffer, design.description, new URL(shareImage, `https://${config.domain}/`).href)
     : null;
 
   const breadcrumbJsonLd = {

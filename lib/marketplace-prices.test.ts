@@ -1,6 +1,7 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { getTshirtOffers, parsePriceSnapshot, tshirtPriceSources, type TshirtOffer } from "./marketplace-prices";
 import type { Design } from "@/types/design";
+import {tshirtProductJsonLd,designListElements} from './structured-data';
 const id = "123e4567-e89b-12d3-a456-426614174000";
 const now = new Date("2026-10-29T07:00:00Z");
 const offer: TshirtOffer = { platform: "redbubble", seller: "Redbubble", name: "Basket Classic T-Shirt", url: "https://www.redbubble.com/i/t-shirt/Basket/123/lrcw", price: "26.21", currency: "EUR", checkedAt: now.toISOString(), expiresAt: "2026-10-30T19:00:00Z" };
@@ -35,7 +36,7 @@ it("chooses the same first canonical listing for collector and renderer when a p
 });
 it("degrades to the existing page when CDN data is missing, unavailable or malformed", async () => {
   const fetcher = vi.spyOn(globalThis, "fetch");
-  for (const response of [new Response("", { status: 404 }), new Response("not JSON"), new Response(JSON.stringify({ ...snapshot(), version: 2 }))]) {
+  for (const response of [new Response("", { status: 404 }), new Response("not JSON"), new Response(JSON.stringify({ ...snapshot(), version: 3 }))]) {
     fetcher.mockResolvedValueOnce(response);
     expect(await getTshirtOffers(id, sources)).toEqual([]);
   }
@@ -44,4 +45,34 @@ it("degrades to the existing page when CDN data is missing, unavailable or malfo
   vi.stubEnv("NEXT_PUBLIC_IMAGES_CDN", "");
   expect(await getTshirtOffers(id, sources)).toEqual([]);
   expect(fetcher).toHaveBeenCalledTimes(4);
+});
+
+it('switches to the same stored regular price at the exact deadline without refreshing the CDN timestamp',()=>{
+ const end=now.getTime()+3600000;
+ const planned={...offer,pricingVersion:2,price:'16.26',salePrice:'16.26',regularPrice:'21.36',saleEndsAt:new Date(end).toISOString(),expiresAt:new Date(now.getTime()+30*86400000).toISOString()};
+ expect(parsePriceSnapshot(snapshot([planned]),id,sources,end-1)[0]).toMatchObject({price:'16.26',priceStatus:'verified'});
+ expect(parsePriceSnapshot(snapshot([planned]),id,sources,end)[0]).toMatchObject({price:'21.36',checkedAt:offer.checkedAt,priceStatus:'regular'});
+ expect(parsePriceSnapshot(snapshot([planned]),id,sources,now.getTime()+30*86400000)).toEqual([]);
+});
+it('keeps labelled history on cards and excludes projected or old prices from product lists',()=>{
+ const planned={...offer,pricingVersion:2,expiresAt:new Date(now.getTime()+30*86400000).toISOString()};
+ const old=parsePriceSnapshot(snapshot([planned]),id,sources,now.getTime()+2*86400000)[0];
+ expect(old).toMatchObject({price:'26.21',priceStatus:'last-checked'});
+ const designs=Array.from({length:3},(_,i)=>({id:`${id}-${i}`,title:'Print',description:'Print',props:{}} as Design));
+ const list=designListElements(designs,'https://store.test',new Map(designs.map(design=>[design.id,old])));
+ expect(list.every(item=>!('item' in item))).toBe(true);
+ expect(tshirtProductJsonLd('https://store.test/design',offer,'Print','https://cdn.test/a.jpg').offers.price).toBe(offer.price);
+});
+it('rejects incomplete and malformed future price plans',()=>{
+ for(const changed of [{regularPrice:'free'},{saleEndsAt:'2026-12-31'},{salePrice:'30',regularPrice:'20'},{priceValidUntil:3},{variant:{}}]){
+  expect(parsePriceSnapshot(snapshot([{...offer,pricingVersion:2,expiresAt:new Date(now.getTime()+30*86400000).toISOString(),...changed}]),id,sources)).toEqual([]);
+ }
+});
+
+it('keeps the visible primary product and JSON-LD aligned when another marketplace has a fresher price',()=>{
+ const nowMs=now.getTime(),old={...offer,pricingVersion:2,checkedAt:new Date(nowMs-2*86400000).toISOString(),expiresAt:new Date(nowMs+28*86400000).toISOString()};
+ const tee={...offer,platform:'teepublic',name:'Fresh TeePublic T-Shirt',url:'https://www.teepublic.com/t-shirt/456-basket'};
+ const resolved=parsePriceSnapshot(snapshot([old,tee]),id,[...sources,{platform:'teepublic',url:tee.url}]);
+ expect(resolved.map(offer=>offer.platform)).toEqual(['teepublic','redbubble']);
+ expect(tshirtProductJsonLd('https://store.test/design',resolved[0],'Print','https://cdn.test/a.jpg').name).toBe(resolved[0].name);
 });

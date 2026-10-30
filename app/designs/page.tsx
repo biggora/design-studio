@@ -20,6 +20,7 @@ import {pageJsonLd, designListElements} from "@/lib/structured-data";
 import {getListingTshirtOffers} from "@/lib/marketplace-prices";
 
 const ITEMS_PER_PAGE = 15;
+export const revalidate = 300;
 
 const loadCatalog = cache(async (page: number, search: string, collection: string) => {
   const [config, result, collections] = await Promise.all([
