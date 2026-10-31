@@ -102,7 +102,8 @@ describe("listings responses", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual(result);
     expect(ingest).toHaveBeenCalledWith(body());
-    expect(revalidate).toHaveBeenCalledWith("/", "layout");
+    expect(revalidate).toHaveBeenCalledWith("/");
+    expect(revalidate).not.toHaveBeenCalledWith("/", "layout");
   });
   it("accepts the pod-uploader tostadora listing body", async () => {
     const tostadoraBody = {
@@ -159,7 +160,8 @@ describe("listings responses", () => {
     }));
     expect(response.status).toBe(200);
     expect((await response.json()).design.cdnImage).toEqual(cdnImage);
-    expect(revalidate).toHaveBeenCalledWith("/", "layout");
+    expect(revalidate).toHaveBeenCalledWith("/");
+    expect(revalidate).not.toHaveBeenCalledWith("/", "layout");
   });
   it("preserves conflict details and does not revalidate on failure", async () => {
     ingest.mockRejectedValue(new ListingsError(409, "CONFLICT", "Identity conflict", undefined, { designId: "other" }));

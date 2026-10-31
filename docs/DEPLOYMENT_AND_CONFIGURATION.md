@@ -63,7 +63,7 @@ All environment settings are configured in the `.env` file (see `.env.example` i
 
 ### 1.5 Site config cache & Supabase webhook
 
-`getSiteConfig()` (`utils/database.ts`) is cached across requests with the Next.js Data Cache under the tag `site-config` and a 5-minute (`revalidate: 300`) safety TTL, on top of the existing per-render React `cache()` dedupe. Edits to the `studio` table are picked up within 5 minutes automatically, or immediately by calling `POST /api/revalidate/config` (authorized the same way as the sync endpoint, via `SYNC_SECRET`).
+`getSiteConfig()` (`utils/database.ts`) is cached across requests with the Next.js Data Cache under the tag `site-config` and a 1-hour (`revalidate: 3600`) safety TTL, on top of the existing per-render React `cache()` dedupe. Edits to the `studio` table are picked up within an hour automatically, or immediately by calling `POST /api/revalidate/config` (authorized the same way as the sync endpoint, via `SYNC_SECRET`).
 
 To invalidate on every edit, configure a Supabase Database Webhook:
 
@@ -267,4 +267,4 @@ curl -fsS -X POST "https://your-domain.com/api/designs/active" \
   -d '{"active": false, "ids": ["<uuid>"]}'
 ```
 
-Body: `{ "active": boolean, "ids"?: string[], "all"?: boolean, "dryRun"?: boolean }` (exactly one of a non-empty `ids` array or `all: true`, up to 500 ids). A real (non-dry) change revalidates the site layout immediately; CDN-cached surfaces (sitemap, public API, OG images) refresh within their normal TTLs (5 minutes / 24 hours).
+Body: `{ "active": boolean, "ids"?: string[], "all"?: boolean, "dryRun"?: boolean }` (exactly one of a non-empty `ids` array or `all: true`, up to 500 ids). A real (non-dry) change revalidates the catalog-driven pages (`lib/catalog-revalidation.ts`: home, catalog, collections, gifts, design pages, sitemap) immediately, not the whole layout; CDN-cached surfaces (sitemap, public API, OG images) refresh within their normal TTLs (5 minutes / 24 hours).

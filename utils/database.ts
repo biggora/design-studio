@@ -511,10 +511,11 @@ export async function loadSiteConfig(): Promise<SiteConfig> {
 export const SITE_CONFIG_TAG = "site-config";
 
 // Per-render dedupe (React cache) around a cross-request cache (unstable_cache),
-// invalidated by /api/revalidate/config; the 5-min revalidate is a safety TTL.
+// invalidated by /api/revalidate/config; the hourly revalidate is a safety TTL
+// (it also caps how often every page regenerates — see app/layout.tsx).
 export const getSiteConfig = cache(unstable_cache(loadSiteConfig, ["site-config"], {
     tags: [SITE_CONFIG_TAG],
-    revalidate: 300,
+    revalidate: 3600,
 }));
 
 export async function fetchDesigns(

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateCatalogPages } from "@/lib/catalog-revalidation";
 import { ingestListing, getDesignListings } from "@/utils/database";
 import {
   authorizeListingsRequest, ListingsError, listingsErrorResponse,
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
   }
   try {
     const result = await ingestListing(parseIngestInput(body));
-    revalidatePath("/", "layout");
+    revalidateCatalogPages();
     return NextResponse.json(result, {
       status: result.created.listing ? 201 : 200, headers: { "Cache-Control": "no-store" },
     });

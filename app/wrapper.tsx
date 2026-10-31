@@ -1,15 +1,15 @@
 "use client";
 
 import { createContext } from "react";
-import { SiteConfig } from "@/lib/store";
+import type { ClientConfig } from "@/lib/client-config";
 
-export const ConfigContext = createContext<SiteConfig>({} as SiteConfig);
+export const ConfigContext = createContext<ClientConfig>({} as ClientConfig);
 
 const ContextWrapper = ({
   config,
   children,
 }: {
-  config: SiteConfig;
+  config: ClientConfig;
   children: React.ReactNode;
 }) => {
   return (

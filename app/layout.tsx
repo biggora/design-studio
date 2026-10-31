@@ -10,10 +10,12 @@ import { SiteConfig } from "@/lib/store";
 import { getSiteConfig } from "@/utils/database";
 import ContextWrapper from "@/app/wrapper";
 import baseConfig from "@/config/config.json";
+import { toClientConfig } from "@/lib/client-config";
 
 // Safety-net TTL for the studio config cache; edits also trigger
-// /api/revalidate/config for near-immediate invalidation.
-export const revalidate = 300;
+// /api/revalidate/config for near-immediate invalidation. Hourly, not every
+// 5 min: every regeneration of every page is an ISR write on the Hobby plan.
+export const revalidate = 3600;
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 const poppins = Poppins({
@@ -164,7 +166,7 @@ export default async function RootLayout({
         {newConfig?.analytics?.google ? (
           <AnalyticsGate gaId={newConfig.analytics.google} domain={newConfig.domain} />
         ) : null}
-        <ContextWrapper config={newConfig}>
+        <ContextWrapper config={toClientConfig(newConfig)}>
           <Header />
           <main id="main-content" className="main-container pt-16">
             {children}

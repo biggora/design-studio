@@ -77,7 +77,8 @@ describe("POST /api/designs/active", () => {
     expect(response.status).toBe(200);
     expect(result.updated).toHaveLength(1);
     expect(setDesignActiveMock).toHaveBeenCalledWith({ active: false, ids: ["d1"], all: false, dryRun: false });
-    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/");
+    expect(revalidatePathMock).not.toHaveBeenCalledWith("/", "layout");
   });
 
   it("does not revalidate in dry-run mode", async () => {

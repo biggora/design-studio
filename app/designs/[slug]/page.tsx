@@ -51,7 +51,7 @@ const loadDesign = cache(async (param: string) => {
   return getDesignBySlug(param);
 });
 
-export const revalidate = 300;
+export const revalidate = 3600;
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const params = await props.params;

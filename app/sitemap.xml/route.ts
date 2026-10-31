@@ -18,7 +18,7 @@ import {giftPath} from "@/lib/gifts";
  */
 
 // Safety-net TTL matching the previous metadata route's revalidate.
-export const revalidate = 300;
+export const revalidate = 3600;
 
 type SitemapEntry = {
   url: string;

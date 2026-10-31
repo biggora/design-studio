@@ -84,7 +84,8 @@ describe("POST /api/designs/background", () => {
       updated: [{ id: "d1", externalImageUrl: "https://x/raf,...jpg", backgroundColor: "#fafafa" }],
       skipped: [],
     });
-    expect(revalidatePathMock).toHaveBeenCalledWith("/", "layout");
+    expect(revalidatePathMock).toHaveBeenCalledWith("/");
+    expect(revalidatePathMock).not.toHaveBeenCalledWith("/", "layout");
   });
 
   it("does not revalidate on a dry run", async () => {

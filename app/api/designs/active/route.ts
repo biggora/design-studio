@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidateCatalogPages } from "@/lib/catalog-revalidation";
 import { authorizeSyncRequest } from "@/lib/sync-auth";
 import { setDesignActive } from "@/lib/design-active-service";
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     });
 
     if (!result.dryRun && result.updated.length > 0) {
-      revalidatePath("/", "layout");
+      revalidateCatalogPages();
     }
 
     return NextResponse.json(result);
