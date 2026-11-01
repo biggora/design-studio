@@ -120,7 +120,7 @@ export default async function DesignFolio(
 
   const siteUrl = `https://${config.domain}`;
   const tshirtOffers = await getListingTshirtOffers(designs);
-  const listElements = designListElements(designs, siteUrl, tshirtOffers, (currentPage - 1) * ITEMS_PER_PAGE);
+  const listElements = designListElements(designs, siteUrl, tshirtOffers, config.name, (currentPage - 1) * ITEMS_PER_PAGE);
   const collectionJsonLd = selectedCollection && !searchQuery && knownCollection && total > 0 ? {
     ...pageJsonLd(config, collectionPath(selectedCollection, currentPage), heading, "CollectionPage"),
     description: description || intro,

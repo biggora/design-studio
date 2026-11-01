@@ -106,7 +106,7 @@ export default async function GiftPage(props: Props) {
     "@id": `${siteUrl}${path}#items`,
     name: gift.heading || gift.title,
     numberOfItems: total,
-    itemListElement: designListElements(designs, siteUrl, tshirtOffers, (page - 1) * GIFT_PAGE_SIZE),
+    itemListElement: designListElements(designs, siteUrl, tshirtOffers, config.name, (page - 1) * GIFT_PAGE_SIZE),
   };
 
   return (

@@ -35,7 +35,7 @@ describe("verified T-shirt prices", () => {
   });
 
   it("keeps a single concrete Product offer identical to the primary visible row", () => {
-    const product = tshirtProductJsonLd("https://other.test/designs/basket", offers[0], design.description, "https://other.test/fallback.jpg");
+    const product = tshirtProductJsonLd("https://other.test/designs/basket", offers[0], design.description, "https://other.test/fallback.jpg", "Other Brand");
     expect(product).toMatchObject({
       "@type": "Product", name: offers[0].name, image: offers[0].image,
       offers: { "@type": "Offer", price: offers[0].price, priceCurrency: offers[0].currency, url: offers[0].url, seller: { name: offers[0].seller } },

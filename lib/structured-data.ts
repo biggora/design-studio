@@ -6,7 +6,7 @@ import { designPath } from "@/lib/slug";
 import { getShareImageUrl } from "@/lib/image";
 
 /** A carousel needs at least three complete products; otherwise retain a plain link list. */
-export function designListElements(designs: Design[], siteUrl: string, offers: Map<string, TshirtOffer>, offset = 0) {
+export function designListElements(designs: Design[], siteUrl: string, offers: Map<string, TshirtOffer>, brandName: string, offset = 0) {
   const products = designs.length >= 3 && designs.every(design => {const offer=offers.get(design.id);return offer && isVerifiedPrice(offer);});
   return designs.map((design, index) => {
     const url = `${siteUrl}${designPath(design)}`;
@@ -17,13 +17,13 @@ export function designListElements(designs: Design[], siteUrl: string, offers: M
       name: design.title,
       url,
       ...(products && offer ? {item: tshirtProductJsonLd(url, offer, design.description,
-        new URL(getShareImageUrl(design) || "/images/no_image_available.svg", `${siteUrl}/`).href)} : {}),
+        new URL(getShareImageUrl(design) || "/images/no_image_available.svg", `${siteUrl}/`).href, brandName)} : {}),
     };
   });
 }
 
 /** One concrete marketplace T-shirt; other stores' currencies are not aggregated. */
-export function tshirtProductJsonLd(pageUrl: string, offer: TshirtOffer, description: string, image: string) {
+export function tshirtProductJsonLd(pageUrl: string, offer: TshirtOffer, description: string, image: string, brandName: string) {
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -32,6 +32,7 @@ export function tshirtProductJsonLd(pageUrl: string, offer: TshirtOffer, descrip
     description,
     image: offer.image || image,
     category: "T-Shirt",
+    brand: { "@type": "Brand", name: brandName },
     url: pageUrl,
     mainEntityOfPage: { "@id": `${pageUrl}#webpage` },
     offers: {

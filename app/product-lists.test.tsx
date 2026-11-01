@@ -59,7 +59,7 @@ it.each(["catalog", "gifts"])("describes every visible %s T-shirt as Product and
   const {$, list} = await render(surface);
   expect(list.itemListElement).toHaveLength(3);
   list.itemListElement.forEach((entry: {item: Record<string, unknown>}, i: number) => {
-    expect(entry.item).toMatchObject({"@type": "Product", url: `https://shop.test/designs/print-${i}`,
+    expect(entry.item).toMatchObject({"@type": "Product", brand: {"@type": "Brand", name: "Shop"}, url: `https://shop.test/designs/print-${i}`,
       image: "https://ih1.redbubble.net/tee.jpg", offers: {price: "26.21", priceCurrency: "EUR"}});
   });
   expect($("p").filter((_, element) => $(element).text().includes("T-shirt") && $(element).text().includes("€26.21 EUR"))).toHaveLength(3);

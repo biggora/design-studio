@@ -59,9 +59,9 @@ it('keeps labelled history on cards and excludes projected or old prices from pr
  const old=parsePriceSnapshot(snapshot([planned]),id,sources,now.getTime()+2*86400000)[0];
  expect(old).toMatchObject({price:'26.21',priceStatus:'last-checked'});
  const designs=Array.from({length:3},(_,i)=>({id:`${id}-${i}`,title:'Print',description:'Print',props:{}} as Design));
- const list=designListElements(designs,'https://store.test',new Map(designs.map(design=>[design.id,old])));
+ const list=designListElements(designs,'https://store.test',new Map(designs.map(design=>[design.id,old])),'Store');
  expect(list.every(item=>!('item' in item))).toBe(true);
- expect(tshirtProductJsonLd('https://store.test/design',offer,'Print','https://cdn.test/a.jpg').offers.price).toBe(offer.price);
+ expect(tshirtProductJsonLd('https://store.test/design',offer,'Print','https://cdn.test/a.jpg','Store').offers.price).toBe(offer.price);
 });
 it('rejects incomplete and malformed future price plans',()=>{
  for(const changed of [{regularPrice:'free'},{saleEndsAt:'2026-12-31'},{salePrice:'30',regularPrice:'20'},{priceValidUntil:3},{variant:{}}]){
@@ -74,5 +74,5 @@ it('keeps the visible primary product and JSON-LD aligned when another marketpla
  const tee={...offer,platform:'teepublic',name:'Fresh TeePublic T-Shirt',url:'https://www.teepublic.com/t-shirt/456-basket'};
  const resolved=parsePriceSnapshot(snapshot([old,tee]),id,[...sources,{platform:'teepublic',url:tee.url}]);
  expect(resolved.map(offer=>offer.platform)).toEqual(['teepublic','redbubble']);
- expect(tshirtProductJsonLd('https://store.test/design',resolved[0],'Print','https://cdn.test/a.jpg').name).toBe(resolved[0].name);
+ expect(tshirtProductJsonLd('https://store.test/design',resolved[0],'Print','https://cdn.test/a.jpg','Store').name).toBe(resolved[0].name);
 });

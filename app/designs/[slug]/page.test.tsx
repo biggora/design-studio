@@ -88,6 +88,7 @@ describe("non-Redbubble design page", () => {
       const html = renderToStaticMarkup(page);
       expect(findBuyLinks(page).find(link => link.props.position === "primary")?.props.href).toBe(url);
       expect(html).toContain('"@type":"Product"');
+      expect(html).toContain(`"brand":{"@type":"Brand","name":"${config.name}"}`);
       expect(html).toContain('"priceCurrency":"EUR"');
       expect(html).toContain("T-Shirt prices");
       expect(html).not.toContain("Buy on TeePublic");

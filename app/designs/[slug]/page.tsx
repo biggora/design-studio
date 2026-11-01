@@ -175,7 +175,7 @@ export default async function DesignDetails(
   const shareImage = getShareImageUrl(design) || "/images/no_image_available.svg";
   const verifiedOffer = tshirtOffers.find(isVerifiedPrice);
   const tshirtProduct = verifiedOffer
-    ? tshirtProductJsonLd(shareUrl, verifiedOffer, design.description, new URL(shareImage, `https://${config.domain}/`).href)
+    ? tshirtProductJsonLd(shareUrl, verifiedOffer, design.description, new URL(shareImage, `https://${config.domain}/`).href, config.name)
     : null;
 
   const breadcrumbJsonLd = {
