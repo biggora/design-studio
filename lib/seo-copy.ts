@@ -8,6 +8,8 @@ export type SeoCopyPlan = {
     description?: string;
     collectionPages?: CollectionPage[];
     giftPages?: GiftPage[];
+    /** Organization JSON-LD alternateName (brand variants). */
+    alternateNames?: string[];
 };
 
 export type StudioRow = {key: string; value: string};
@@ -21,6 +23,10 @@ export function validateSeoCopyPlan(plan: SeoCopyPlan): void {
     if (plan.giftPages !== undefined
         && (!Array.isArray(plan.giftPages) || getGiftPages(plan.giftPages).length !== plan.giftPages.length)) {
         throw new Error("Invalid giftPages in plan");
+    }
+    if (plan.alternateNames !== undefined
+        && (!Array.isArray(plan.alternateNames) || plan.alternateNames.some(name => typeof name !== "string" || !name.trim()))) {
+        throw new Error("Invalid alternateNames in plan");
     }
 }
 
@@ -44,6 +50,7 @@ export function buildStudioRows(plan: SeoCopyPlan): StudioRow[] {
     if (plan.description !== undefined) rows.push({key: "description", value: plan.description});
     if (plan.collectionPages !== undefined) rows.push({key: "collectionPages", value: JSON.stringify(plan.collectionPages)});
     if (plan.giftPages !== undefined) rows.push({key: "giftPages", value: JSON.stringify(plan.giftPages)});
+    if (plan.alternateNames !== undefined) rows.push({key: "alternateNames", value: JSON.stringify(plan.alternateNames)});
     return rows;
 }
 
@@ -69,7 +76,7 @@ function describe(key: string, value: string | undefined): string | number | nul
 export function isChanged(row: StudioRow, config: SiteConfig): boolean {
     const old = currentStudioValue(config, row.key);
     if (old === undefined) return true;
-    if (row.key === "collectionPages" || row.key === "giftPages") {
+    if (row.key === "collectionPages" || row.key === "giftPages" || row.key === "alternateNames") {
         const parse = (text: string): unknown => { try { return JSON.parse(text); } catch { return text; } };
         return JSON.stringify(parse(old)) !== JSON.stringify(parse(row.value));
     }

@@ -15,6 +15,9 @@ describe("validateSeoCopyPlan", () => {
         expect(() => validateSeoCopyPlan({collectionPages: [{...collectionPage, intro: ""}]})).toThrow("Invalid collectionPages");
         expect(() => validateSeoCopyPlan({giftPages: [{...giftPage, sections: []}]})).toThrow("Invalid giftPages");
         expect(() => validateSeoCopyPlan({giftPages: [giftPage, giftPage]})).toThrow("Invalid giftPages");
+        expect(() => validateSeoCopyPlan({alternateNames: ["ok", " "]})).toThrow("Invalid alternateNames");
+        expect(() => validateSeoCopyPlan({alternateNames: "ok" as unknown as string[]})).toThrow("Invalid alternateNames");
+        expect(() => validateSeoCopyPlan({alternateNames: ["ok"]})).not.toThrow();
     });
     it("does not throw on collections missing from the DB", () => {
         expect(() => validateSeoCopyPlan({collectionPages: [{...collectionPage, collection: "Nope"}]})).not.toThrow();
@@ -38,6 +41,14 @@ describe("buildStudioRows and summarizeRows", () => {
             {key: "home.title", value: "T"}, {key: "intro", value: "I"}, {key: "giftPages", value: JSON.stringify([giftPage])},
         ]);
         expect(buildStudioRows({})).toEqual([]);
+    });
+
+    it("stores alternateNames as JSON text and compares it as JSON", () => {
+        const names = ["ThreadQuirks", "Thread Quirk"];
+        expect(buildStudioRows({alternateNames: names})).toEqual([{key: "alternateNames", value: JSON.stringify(names)}]);
+        const same = summarizeRows(buildStudioRows({alternateNames: names}), {alternateNames: '[ "ThreadQuirks", "Thread Quirk" ]'} as unknown as SiteConfig);
+        const other = summarizeRows(buildStudioRows({alternateNames: names}), {alternateNames: ["ThreadQuirks"]} as unknown as SiteConfig);
+        expect([same[0].status, other[0].status]).toEqual(["unchanged", "changed"]);
     });
 
     it("marks rows changed or unchanged and shortens scalars", () => {

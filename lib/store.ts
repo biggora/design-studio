@@ -65,6 +65,8 @@ export interface SiteConfig {
   themeLink: string;
   slides: CarouselSlide[];
   about: AboutConfig;
+  /** Organization JSON-LD alternateName (brand variants); JSON text in the studio table. */
+  alternateNames?: string[] | string;
   /** Promoted collection pages, optionally JSON-encoded in the studio table. */
   collectionPages?: CollectionPage[] | string;
   /** Curated gift landing pages (/gifts/<slug>), optionally JSON-encoded in the studio table. */

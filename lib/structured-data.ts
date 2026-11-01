@@ -5,6 +5,16 @@ import type { Design } from "@/types/design";
 import { designPath } from "@/lib/slug";
 import { getShareImageUrl } from "@/lib/image";
 
+/** studio.value is text; config.json may provide the same setting as an array. */
+export function getAlternateNames(value: unknown, name: string): string[] {
+  if (typeof value === "string") {
+    try { value = JSON.parse(value); } catch { return []; }
+  }
+  if (!Array.isArray(value)) return [];
+  const names = value.filter((item): item is string => typeof item === "string").map(item => item.trim());
+  return [...new Set(names.filter(item => item && item !== name))];
+}
+
 /** A carousel needs at least three complete products; otherwise retain a plain link list. */
 export function designListElements(designs: Design[], siteUrl: string, offers: Map<string, TshirtOffer>, brandName: string, offset = 0) {
   const products = designs.length >= 3 && designs.every(design => {const offer=offers.get(design.id);return offer && isVerifiedPrice(offer);});

@@ -11,6 +11,7 @@ import { getSiteConfig } from "@/utils/database";
 import ContextWrapper from "@/app/wrapper";
 import baseConfig from "@/config/config.json";
 import { toClientConfig } from "@/lib/client-config";
+import { getAlternateNames } from "@/lib/structured-data";
 
 // Safety-net TTL for the studio config cache; edits also trigger
 // /api/revalidate/config for near-immediate invalidation. Hourly, not every
@@ -110,6 +111,7 @@ export default async function RootLayout({
     newConfig.representation.tostadora || newConfig.representation.tostaDora,
     newConfig.representation.zazzle,
   ].filter(Boolean))];
+  const alternateNames = getAlternateNames(newConfig.alternateNames, newConfig.name);
 
   const jsonLdData = [
     {
@@ -117,6 +119,7 @@ export default async function RootLayout({
       "@type": "Organization",
       "@id": `${siteUrl}/#organization`,
       name: newConfig.name,
+      ...(alternateNames.length ? { alternateName: alternateNames } : {}),
       url: siteUrl,
       ...(newConfig.description ? { description: newConfig.description } : {}),
       ...(newConfig.siteLogo ? { logo: new URL(newConfig.siteLogo, `${siteUrl}/`).href } : {}),

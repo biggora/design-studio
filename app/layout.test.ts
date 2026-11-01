@@ -58,6 +58,25 @@ describe("root JSON-LD", () => {
       "https://www.zazzle.com/store/other",
     ]);
   });
+  it("lists configured alternate names on the Organization only", async () => {
+    const { default: RootLayout } = await import("./layout");
+    const names = ["ThreadQuirks", "Thread Quirk"];
+    for (const alternateNames of [names, JSON.stringify(names)]) {
+      getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test", alternateNames });
+      const data = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+      expect(data[0].alternateName).toEqual(names);
+      expect(Object.keys(data[0]).indexOf("alternateName")).toBe(Object.keys(data[0]).indexOf("name") + 1);
+      expect(data[1]).not.toHaveProperty("alternateName");
+    }
+  });
+  it("omits alternateName when none are configured", async () => {
+    const { default: RootLayout } = await import("./layout");
+    for (const alternateNames of [undefined, [], ["Other Studio"]]) {
+      getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", alternateNames });
+      const data = findJsonLdData(await RootLayout({ children: null })) as Record<string, unknown>[];
+      expect(data[0]).not.toHaveProperty("alternateName");
+    }
+  });
   it("declares a WebSite SearchAction for the catalog search", async () => {
     const { default: RootLayout } = await import("./layout");
     getSiteConfig.mockResolvedValue({ ...baseConfig, name: "Other Studio", domain: "other.example.test" });

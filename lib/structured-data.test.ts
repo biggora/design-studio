@@ -2,12 +2,22 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { load } from "cheerio";
 import { describe, expect, it } from "vitest";
-import { designListElements, pageJsonLd, tshirtProductJsonLd } from "./structured-data";
+import { designListElements, getAlternateNames, pageJsonLd, tshirtProductJsonLd } from "./structured-data";
 import type { TshirtOffer } from "./marketplace-prices";
 import type { Design } from "@/types/design";
 import { JsonLd } from "@/app/components/JsonLd";
 
 const offer: TshirtOffer = { platform: "redbubble", seller: "Redbubble", name: "Basket Classic T-Shirt", url: "https://www.redbubble.com/i/t-shirt/Basket/123/lrcw", price: "26.21", currency: "EUR", checkedAt: "2026-10-29T07:00:00Z", expiresAt: "2026-10-30T19:00:00Z" };
+
+describe("getAlternateNames", () => {
+  it("accepts an array or studio JSON text and returns trimmed, unique names other than the brand", () => {
+    expect(getAlternateNames(["ThreadQuirks", "Thread Quirk"], "ThreadQuirk")).toEqual(["ThreadQuirks", "Thread Quirk"]);
+    expect(getAlternateNames('[" ThreadQuirks ","","ThreadQuirks","ThreadQuirk",7,null]', "ThreadQuirk")).toEqual(["ThreadQuirks"]);
+  });
+  it("returns an empty list for unset, malformed or non-array values", () => {
+    for (const value of [undefined, null, "", "not json", '{"a":1}', 5, {}]) expect(getAlternateNames(value, "X")).toEqual([]);
+  });
+});
 
 describe("structured page data", () => {
   it("uses deployment identity and distinct page identities including pagination", () => {
