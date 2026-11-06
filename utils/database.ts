@@ -513,7 +513,9 @@ export const SITE_CONFIG_TAG = "site-config";
 // Per-render dedupe (React cache) around a cross-request cache (unstable_cache),
 // invalidated by /api/revalidate/config; the hourly revalidate is a safety TTL
 // (it also caps how often every page regenerates — see app/layout.tsx).
-export const getSiteConfig = cache(unstable_cache(loadSiteConfig, ["site-config"], {
+// Include the editorial-profile schema version so deployments cannot reuse a
+// pre-profile snapshot from the persistent Data Cache during this rollout.
+export const getSiteConfig = cache(unstable_cache(loadSiteConfig, ["site-config", "editorial-pages-v1"], {
     tags: [SITE_CONFIG_TAG],
     revalidate: 3600,
 }));
