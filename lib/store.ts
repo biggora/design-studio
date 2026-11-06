@@ -2,6 +2,7 @@ import { create } from "zustand";
 import companyData from "@/config/config.json";
 import type {CollectionPage} from "@/lib/collections";
 import type {GiftPage} from "@/lib/gifts";
+import type {DesignPage} from "@/lib/design-pages";
 
 export interface SocialMedia {
   [key: string]: string;
@@ -71,6 +72,8 @@ export interface SiteConfig {
   collectionPages?: CollectionPage[] | string;
   /** Curated gift landing pages (/gifts/<slug>), optionally JSON-encoded in the studio table. */
   giftPages?: GiftPage[] | string;
+  /** Editorial design detail profiles; marketplace titles and URLs stay independent. */
+  designPages?: DesignPage[] | string;
   /** Home discovery copy; studio rows can override any field below. */
   home?: HomeConfig;
   /** Navigation label for the article index; overridable with studio articles.label. */

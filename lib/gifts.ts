@@ -1,4 +1,5 @@
 import {isGiftTopic, type GiftTopic} from "@/lib/gift-selection";
+import {isDesignLinkSection, type DesignLinkSection} from "@/lib/design-pages";
 
 export const GIFT_PAGE_SIZE = 20;
 
@@ -23,6 +24,7 @@ export type GiftPage = {
     intro: string;
     sections: GiftSection[];
     faq?: GiftFaq[];
+    designLinks?: DesignLinkSection;
     /** Optional "MM-DD" window (may wrap the year end) in which the page is promoted. */
     season?: {start: string; end: string};
 };
@@ -62,7 +64,8 @@ export function getGiftPages(value: unknown): GiftPage[] {
             || !filled(page.title) || !filled(page.description) || !filled(page.intro) || !optionalFilled(page.heading)
             || (page.topic !== undefined && !isGiftTopic(page.topic))
             || !Array.isArray(page.sections) || !page.sections.length || !page.sections.every(validSection)
-            || !validSeason(page.season) || (page.faq !== undefined && (!Array.isArray(page.faq) || !page.faq.every(validFaq)))) return false;
+            || !validSeason(page.season) || (page.faq !== undefined && (!Array.isArray(page.faq) || !page.faq.every(validFaq)))
+            || (page.designLinks !== undefined && !isDesignLinkSection(page.designLinks))) return false;
         seen.add(page.slug);
         return true;
     });

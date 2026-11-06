@@ -5,6 +5,7 @@ import type { ReactElement } from "react";
 import { Design } from "@/types/design";
 import config from "@/config/config.json";
 import BuyLink, { BuyLinkProps } from "@/app/components/BuyLink";
+import quiltingCopy from "@/docs/plans/2026-11-06-quilting-seo-copy.json";
 
 const design: Design = {
   id: "123e4567-e89b-12d3-a456-426614174000", slug: "space-cat", externalId: null,
@@ -68,6 +69,27 @@ function findBuyLinks(node: unknown): ReactElement<BuyLinkProps>[] {
 }
 
 describe("non-Redbubble design page", () => {
+  it("uses editorial copy without changing the design identity, canonical or marketplace links", async () => {
+    const profile = {...quiltingCopy.designPages[0], slug: design.slug, related: undefined};
+    Object.assign(config, {designPages: JSON.stringify([profile])});
+    try {
+      const metadata = await generateMetadata({params: Promise.resolve({slug: "space-cat"})});
+      const html = renderToStaticMarkup(await DesignDetails({params: Promise.resolve({slug: "space-cat"})}));
+      expect(metadata).toMatchObject({
+        title: `${profile.title} | ${config.name}`, description: profile.description,
+        alternates: {canonical: "/designs/space-cat"},
+        openGraph: {title: `${profile.title} | ${config.name}`, description: profile.description},
+        twitter: {title: `${profile.title} | ${config.name}`, description: profile.description},
+      });
+      expect(html).toContain(profile.heading);
+      expect(html).toContain(profile.intro);
+      expect(html).toContain(profile.buyingInfo);
+      expect(html).toContain(`alt="${profile.imageAlt}"`);
+      expect(html).toContain('"name":"Space cat"'); // artwork identity stays original
+      expect(html).toContain('href="https://teepublic.com/t-shirt/123-space-cat"');
+      expect(design.title).toBe("Space cat");
+    } finally { delete (config as {designPages?: unknown}).designPages; }
+  });
   it("retains the page and existing links when the batched marketplace lookup fails", async () => {
     const warning = vi.spyOn(console, "warn").mockImplementation(() => {});
     fetchPublicListings.mockRejectedValueOnce(new Error("temporary listing outage"));

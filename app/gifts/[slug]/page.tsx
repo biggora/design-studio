@@ -17,6 +17,8 @@ import { parsePageParam } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { pageJsonLd, designListElements } from "@/lib/structured-data";
 import { getListingTshirtOffers } from "@/lib/marketplace-prices";
+import { resolveDesignLinks } from "@/lib/design-links";
+import { CuratedDesignLinks } from "@/app/components/CuratedDesignLinks";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -89,6 +91,8 @@ export default async function GiftPage(props: Props) {
   const selectedName = collectionNames.get(collection) ?? collection;
   const tshirtOffers = await getListingTshirtOffers(designs);
   const totalPages = Math.ceil(total / GIFT_PAGE_SIZE);
+  const editorialLinks = !search && !collection && page === 1
+    ? await resolveDesignLinks(gift.designLinks) : [];
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -152,6 +156,7 @@ export default async function GiftPage(props: Props) {
         </nav>
       )}
 
+      <CuratedDesignLinks section={gift.designLinks} links={editorialLinks} />
       {gift.faq && gift.faq.length > 0 && (
         <section className="mb-8">
           <SectionHeading>Questions</SectionHeading>

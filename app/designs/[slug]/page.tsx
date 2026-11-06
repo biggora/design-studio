@@ -32,6 +32,9 @@ import { buttonVariants } from "@/components/ui/button";
 import { collectionPath, collectionDisplayNames } from "@/lib/collections";
 import { getGiftPages, giftPath, orderGiftPages } from "@/lib/gifts";
 import { matchesGiftPage } from "@/lib/gift-selection";
+import { getDesignPages } from "@/lib/design-pages";
+import { resolveDesignLinks } from "@/lib/design-links";
+import { CuratedDesignLinks } from "@/app/components/CuratedDesignLinks";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -67,9 +70,10 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   }
 
   const { design } = data;
-  const title = `${design.title} - ${config.name}`;
+  const editorial = getDesignPages(config.designPages).find(page => page.slug === design.slug);
+  const title = editorial ? `${editorial.title} | ${config.name}` : `${design.title} - ${config.name}`;
   // og:image / twitter:image come from the opengraph-image file convention next to this page.
-  const description = truncateAtWord(`${design.title} by ${config.name}. ${design.description}`, 155);
+  const description = editorial?.description ?? truncateAtWord(`${design.title} by ${config.name}. ${design.description}`, 155);
   return {
     title,
     description,
@@ -109,6 +113,9 @@ export default async function DesignDetails(
   }
 
   const { design } = data;
+
+  const editorial = getDesignPages(config.designPages).find(page => page.slug === design.slug);
+  const editorialLinks = await resolveDesignLinks(editorial?.related, design.slug ?? undefined);
 
   if (UUID_PATTERN.test(slug) && design.slug) {
     permanentRedirect(designPath(design));
@@ -226,8 +233,8 @@ export default async function DesignDetails(
   return (
     <>
       <JsonLd data={[breadcrumbJsonLd, creativeWorkJsonLd, {
-        ...pageJsonLd(config, designPath(design), design.title),
-        description: design.description,
+        ...pageJsonLd(config, designPath(design), editorial?.heading ?? design.title),
+        description: editorial?.description ?? design.description,
         mainEntity: tshirtProduct
           ? [{ "@id": `${shareUrl}#artwork` }, { "@id": tshirtProduct["@id"] }]
           : { "@id": `${shareUrl}#artwork` },
@@ -241,18 +248,19 @@ export default async function DesignDetails(
             <div className="relative bg-card md:pb-0 md:h-full">
               <DesignImage
                 design={design}
-                alt={design.collection ? `${design.title} – ${design.collection} design` : `${design.title} design`}
+                alt={editorial?.imageAlt ?? (design.collection ? `${design.title} – ${design.collection} design` : `${design.title} design`)}
                 priority
                 className="object-contain w-full h-full"
               />
             </div>
             <div className="p-6 flex flex-col justify-center">
               <h1 className="font-display text-3xl font-bold tracking-[-0.02em] mb-4 text-foreground">
-                {design.title}
+                {editorial?.heading ?? design.title}
               </h1>
               <p className="text-muted-foreground mb-6">
-                {design.description}
+                {editorial?.intro ?? design.description}
               </p>
+              {editorial?.buyingInfo && <p className="text-sm text-muted-foreground mb-6">{editorial.buyingInfo}</p>}
               <div className="grid grid-cols-1 md:grid-cols-2">
                 {design.collection && (
                   <p className="text-muted-foreground mb-4">
@@ -375,6 +383,7 @@ export default async function DesignDetails(
       </PageShell>
       {buyUrl !== "#" && <MobileBuyBar href={buyUrl} designSlug={design.slug || design.id} />}
       <PageShell>
+        <CuratedDesignLinks section={editorial?.related} links={editorialLinks} />
         <FeaturedDesigns
           title={relatedTitle}
           designs={relatedDesigns}

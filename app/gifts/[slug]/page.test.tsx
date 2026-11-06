@@ -4,6 +4,7 @@ import {load} from "cheerio";
 import {beforeEach, describe, expect, it, vi} from "vitest";
 import {Design} from "@/types/design";
 import type {TshirtOffer} from "@/lib/marketplace-prices";
+import type {GiftPage} from "@/lib/gifts";
 
 const fetchGiftPageDesigns = vi.fn();
 const offers = new Map<string, TshirtOffer>();
@@ -22,6 +23,7 @@ const config = {
 vi.mock("@/utils/database", () => ({
   getSiteConfig: async () => config,
   fetchGiftPageDesigns: (...args: unknown[]) => fetchGiftPageDesigns(...args),
+  getDesignBySlug: async (slug: string) => slug === "hidden" ? null : {design: {id: slug, slug}},
 }));
 vi.mock("next/navigation", () => ({
   notFound: () => {throw new Error("NEXT_NOT_FOUND");},
@@ -48,6 +50,22 @@ beforeEach(() => {
 });
 
 describe("/gifts/[slug]", () => {
+  it("renders configured active-design links only on the unfiltered first page", async () => {
+    const {default: Page} = await import("./page");
+    const gift: GiftPage = config.giftPages[0];
+    gift.designLinks = {heading: "Gifts for quilters", intro: "Choose a patchwork gift.", links: [
+      {slug: "quilting-shirt", label: "funny quilting T-shirt"}, {slug: "hidden", label: "Hidden print"},
+    ]};
+    try {
+      const html = renderToStaticMarkup(await Page({params: Promise.resolve({slug: "programmers"})}));
+      const $ = load(html);
+      expect($('a[href="/designs/quilting-shirt"]').text()).toBe("funny quilting T-shirt");
+      expect($("h2").first().text()).toBe("Gifts for quilters");
+      expect(html).not.toContain("Hidden print");
+      const filtered = renderToStaticMarkup(await Page({params: Promise.resolve({slug: "programmers"}), searchParams: Promise.resolve({search: "cat"})}));
+      expect(filtered).not.toContain("Gifts for quilters");
+    } finally { delete gift.designLinks; }
+  });
   it("renders a single grid with scoped search, categories, FAQ and ItemList JSON-LD", async () => {
     const {default: Page} = await import("./page");
     const html = renderToStaticMarkup(await Page({params: Promise.resolve({slug: "programmers"})}));

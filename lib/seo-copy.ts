@@ -1,6 +1,7 @@
 import {CollectionPage, getCollectionPages} from "@/lib/collections";
 import {GiftPage, getGiftPages} from "@/lib/gifts";
 import type {SiteConfig} from "@/lib/store";
+import {DesignPage, getDesignPages} from "@/lib/design-pages";
 
 export type SeoCopyPlan = {
     home?: {title?: string; heading?: string; description?: string};
@@ -8,6 +9,7 @@ export type SeoCopyPlan = {
     description?: string;
     collectionPages?: CollectionPage[];
     giftPages?: GiftPage[];
+    designPages?: DesignPage[];
     /** Organization JSON-LD alternateName (brand variants). */
     alternateNames?: string[];
 };
@@ -16,6 +18,10 @@ export type StudioRow = {key: string; value: string};
 
 /** Throws unless every page is structurally valid. */
 export function validateSeoCopyPlan(plan: SeoCopyPlan): void {
+    if (plan.designPages !== undefined
+        && (!Array.isArray(plan.designPages) || getDesignPages(plan.designPages).length !== plan.designPages.length)) {
+        throw new Error("Invalid designPages in plan");
+    }
     if (plan.collectionPages !== undefined
         && (!Array.isArray(plan.collectionPages) || getCollectionPages(plan.collectionPages).length !== plan.collectionPages.length)) {
         throw new Error("Invalid collectionPages in plan");
@@ -50,6 +56,7 @@ export function buildStudioRows(plan: SeoCopyPlan): StudioRow[] {
     if (plan.description !== undefined) rows.push({key: "description", value: plan.description});
     if (plan.collectionPages !== undefined) rows.push({key: "collectionPages", value: JSON.stringify(plan.collectionPages)});
     if (plan.giftPages !== undefined) rows.push({key: "giftPages", value: JSON.stringify(plan.giftPages)});
+    if (plan.designPages !== undefined) rows.push({key: "designPages", value: JSON.stringify(plan.designPages)});
     if (plan.alternateNames !== undefined) rows.push({key: "alternateNames", value: JSON.stringify(plan.alternateNames)});
     return rows;
 }
@@ -69,6 +76,7 @@ function describe(key: string, value: string | undefined): string | number | nul
     if (value === undefined) return null;
     if (key === "collectionPages") return getCollectionPages(value).length;
     if (key === "giftPages") return getGiftPages(value).length;
+    if (key === "designPages") return getDesignPages(value).length;
     return short(value);
 }
 
@@ -76,7 +84,7 @@ function describe(key: string, value: string | undefined): string | number | nul
 export function isChanged(row: StudioRow, config: SiteConfig): boolean {
     const old = currentStudioValue(config, row.key);
     if (old === undefined) return true;
-    if (row.key === "collectionPages" || row.key === "giftPages" || row.key === "alternateNames") {
+    if (row.key === "collectionPages" || row.key === "giftPages" || row.key === "designPages" || row.key === "alternateNames") {
         const parse = (text: string): unknown => { try { return JSON.parse(text); } catch { return text; } };
         return JSON.stringify(parse(old)) !== JSON.stringify(parse(row.value));
     }
