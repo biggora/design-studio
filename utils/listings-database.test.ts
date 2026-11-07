@@ -68,9 +68,11 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
       await pgSql(readFileSync("init/migrations/008_design_cdn_image_api_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/006_listing_extra_mockups_postgres.sql", "utf8"));
       await pgSql(readFileSync("init/migrations/008_design_cdn_image_api_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/018_ingest_collections_postgres.sql", "utf8"));
+      await pgSql(readFileSync("init/migrations/018_ingest_collections_postgres.sql", "utf8"));
       await pgSql("GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;");
     } else {
-      pool = mysql.createPool({ host: "127.0.0.1", port: 33316, user: "root", password: "listings-test", database: "listings_test", dateStrings: true, multipleStatements: true });
+      pool = mysql.createPool({ host: "127.0.0.1", port: Number(process.env.LISTINGS_MYSQL_PORT || 33316), user: "root", password: "listings-test", database: "listings_test", dateStrings: true, multipleStatements: true });
       await pool.query("DROP TABLE IF EXISTS design_listings, design_collections, collections, designs, studio");
       const schema = readFileSync("init/mysql_tables.sql", "utf8").split("CREATE TABLE design_listings")[0]
         .replace('`externalId` BIGINT NULL,', '`externalId` BIGINT NOT NULL,')
@@ -81,7 +83,7 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
       await pool.query(readFileSync("init/migrations/005_design_cdn_image_mysql.sql", "utf8"));
     }
   }, 30000);
-  beforeEach(async () => { await execute("DELETE FROM designs"); });
+  beforeEach(async () => { await execute("DELETE FROM designs"); await execute("DELETE FROM collections"); });
   afterAll(async () => { if (pool) await pool.end(); });
 
   it("creates a design and listing and mirrors canonical Redbubble fields", async () => {
@@ -91,6 +93,55 @@ describe.skipIf(!runDbTests).each(["postgres", "mysql"] as const)("listings tran
     const [saved] = await designs();
     expect(saved).toMatchObject({ source: "pod-studio", keywords: "space,cat", backgroundColor: "#000000", externalLink: input().listing.url });
     expect(await listings()).toHaveLength(1);
+  });
+  it("adds collections and curated props alongside platform links, with idempotent repeats", async () => {
+    await execute(`INSERT INTO collections (id, ${provider === "postgres" ? '"externalId"' : '`externalId`'}, title) VALUES ('10000000-0000-4000-8000-000000000001', '1', 'Pets'), ('10000000-0000-4000-8000-000000000002', '2', 'Programming')`);
+    const body = input();
+    body.design.collections = ["Pets"];
+    const result = await ingest(body);
+    const tp = input();
+    tp.design.collections = ["Programming"];
+    tp.listing = {platform: "teepublic", account: "teepublic:main", externalId: "123", url: "https://www.teepublic.com/t-shirt/123-space-cat"};
+    await ingest(tp);
+    await ingest(tp);
+    const [saved] = await designs();
+    const props = typeof saved.props === "string" ? JSON.parse(saved.props) : saved.props;
+    expect(saved.collection).toBe("Pets");
+    expect(props).toMatchObject({curatedCollections: ["Pets", "Programming"], teepublicId: "123", teepublicLink: tp.listing.url});
+    expect(await query(`SELECT * FROM design_collections WHERE ${provider === "postgres" ? '"designId"' : 'designId'} = ${sqlString(result.design.id)}`)).toHaveLength(2);
+    await ingest(input()); // absent and empty fields never clear assignments
+    body.design.collections = [];
+    await ingest(body);
+    expect((await designs())[0].collection).toBe("Pets");
+    expect(await query("SELECT * FROM design_collections")).toHaveLength(2);
+  });
+  it("rolls back the listing and design if a requested collection does not exist", async () => {
+    const body = input();
+    body.design.collections = ["Unknown collection"];
+    await expect(ingest(body)).rejects.toThrow();
+    expect(await designs()).toEqual([]);
+    expect(await listings()).toEqual([]);
+    expect(await query("SELECT * FROM design_collections")).toEqual([]);
+  });
+  it("links all existing collections sharing a title, as native curation does", async () => {
+    await execute(`INSERT INTO collections (id, ${provider === "postgres" ? '"externalId"' : '`externalId`'}, title) VALUES ('10000000-0000-4000-8000-000000000001', '1', 'Pets'), ('10000000-0000-4000-8000-000000000002', '2', 'Pets')`);
+    const body = input();
+    body.design.collections = ["Pets"];
+    await ingest(body);
+    expect((await designs())[0].collection).toBe("Pets");
+    expect(await query("SELECT * FROM design_collections")).toHaveLength(2);
+  });
+  it("rolls back partial collection additions and a new platform link together", async () => {
+    await execute(`INSERT INTO collections (id, ${provider === "postgres" ? '"externalId"' : '`externalId`'}, title) VALUES ('10000000-0000-4000-8000-000000000001', '1', 'Pets')`);
+    await ingest(input());
+    const before = await designs();
+    const tp = input();
+    tp.design.collections = ["Pets", "Unknown collection"];
+    tp.listing = {platform: "teepublic", account: "teepublic:main", externalId: "123", url: "https://www.teepublic.com/t-shirt/123-space-cat"};
+    await expect(ingest(tp)).rejects.toThrow();
+    expect(await designs()).toEqual(before);
+    expect(await listings()).toHaveLength(1);
+    expect(await query("SELECT * FROM design_collections")).toEqual([]);
   });
   it("stores cdnImage on create and returns it in the design response", async () => {
     const body = input();

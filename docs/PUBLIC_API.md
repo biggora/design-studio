@@ -329,6 +329,7 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 | `design.title` | yes | ≤ 500 characters |
 | `design.description` | no | ≤ 5000 characters |
 | `design.tags` | no | ≤ 100 strings, each non-empty and ≤ 100 characters |
+| `design.collections` | no | ≤ 100 existing collection titles, each non-empty and ≤ 255 characters; duplicate titles are collapsed |
 | `design.backgroundColor` | no | #rgb or #rrggbb |
 | `design.cdnImage` | no | Array of 1–8 objects `{ key, kind, version, width, height }` — the design's CDN mockups, see below |
 | `listing.platform` | yes | redbubble, teepublic, spreadshirt, tostadora, zazzle |
@@ -340,6 +341,8 @@ Call only after a marketplace publish is confirmed. The JSON body has exactly tw
 | `listing.thumbnailUrl` | no | http(s) URL, ≤ 2000 characters, no credentials |
 | `listing.publishedAt` | no | ISO-8601 timestamp with timezone; defaults to now on creation |
 | `listing.extra` | no | JSON object, serialized UTF-8 size ≤ 16 KiB |
+
+`design.collections` adds the owner's pod-studio assignments in the listing's existing transaction on both database providers: it unions `props.curatedCollections`, upserts `design_collections`, and fills an empty primary collection. Existing primary labels, memberships and other props are preserved; absent or empty arrays remove nothing. The titles must already exist on the site. An unknown title or failed write rolls back the entire ingest; the API returns `500 INTERNAL` and the uploader's durable outbox retains the request for retry. Repeated delivery is idempotent. On PostgreSQL apply migration **018** (`018_ingest_collections_postgres.sql`) before deploying this API and enabling `designStudio.collections: true` in pod-uploader. MySQL needs only the application update. Older API versions reject the unknown field; an older PostgreSQL function would silently omit it, so follow the rollout order. No existing data is backfilled by the migration.
 
 The optional `extra.mockupTshirt`, `extra.mockupHat`, `extra.mockupMug` and `extra.mockupMousepad`, when used for the legacy Redbubble image mirror, must each be an HTTPS URL on a Redbubble image host supported by the existing image allowlist (`*.redbubble.net` / `*.redbubble.com`); a violation is `400 VALIDATION` naming the field, e.g. `listing.extra.mockupHat`. On a Redbubble listing they fill `designs.props.mockup_tshirt`, `mockup_hat`, `mockup_mug` and `mockup_mousepad` respectively, each only while that prop is empty (a stored or curated value is never overwritten). All four are optional and independent; requests without them behave exactly as before, and `extra` keys not listed here are stored in the listing untouched. Installations must apply `init/migrations/006_listing_extra_mockups_postgres.sql` (PostgreSQL; MySQL needs no schema change) before sending the three new keys, otherwise an old database function silently ignores them. Other thumbnail hosts are stored in the listing without adding them to that allowlist.
 

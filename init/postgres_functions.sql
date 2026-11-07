@@ -53,6 +53,9 @@ DECLARE
   suffix INTEGER := 2;
   props_value JSONB;
   mockup RECORD;
+  collection_title TEXT;
+  collection_ids UUID[];
+  curated JSONB;
   constraint_name TEXT;
 BEGIN
   -- A short ingest serializes with catalog writes (including scraper inserts),
@@ -135,6 +138,20 @@ BEGIN
   ELSIF platform_name = 'teepublic' THEN
     props_value := props_value || jsonb_build_object('teepublicLink', l->>'url', 'teepublicId', work_id);
   END IF;
+  IF jsonb_array_length(coalesce(d->'collections', '[]'::JSONB)) > 0 THEN
+    curated := CASE WHEN jsonb_typeof(props_value->'curatedCollections') = 'array'
+      THEN props_value->'curatedCollections' ELSE '[]'::JSONB END;
+    FOR collection_title IN SELECT value FROM jsonb_array_elements_text(d->'collections') LOOP
+      SELECT array_agg(id) INTO collection_ids FROM public.collections WHERE title = collection_title;
+      IF coalesce(cardinality(collection_ids), 0) = 0 THEN
+        RAISE EXCEPTION USING ERRCODE = '22023', MESSAGE = 'Unknown ingest collection: ' || collection_title;
+      END IF;
+      IF NOT curated @> jsonb_build_array(collection_title) THEN curated := curated || jsonb_build_array(collection_title); END IF;
+      INSERT INTO public.design_collections ("designId", "collectionId") SELECT target.id, unnest(collection_ids)
+        ON CONFLICT ("designId", "collectionId") DO NOTHING;
+    END LOOP;
+    props_value := props_value || jsonb_build_object('curatedCollections', curated);
+  END IF;
   UPDATE public.designs SET
     sha256 = coalesce(sha256, d->>'sha256'), "sourceImageId" = coalesce("sourceImageId", (d->>'sourceImageId')::BIGINT),
     source = coalesce(source, 'pod-studio'),
@@ -146,6 +163,8 @@ BEGIN
     -- A present cdnImage overwrites (e.g. a higher version); an absent one keeps the
     -- stored value. There is no way to clear the column through the API.
     "cdnImage" = CASE WHEN d ? 'cdnImage' THEN d->'cdnImage' ELSE "cdnImage" END,
+    collection = CASE WHEN coalesce(trim(collection), '') IN ('', 'no_collection')
+      THEN coalesce(d->'collections'->>0, collection) ELSE collection END,
     props = props_value::JSON, "updatedAt" = now()
   WHERE id = target.id RETURNING * INTO target;
 

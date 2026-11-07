@@ -96,6 +96,25 @@ describe("listings validation", () => {
 });
 
 describe("listings responses", () => {
+  it("records pod-studio collections before acknowledging and invalidating the catalog", async () => {
+    const input = { ...body(), design: { ...body().design, collections: ["Pets", "Programming", "Pets"] } };
+    expect((await POST(request(input))).status).toBe(201);
+    expect(ingest).toHaveBeenCalledExactlyOnceWith({ ...input, design: { ...input.design, collections: ["Pets", "Programming"] } });
+    expect(revalidate.mock.invocationCallOrder[0]).toBeGreaterThan(ingest.mock.invocationCallOrder[0]);
+  });
+  it("leaves an older sender's collection memberships alone", async () => {
+    expect((await POST(request())).status).toBe(201);
+    expect(ingest).toHaveBeenCalledExactlyOnceWith(body());
+  });
+  it("returns a retryable failure if collection persistence fails inside the ingest transaction", async () => {
+    ingest.mockRejectedValueOnce(new Error("Collection store unavailable"));
+    const input = { ...body(), design: { ...body().design, collections: ["Pets"] } };
+    expect((await POST(request(input))).status).toBe(500);
+    expect(revalidate).not.toHaveBeenCalled();
+    ingest.mockResolvedValue({ ...result, created: { design: false, listing: false } });
+    expect((await POST(request(input))).status).toBe(200);
+    expect(ingest).toHaveBeenCalledTimes(2);
+  });
   it("returns 201 on create, normalizes the hash, revalidates, never caches", async () => {
     const response = await POST(request({ ...body(), design: { ...body().design, sha256: sha256.toUpperCase() } }));
     expect(response.status).toBe(201);

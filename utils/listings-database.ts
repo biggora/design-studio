@@ -5,6 +5,7 @@ import {
   DesignListing, IngestDesign, IngestInput, IngestResult, ListingsError, MOCKUP_EXTRA_PROPS,
 } from "@/lib/listings";
 import { normalizeCdnImageMockups } from "@/lib/image";
+import { curatedCollectionTitles } from "@/lib/collections";
 
 type DesignRow = IngestDesign & {
   source: string | null;
@@ -13,6 +14,7 @@ type DesignRow = IngestDesign & {
   backgroundColor: string | null;
   externalLink: string | null;
   props: Record<string, unknown> | null;
+  collection: string | null;
 };
 
 export function ingestDesignResponse(row: IngestDesign): IngestDesign {
@@ -108,6 +110,16 @@ export async function ingestListingMySQL(pool: mysql.Pool, input: IngestInput): 
       }
     }
     if (l.platform === "teepublic") Object.assign(props, { teepublicLink: l.url, teepublicId: l.externalId });
+    if (d.collections?.length) {
+      const titles = [...new Set(d.collections)];
+      const collections = await query("SELECT id, title FROM collections WHERE title IN (?)", [titles]);
+      if (new Set(collections.map(collection => collection.title)).size !== titles.length) throw new Error("Unknown ingest collection");
+      props.curatedCollections = [...new Set([...curatedCollectionTitles(props), ...titles])];
+      await connection.query("INSERT IGNORE INTO design_collections (designId, collectionId) VALUES ?", [collections.map(collection => [design.id, collection.id])]);
+      if (!design.collection?.trim() || design.collection === "no_collection") {
+        await connection.query("UPDATE designs SET collection = ? WHERE id = ?", [titles[0], design.id]);
+      }
+    }
     await connection.query(
       // A present cdnImage overwrites (e.g. a higher version); an absent one keeps the
       // stored value — there is no way to clear the column through the API.

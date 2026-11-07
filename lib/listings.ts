@@ -39,6 +39,7 @@ export type IngestInput = {
     title: string;
     description?: string;
     tags?: string[];
+    collections?: string[];
     backgroundColor?: string;
     cdnImage?: CdnImage;
   };
@@ -233,7 +234,7 @@ function listingUrlHostError(platform: ListingPlatform): never {
 
 export function parseIngestInput(value: unknown): IngestInput {
   const body = strictObject(value, "", ["design", "listing"]);
-  const d = strictObject(body.design, "design", ["sourceImageId", "sha256", "title", "description", "tags", "backgroundColor", "cdnImage"]);
+  const d = strictObject(body.design, "design", ["sourceImageId", "sha256", "title", "description", "tags", "collections", "backgroundColor", "cdnImage"]);
   const l = strictObject(body.listing, "listing", ["platform", "account", "externalId", "url", "title", "description", "tags", "thumbnailUrl", "publishedAt", "extra"]);
   const design: IngestInput["design"] = {
     sourceImageId: sourceId(d.sourceImageId), sha256: hash(d.sha256), title: text(d.title, "design.title", 500),
@@ -243,6 +244,10 @@ export function parseIngestInput(value: unknown): IngestInput {
     design.description = d.description;
   }
   if (d.tags !== undefined) design.tags = tags(d.tags, "design.tags");
+  if (d.collections !== undefined) {
+    if (!Array.isArray(d.collections) || d.collections.length > 100) invalid("design.collections", "Expected at most 100 collection titles");
+    design.collections = [...new Set(d.collections.map((title, index) => text(title, `design.collections.${index}`, 255)))];
+  }
   if (d.backgroundColor !== undefined) {
     if (typeof d.backgroundColor !== "string" || !/^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(d.backgroundColor)) invalid("design.backgroundColor", "Expected #rgb or #rrggbb");
     design.backgroundColor = d.backgroundColor;

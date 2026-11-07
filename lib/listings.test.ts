@@ -22,6 +22,15 @@ function parseField(value: unknown): ListingsError {
 }
 const parseOk = (value: unknown) => parseIngestInput({ ...body(), design: { ...body().design, cdnImage: value } });
 
+describe("parseIngestInput collections", () => {
+  it.each([null, "Pets", [""], ["   "], [42], ["x".repeat(256)], Array(101).fill("Pets")])("rejects invalid titles: %j", collections => {
+    expect(() => parseIngestInput({ ...body(), design: { ...body().design, collections } })).toThrow(ListingsError);
+  });
+  it("accepts an empty array without removing existing memberships", () => {
+    expect(parseIngestInput({ ...body(), design: { ...body().design, collections: [] } }).design.collections).toEqual([]);
+  });
+});
+
 describe("parseIngestInput cdnImage (mockup array)", () => {
   it("accepts all four kinds and keeps them in request order", () => {
     const mockups = kinds.map((kind, i) => mockup(i + 1, kind));
