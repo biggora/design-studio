@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO Promoter"
+  short_description: "Спрос, запросы и SEO-продвижение принтов в Google"
+  default_prompt: "Используй $seo-promoter, чтобы найти покупательские запросы для наших принтов, проверить спрос и подготовить приоритетные SEO-правки для выбранного рынка."
